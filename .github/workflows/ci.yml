@@ -37,7 +37,7 @@ jobs:
       - name: Build deterministic candidate
         run: |
           python3 tools/build-release.py
-          sha256sum -c <(head -n 1 dist/SHA256SUMS)
+          (cd dist && sha256sum -c SHA256SUMS)
           unzip -t dist/*.zip
       - name: Rebuild parity
         run: |
