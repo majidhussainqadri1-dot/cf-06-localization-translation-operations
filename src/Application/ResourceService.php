@@ -6,119 +6,46 @@ namespace Sabri\Localization\Application;
 
 use InvalidArgumentException;
 use Sabri\Localization\Domain\Locale\LocaleValidator;
+use Sabri\Localization\Domain\Translation\BidiValidator;
+use Sabri\Localization\Domain\Translation\PlaceholderValidator;
+use Sabri\Localization\Domain\Translation\RiskPolicy;
+use Sabri\Localization\Infrastructure\Outbox;
 use Sabri\Localization\Infrastructure\Repository\AuditRepository;
-use Sabri\Localization\Infrastructure\Repository\LocaleRepository;
-use Sabri\Localization\Infrastructure\Repository\ResourceRepository;
+use Sabri\Localization\Infrastructure\Repository\LocalizationRepository;
 use Sabri\Localization\Infrastructure\Transaction;
 
 final class ResourceService
 {
-    private const KEY_PATTERN = '/^[a-z][a-z0-9_.-]{2,190}$/D';
+    public function __construct(private readonly LocalizationRepository $repo,private readonly AuditRepository $audit,private readonly Outbox $outbox,private readonly Transaction $tx){}
 
-    public function __construct(
-        private readonly LocaleRepository $locales,
-        private readonly ResourceRepository $resources,
-        private readonly AuditRepository $audit,
-        private readonly Transaction $transaction
-    ) {
-    }
-
-    public function register(array $input): array
+    public function register(array $input):array
     {
-        $key = strtolower(trim((string) ($input['resource_key'] ?? '')));
-        if (1 !== preg_match(self::KEY_PATTERN, $key)) {
-            throw new InvalidArgumentException('Resource key must be a stable lowercase semantic key.');
-        }
-        $sourceLocale = LocaleValidator::canonicalize((string) ($input['source_locale'] ?? ''));
-        if (null === $sourceLocale || null === $this->locales->find($sourceLocale)) {
-            throw new InvalidArgumentException('Source locale must be registered.');
-        }
-        $sourceText = wp_kses_post((string) ($input['source_text'] ?? ''));
-        if ('' === trim($sourceText)) {
-            throw new InvalidArgumentException('Source text is required.');
-        }
-        if (strlen($sourceText) > 200000) {
-            throw new InvalidArgumentException('Source text exceeds the foundation safety limit.');
-        }
-        $riskClass = strtolower((string) ($input['risk_class'] ?? 'low'));
-        if (! in_array($riskClass, array('low', 'medium', 'high', 'critical', 'private'), true)) {
-            throw new InvalidArgumentException('Invalid risk class.');
-        }
-        $dataClass = strtoupper((string) ($input['data_class'] ?? 'C1'));
-        if (! in_array($dataClass, array('C1', 'C2', 'C3', 'C4', 'C5'), true)) {
-            throw new InvalidArgumentException('Invalid data class.');
-        }
-        if (in_array($dataClass, array('C4', 'C5'), true) || 'private' === $riskClass) {
-            throw new InvalidArgumentException('Restricted/private resources remain blocked until the approved secure-storage contract is implemented.');
-        }
-        $placeholderSchema = $this->validatePlaceholders($sourceText, $input['placeholders'] ?? array());
-        $references = is_array($input['references'] ?? null) ? array_slice($input['references'], 0, 50) : array();
-        $context = wp_kses_post((string) ($input['context'] ?? ''));
-        $description = sanitize_textarea_field((string) ($input['description'] ?? ''));
-        $domain = sanitize_key((string) ($input['domain'] ?? 'platform')) ?: 'platform';
-        $hashPayload = array(
-            'key' => $key,
-            'source_locale' => $sourceLocale,
-            'source_text' => $sourceText,
-            'context' => $context,
-            'domain' => $domain,
-            'risk_class' => $riskClass,
-            'data_class' => $dataClass,
-            'placeholders' => $placeholderSchema,
-        );
-        $encoded = wp_json_encode($hashPayload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        $hash = hash('sha256', is_string($encoded) ? $encoded : '');
-        $record = array(
-            'resource_key' => $key,
-            'source_locale' => $sourceLocale,
-            'source_text' => $sourceText,
-            'source_hash' => $hash,
-            'context' => $context,
-            'description' => $description,
-            'domain_name' => $domain,
-            'risk_class' => $riskClass,
-            'data_class' => $dataClass,
-            'placeholders' => wp_json_encode($placeholderSchema, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
-            'references_json' => wp_json_encode($references, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
-            'status' => 'active',
-        );
-        return $this->transaction->run(function () use ($record, $key, $hash, $riskClass, $dataClass): array {
-            $result = $this->resources->upsert($record, get_current_user_id());
-            $this->audit->record(
-                'resource',
-                $key,
-                $result['changed'] ? 'resource_versioned' : 'resource_idempotent',
-                'success',
-                array('version' => $result['version'], 'hash' => $hash, 'risk' => $riskClass, 'data_class' => $dataClass)
-            );
-            return array_merge($result, array('resource_key' => $key, 'source_hash' => $hash));
+        $key=(string)($input['resource_key']??'');
+        if(1!==preg_match('/^[a-z][a-z0-9]*(?:[._-][a-z0-9]+){1,15}$/D',$key)){throw new InvalidArgumentException('Resource key must be stable, semantic and namespaced.');}
+        $locale=LocaleValidator::canonicalize((string)($input['source_locale']??''));
+        if(null===$locale||!$this->repo->findOne('locales','locale_tag',$locale)){throw new InvalidArgumentException('Source locale is not registered.');}
+        $text=(string)($input['source_text']??'');if(''===trim($text)||strlen($text)>500000){throw new InvalidArgumentException('Source text is empty or exceeds the bounded limit.');}
+        BidiValidator::assertSafe($text);
+        $risk=strtolower((string)($input['risk_class']??'low'));$data=strtoupper((string)($input['data_class']??'C1'));
+        if(!in_array($risk,array('low','medium','high','critical','private'),true)||!in_array($data,array('C1','C2','C3','C4','C5'),true)){throw new InvalidArgumentException('Invalid resource risk or data class.');}
+        $domain=sanitize_key((string)($input['domain']??'platform'))?:'platform';
+        $schema=PlaceholderValidator::normalizeSchema($input['placeholders']??array());PlaceholderValidator::assertSource($text,$schema);
+        $existing=$this->repo->findOne('resources','resource_key',$key);
+        $hash=hash('sha256',wp_json_encode(array('key'=>$key,'locale'=>$locale,'text'=>$text,'context'=>(string)($input['context']??''),'domain'=>$domain,'risk'=>$risk,'data'=>$data,'placeholders'=>$schema),JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES));
+        if(is_array($existing)&&hash_equals((string)$existing['source_hash'],$hash)){return array('changed'=>false,'record'=>$existing);}
+        return $this->tx->run(function()use($existing,$key,$locale,$text,$hash,$input,$domain,$risk,$data,$schema):array{
+            $uuid=is_array($existing)?(string)$existing['uuid']:\Sabri\Localization\Infrastructure\Database::uuid();
+            $secureId=null;$stored=$text;
+            if(in_array($data,array('C4','C5'),true)||'private'===$risk){$secureId=$this->repo->storeSecurePayload('resource',$uuid,'source_text',$text);$stored='[ENCRYPTED RESTRICTED SOURCE]';}
+            $base=array('resource_key'=>$key,'source_locale'=>$locale,'source_text'=>$stored,'secure_payload_id'=>$secureId,'source_hash'=>$hash,'context'=>wp_kses_post((string)($input['context']??'')),'description'=>sanitize_textarea_field((string)($input['description']??'')),'domain_name'=>$domain,'risk_class'=>$risk,'data_class'=>$data,'placeholders'=>wp_json_encode($schema),'markup_policy'=>wp_json_encode($input['markup_policy']??array()),'references_json'=>wp_json_encode(array_slice(is_array($input['references']??null)?$input['references']:array(),0,100)),'translatability_json'=>wp_json_encode($input['translatability']??array()),'critical'=>RiskPolicy::criticalResource($risk,$domain)?1:0,'status'=>'active','updated_by'=>get_current_user_id());
+            if(is_array($existing)){$version=(int)$existing['row_version'];$base['source_version']=(int)$existing['source_version']+1;$updated=$this->repo->updateVersioned('resources',$uuid,$version,$base);if(!empty($existing['secure_payload_id'])&&(int)$existing['secure_payload_id']!==(int)$secureId){$this->repo->retireSecurePayload((int)$existing['secure_payload_id']);}$stale=$this->repo->markDependentUnitsStale($uuid,'source_changed');$this->audit->record('resource',$key,'resource_versioned','success',array('source_version'=>$base['source_version'],'stale_units'=>$stale,'hash'=>$hash));$this->outbox->enqueue('TranslatableResourceChanged','resource',$uuid,array('resource_key'=>$key,'source_version'=>$base['source_version'],'source_hash'=>$hash,'stale_units'=>$stale));return array('changed'=>true,'record'=>$updated,'stale_units'=>$stale);}
+            $base['uuid']=$uuid;$base['source_version']=1;$base['created_by']=get_current_user_id();$base['row_version']=1;$created=$this->repo->insert('resources',$base);$this->audit->record('resource',$key,'resource_registered','success',array('source_version'=>1,'hash'=>$hash,'risk'=>$risk,'data_class'=>$data));return array('changed'=>true,'record'=>$created,'stale_units'=>0);
         });
     }
 
-    private function validatePlaceholders(string $sourceText, mixed $provided): array
+    public function text(array $resource):string
     {
-        preg_match_all('/(?<!\{)\{([A-Za-z][A-Za-z0-9_]*)\}(?!\})/', $sourceText, $matches);
-        $found = array_values(array_unique($matches[1] ?? array()));
-        sort($found, SORT_STRING);
-        $schema = array();
-        if (is_array($provided)) {
-            foreach ($provided as $name => $type) {
-                $name = (string) $name;
-                $type = strtolower((string) $type);
-                if (1 !== preg_match('/^[A-Za-z][A-Za-z0-9_]*$/D', $name)) {
-                    throw new InvalidArgumentException('Invalid placeholder name: ' . $name);
-                }
-                if (! in_array($type, array('string', 'integer', 'decimal', 'date', 'time', 'datetime', 'currency', 'percent', 'url'), true)) {
-                    throw new InvalidArgumentException('Invalid placeholder type for: ' . $name);
-                }
-                $schema[$name] = $type;
-            }
-        }
-        $declared = array_keys($schema);
-        sort($declared, SORT_STRING);
-        if ($found !== $declared) {
-            throw new InvalidArgumentException('Declared placeholders must exactly match named placeholders in source text.');
-        }
-        return $schema;
+        if(!empty($resource['secure_payload_id'])){return $this->repo->readSecurePayload((int)$resource['secure_payload_id'],(string)$resource['uuid'],'source_text');}
+        return (string)$resource['source_text'];
     }
 }

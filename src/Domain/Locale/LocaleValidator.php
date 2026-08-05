@@ -6,35 +6,42 @@ namespace Sabri\Localization\Domain\Locale;
 
 final class LocaleValidator
 {
-    private const PATTERN = '/^(?<language>[A-Za-z]{2,8})(?:-(?<script>[A-Za-z]{4}))?(?:-(?<region>[A-Za-z]{2}|[0-9]{3}))?(?<variants>(?:-(?:[A-Za-z0-9]{5,8}|[0-9][A-Za-z0-9]{3}))*)$/D';
-
-    public static function canonicalize(string $tag): ?string
+    public static function parse(string $input): ?array
     {
-        $parsed = self::parse($tag);
+        $input = trim(str_replace('_', '-', $input));
+        if ('' === $input || strlen($input) > 35 || 1 !== preg_match('/^[A-Za-z]{2,8}(?:-[A-Za-z]{4})?(?:-(?:[A-Za-z]{2}|[0-9]{3}))?(?:-[A-Za-z0-9]{5,8})*$/D', $input)) {
+            return null;
+        }
+        $parts = explode('-', $input);
+        $language = strtolower((string) array_shift($parts));
+        $script = '';
+        $region = '';
+        $variants = array();
+        foreach ($parts as $part) {
+            if ('' === $script && 4 === strlen($part) && ctype_alpha($part)) {
+                $script = ucfirst(strtolower($part));
+                continue;
+            }
+            if ('' === $region && ((2 === strlen($part) && ctype_alpha($part)) || (3 === strlen($part) && ctype_digit($part)))) {
+                $region = strtoupper($part);
+                continue;
+            }
+            $variants[] = strtolower($part);
+        }
+        $tag = implode('-', array_filter(array_merge(array($language, $script, $region), $variants), static fn (string $v): bool => '' !== $v));
+        return array('tag' => $tag, 'language' => $language, 'script' => $script, 'region' => $region, 'variants' => $variants);
+    }
 
+    public static function canonicalize(string $input): ?string
+    {
+        $parsed = self::parse($input);
         return $parsed['tag'] ?? null;
     }
 
-    public static function parse(string $tag): ?array
+    public static function direction(string $tag): string
     {
-        $tag = trim(str_replace('_', '-', $tag));
-        if ('' === $tag || 1 !== preg_match(self::PATTERN, $tag, $matches)) {
-            return null;
-        }
-
-        $language = strtolower($matches['language']);
-        $script   = isset($matches['script']) ? ucfirst(strtolower($matches['script'])) : '';
-        $region   = isset($matches['region']) ? strtoupper($matches['region']) : '';
-        $variants = array_values(array_filter(explode('-', ltrim((string) ($matches['variants'] ?? ''), '-')), static fn (string $value): bool => '' !== $value));
-        $variants = array_map('strtolower', $variants);
-        $parts    = array_filter(array_merge(array($language, $script, $region), $variants), static fn (string $value): bool => '' !== $value);
-
-        return array(
-            'tag' => implode('-', $parts),
-            'language' => $language,
-            'script' => $script,
-            'region' => $region,
-            'variants' => $variants,
-        );
+        $parsed = self::parse($tag);
+        $rtl = array('ar', 'fa', 'he', 'ps', 'ur', 'sd', 'ug', 'dv', 'ku');
+        return null !== $parsed && in_array($parsed['language'], $rtl, true) ? 'rtl' : 'ltr';
     }
 }

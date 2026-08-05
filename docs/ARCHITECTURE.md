@@ -1,28 +1,33 @@
-# CF-06 Foundation Architecture — 0.1.0
+# Architecture and Canonical Ownership
 
-## Governing boundary
+## Governing principle
 
-CF-06 owns localization operations, not the original domain truth. File 20 owns the global language preference and shell surface; File 25 owns RTL/LTR visual implementation; File 26 owns search transliteration and ranking; each native domain owner retains source-content and final high-risk publication authority.
+One localization operations owner, while every original record and final domain decision remains with its native owner. Commands mutate only CF-06-owned entities; companion modules consume versioned queries/events and never write CF-06 tables directly.
 
-## Safe-default runtime
+## Boundaries
 
-The plugin installs an auditable foundation but leaves `slto_runtime_enabled` disabled. Public locale resolution returns a controlled 503 until Founder-approved extraction and staging gates are completed. Authorized localization administrators can inspect the registry and register controlled resources during implementation.
+- **File 00:** identity, capabilities, suspension, guardian/entitlement assertions.
+- **File 20:** global language switcher, account preference presentation, shell route/slot placement.
+- **File 24:** assurance, privacy/security posture and evidence consumption.
+- **File 25:** visual RTL/LTR components, typography, responsive behavior and public presentation.
+- **File 26:** transliteration, synonyms, multilingual query/ranking and discovery.
+- **Native domain owner:** original post/lesson/profile/clinical/legal/financial truth and final translated publication approval.
+- **CF-06:** locales, translation resources/units/projects, assignments, terminology, memory, MT draft orchestration, QA and bundle lifecycle.
 
-## Implemented layers
+## Layers
 
-1. **Bootstrap and activation** — schema, capabilities, seed locales, truthful status.
-2. **Locale domain** — BCP 47-style canonicalization and cycle-safe deterministic fallback chains.
-3. **Locale repository/service** — locale upsert, status, direction, fallback, format-data versions.
-4. **Resource catalog** — stable semantic keys, source locale/version/hash, context, domain, risk/data classes, typed named placeholders, idempotent versioning.
-5. **Audit evidence** — mutation audit records contain hashes and metadata, never full source payloads.
-6. **REST contracts** — versioned status, locale, resolution, and resource-registration endpoints.
-7. **Admin evidence surface** — read-only truthful state and locale registry.
-8. **CI** — PHP 8.1/8.3 lint/tests, secret-pattern guard, deterministic candidate packaging.
+1. `Domain`: locale, workflow, linguistic, security and deterministic-release invariants.
+2. `Application`: use cases with server-side authorization prerequisites and transaction boundaries.
+3. `Infrastructure`: schema, encrypted payloads, repositories, audit, outbox, jobs and migrations.
+4. `Contract`: public manifest, versioned events and cross-file readiness.
+5. `Delivery`: REST, WP-CLI and administrator UI.
 
-## Tables
+## Safety invariants
 
-- `{prefix}slto_locales`
-- `{prefix}slto_resources`
-- `{prefix}slto_audit_events`
-
-No translation units, projects, terminology, memory, vendor jobs, bundles, or release tables are created yet; those belong to later C6-C through C6-F phases and must not be falsely represented as complete.
+- Runtime disabled by default.
+- C4/C5/private text encrypted at rest and excluded from external MT.
+- Provider response is only a machine draft; it cannot be published or approved automatically.
+- Every state transition is explicit; stale row versions fail with conflict.
+- Active bundles require signature, 100% critical coverage and accepted cross-file dependencies.
+- Rollback is versioned, audited and cache-invalidating.
+- Audit payloads contain hashes/minimized metadata, not unrestricted translated text.

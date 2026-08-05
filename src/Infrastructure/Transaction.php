@@ -7,31 +7,44 @@ namespace Sabri\Localization\Infrastructure;
 use RuntimeException;
 use Throwable;
 
+/**
+ * Small transaction coordinator with savepoint-backed nested transactions.
+ *
+ * Application services may compose other services without accidentally
+ * committing an outer operation. MySQL/MariaDB savepoints preserve atomicity.
+ */
 final class Transaction
 {
-    /**
-     * @template T
-     * @param callable():T $operation
-     * @return T
-     */
-    public function run(callable $operation): mixed
+    private static int $depth = 0;
+
+    public function run(callable $callback): mixed
     {
         global $wpdb;
 
-        if (false === $wpdb->query('START TRANSACTION')) {
-            throw new RuntimeException('Unable to start database transaction.');
+        $isRoot = 0 === self::$depth;
+        $savepoint = 'slto_sp_' . self::$depth;
+        $statement = $isRoot ? 'START TRANSACTION' : 'SAVEPOINT ' . $savepoint;
+
+        if (false === $wpdb->query($statement)) {
+            throw new RuntimeException('Localization transaction could not be started.');
         }
 
+        ++self::$depth;
+
         try {
-            $result = $operation();
-            if (false === $wpdb->query('COMMIT')) {
-                throw new RuntimeException('Unable to commit database transaction.');
+            $result = $callback();
+            --self::$depth;
+
+            $commit = $isRoot ? 'COMMIT' : 'RELEASE SAVEPOINT ' . $savepoint;
+            if (false === $wpdb->query($commit)) {
+                throw new RuntimeException('Localization transaction could not be committed.');
             }
 
             return $result;
-        } catch (Throwable $exception) {
-            $wpdb->query('ROLLBACK');
-            throw $exception;
+        } catch (Throwable $throwable) {
+            --self::$depth;
+            $wpdb->query($isRoot ? 'ROLLBACK' : 'ROLLBACK TO SAVEPOINT ' . $savepoint);
+            throw $throwable;
         }
     }
 }

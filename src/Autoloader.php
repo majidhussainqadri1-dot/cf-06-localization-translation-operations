@@ -6,25 +6,27 @@ namespace Sabri\Localization;
 
 final class Autoloader
 {
-    private const PREFIX = 'Sabri\\Localization\\';
+    private static string $baseDirectory = '';
 
-    public static function register(string $sourceDirectory): void
+    public static function register(string $baseDirectory): void
     {
-        $base = rtrim($sourceDirectory, '/\\') . DIRECTORY_SEPARATOR;
+        self::$baseDirectory = rtrim($baseDirectory, '/\\') . DIRECTORY_SEPARATOR;
+        spl_autoload_register(array(self::class, 'load'));
+    }
 
-        spl_autoload_register(
-            static function (string $class) use ($base): void {
-                if (! str_starts_with($class, self::PREFIX)) {
-                    return;
-                }
-
-                $relative = substr($class, strlen(self::PREFIX));
-                $file     = $base . str_replace('\\', DIRECTORY_SEPARATOR, $relative) . '.php';
-
-                if (is_readable($file)) {
-                    require_once $file;
-                }
-            }
-        );
+    public static function load(string $class): void
+    {
+        $prefix = __NAMESPACE__ . '\\';
+        if (0 !== strncmp($class, $prefix, strlen($prefix))) {
+            return;
+        }
+        $relative = substr($class, strlen($prefix));
+        if (false === $relative || str_contains($relative, '..')) {
+            return;
+        }
+        $file = self::$baseDirectory . str_replace('\\', DIRECTORY_SEPARATOR, $relative) . '.php';
+        if (is_file($file)) {
+            require_once $file;
+        }
     }
 }

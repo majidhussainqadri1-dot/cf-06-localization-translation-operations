@@ -8,51 +8,39 @@ use InvalidArgumentException;
 
 final class FallbackChainValidator
 {
-    private const MAX_DEPTH = 8;
-
-    public static function assertValid(array $fallbackMap): void
+    public static function validate(string $locale, ?string $fallback, callable $lookup, int $maximumDepth = 8): void
     {
-        foreach ($fallbackMap as $tag => $fallback) {
-            if (null === $fallback || '' === $fallback) {
-                continue;
-            }
-            if (! array_key_exists($fallback, $fallbackMap)) {
-                throw new InvalidArgumentException('Fallback locale is not registered: ' . $fallback);
-            }
-            if ($tag === $fallback) {
-                throw new InvalidArgumentException('A locale cannot fall back to itself: ' . $tag);
-            }
-            self::walk($tag, $fallbackMap);
+        if (null === $fallback || '' === $fallback) {
+            return;
         }
-    }
-
-    public static function chainFor(string $tag, array $fallbackMap): array
-    {
-        self::assertValid($fallbackMap);
-        $chain = array();
-        $current = $tag;
-        while (isset($fallbackMap[$current]) && null !== $fallbackMap[$current] && '' !== $fallbackMap[$current]) {
-            $current = (string) $fallbackMap[$current];
-            $chain[] = $current;
+        $locale = LocaleValidator::canonicalize($locale) ?? '';
+        $fallback = LocaleValidator::canonicalize($fallback) ?? '';
+        if ('' === $locale || '' === $fallback) {
+            throw new InvalidArgumentException('Invalid fallback locale.');
         }
-        return $chain;
-    }
-
-    private static function walk(string $start, array $fallbackMap): void
-    {
-        $seen = array($start => true);
-        $current = $start;
-        $depth = 0;
-        while (isset($fallbackMap[$current]) && null !== $fallbackMap[$current] && '' !== $fallbackMap[$current]) {
-            $current = (string) $fallbackMap[$current];
-            ++$depth;
+        $seen = array($locale => true);
+        $current = $fallback;
+        for ($depth = 0; $depth <= $maximumDepth; $depth++) {
             if (isset($seen[$current])) {
-                throw new InvalidArgumentException('Cyclic locale fallback detected at: ' . $current);
-            }
-            if ($depth > self::MAX_DEPTH) {
-                throw new InvalidArgumentException('Locale fallback chain exceeds maximum depth.');
+                throw new InvalidArgumentException('Locale fallback cycle detected.');
             }
             $seen[$current] = true;
+            $record = $lookup($current);
+            if (! is_array($record)) {
+                throw new InvalidArgumentException('Fallback locale is not registered.');
+            }
+            if (! in_array((string) ($record['status'] ?? ''), array('enabled', 'content_ready', 'degraded'), true)) {
+                throw new InvalidArgumentException('Fallback locale is not eligible for resolution.');
+            }
+            $next = (string) ($record['fallback_tag'] ?? '');
+            if ('' === $next) {
+                return;
+            }
+            $current = LocaleValidator::canonicalize($next) ?? '';
+            if ('' === $current) {
+                throw new InvalidArgumentException('Invalid locale in fallback chain.');
+            }
         }
+        throw new InvalidArgumentException('Locale fallback chain exceeds the maximum depth.');
     }
 }

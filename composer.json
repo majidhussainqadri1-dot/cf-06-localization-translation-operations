@@ -6,17 +6,14 @@
   "require": {
     "php": ">=8.1"
   },
-  "require-dev": {
-    "phpunit/phpunit": "^10.5"
-  },
-  "autoload-dev": {
+  "autoload": {
     "psr-4": {
-      "Sabri\\Localization\\Tests\\": "tests/"
+      "Sabri\\Localization\\": "src/"
     }
   },
   "scripts": {
-    "test": "phpunit --configuration phpunit.xml.dist",
-    "lint": "find . -path './vendor' -prune -o -name '*.php' -print0 | xargs -0 -n1 php -l"
+    "test": "bash tools/quality-check.sh",
+    "package": "python3 tools/build-release.py"
   },
   "config": {
     "sort-packages": true,

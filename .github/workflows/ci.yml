@@ -1,8 +1,8 @@
-name: CF-06 Quality Gate
+name: CF-06 Complete Quality Gate
 
 on:
   push:
-    branches: [main, "codex/**"]
+    branches: [main, 'codex/**']
   pull_request:
 
 permissions:
@@ -10,60 +10,48 @@ permissions:
 
 jobs:
   quality:
+    name: quality (${{ matrix.php }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        php: ["8.1", "8.3"]
+        php: ['8.1', '8.3']
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
+      - uses: actions/checkout@v4
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
           coverage: none
-          tools: composer:v2
-
       - name: Validate Composer metadata
         run: composer validate --strict --no-check-publish
-
-      - name: Install test dependencies
-        run: composer install --no-interaction --prefer-dist --no-progress
-
-      - name: PHP syntax lint
-        run: composer lint
-
-      - name: Unit tests
-        run: composer test
-
-      - name: Secret-pattern guard
-        run: |
-          if grep -RInE --exclude-dir=.git --exclude-dir=vendor 'BEGIN (RSA|OPENSSH|EC) PRIVATE KEY|AKIA[0-9A-Z]{16}|gh[pousr]_[A-Za-z0-9_]{20,}' .; then
-            echo "Potential secret material detected."
-            exit 1
-          fi
+      - name: Exact-source quality gate
+        run: bash tools/quality-check.sh
 
   package:
-    runs-on: ubuntu-latest
+    name: deterministic package
     needs: quality
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Build deterministic candidate ZIP
+      - name: Build deterministic candidate
         run: |
-          mkdir -p build/sabri-localization-translation-operations
-          rsync -a ./ build/sabri-localization-translation-operations/ \
-            --exclude .git --exclude .github --exclude build --exclude vendor \
-            --exclude tests --exclude phpunit.xml.dist --exclude composer.lock
-          find build/sabri-localization-translation-operations -type f -exec touch -t 202608050000 {} +
-          cd build
-          zip -X -r cf-06-sabri-localization-translation-operations-0.1.0-FOUNDATION-CANDIDATE.zip sabri-localization-translation-operations
-          sha256sum cf-06-sabri-localization-translation-operations-0.1.0-FOUNDATION-CANDIDATE.zip > SHA256SUMS
-      - name: Upload candidate artifact
+          python3 tools/build-release.py
+          sha256sum -c <(head -n 1 dist/SHA256SUMS)
+          unzip -t dist/*.zip
+      - name: Rebuild parity
+        run: |
+          first=$(sha256sum dist/*.zip | awk '{print $1}')
+          python3 tools/build-release.py >/tmp/rebuild.txt
+          second=$(sha256sum dist/*.zip | awk '{print $1}')
+          test "$first" = "$second"
+      - name: Upload release evidence
         uses: actions/upload-artifact@v4
         with:
-          name: cf-06-foundation-candidate
+          name: cf-06-complete-source-candidate
           path: |
-            build/cf-06-sabri-localization-translation-operations-0.1.0-FOUNDATION-CANDIDATE.zip
-            build/SHA256SUMS
+            dist/*.zip
+            dist/MANIFEST.json
+            dist/SBOM.cdx.json
+            dist/SHA256SUMS
+          if-no-files-found: error
