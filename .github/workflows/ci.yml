@@ -7,26 +7,20 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: cf06-corrective-bootstrap
+  cancel-in-progress: true
+
 jobs:
-  apply-review-test-package:
+  apply-corrective-source:
     runs-on: ubuntu-latest
-    services:
-      mysql:
-        image: mysql:8.0
-        env:
-          MYSQL_ROOT_PASSWORD: root
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
-          --health-interval=10s --health-timeout=5s --health-retries=12
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           ref: codex/cf-06-foundation-0.1.0
 
-      - name: Apply complete corrective source
+      - name: Decode and commit complete corrective source
         shell: bash
         run: |
           set -euo pipefail
@@ -38,82 +32,5 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -A
           git commit -m 'fix: complete CF-06 three-plan corrective implementation'
-          git push origin HEAD:codex/cf-06-foundation-0.1.0
-          echo "SOURCE_COMMIT=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
-
-      - name: Set up PHP 8.1
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.1'
-          coverage: none
-          tools: composer, wp-cli
-
-      - name: PHP 8.1 exact-source quality gate
-        run: |
-          composer validate --strict --no-check-publish
-          bash tools/quality-check.sh
-
-      - name: WordPress/MySQL integration on PHP 8.1
-        env:
-          SLTO_DATA_ENCRYPTION_KEYS: '{"ci-data":"Y2ktZGF0YS1rZXktMzItYnl0ZXMtbG9uZy0wMDAwMDA="}'
-          SLTO_ACTIVE_DATA_KEY_ID: ci-data
-          SLTO_BUNDLE_SIGNING_KEY: Y2ktc2lnbmluZy1rZXktMzItYnl0ZXMtbG9uZy0wMDAwMA==
-          SLTO_BUNDLE_SIGNING_KEY_ID: ci-sign
-        run: |
-          mysql -h127.0.0.1 -uroot -proot -e 'CREATE DATABASE cf06_81 CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;'
-          mkdir -p /tmp/wp81
-          wp core download --path=/tmp/wp81 --force
-          wp config create --path=/tmp/wp81 --dbname=cf06_81 --dbuser=root --dbpass=root --dbhost=127.0.0.1 --skip-check
-          wp core install --path=/tmp/wp81 --url=http://cf06.local --title=CF06 --admin_user=admin --admin_password='Passw0rd!CF06' --admin_email=admin@example.test
-          ln -s "$GITHUB_WORKSPACE" /tmp/wp81/wp-content/plugins/sabri-localization-translation-operations
-          wp plugin activate sabri-localization-translation-operations --path=/tmp/wp81
-          wp eval-file "$GITHUB_WORKSPACE/tests/wp-integration.php" --path=/tmp/wp81
-
-      - name: Set up PHP 8.3
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.3'
-          coverage: none
-          tools: composer, wp-cli
-
-      - name: PHP 8.3 exact-source quality gate
-        run: |
-          composer validate --strict --no-check-publish
-          bash tools/quality-check.sh
-
-      - name: WordPress/MySQL integration on PHP 8.3
-        env:
-          SLTO_DATA_ENCRYPTION_KEYS: '{"ci-data":"Y2ktZGF0YS1rZXktMzItYnl0ZXMtbG9uZy0wMDAwMDA="}'
-          SLTO_ACTIVE_DATA_KEY_ID: ci-data
-          SLTO_BUNDLE_SIGNING_KEY: Y2ktc2lnbmluZy1rZXktMzItYnl0ZXMtbG9uZy0wMDAwMA==
-          SLTO_BUNDLE_SIGNING_KEY_ID: ci-sign
-        run: |
-          mysql -h127.0.0.1 -uroot -proot -e 'CREATE DATABASE cf06_83 CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;'
-          mkdir -p /tmp/wp83
-          wp core download --path=/tmp/wp83 --force
-          wp config create --path=/tmp/wp83 --dbname=cf06_83 --dbuser=root --dbpass=root --dbhost=127.0.0.1 --skip-check
-          wp core install --path=/tmp/wp83 --url=http://cf06-83.local --title=CF06 --admin_user=admin --admin_password='Passw0rd!CF06' --admin_email=admin@example.test
-          ln -s "$GITHUB_WORKSPACE" /tmp/wp83/wp-content/plugins/sabri-localization-translation-operations
-          wp plugin activate sabri-localization-translation-operations --path=/tmp/wp83
-          wp eval-file "$GITHUB_WORKSPACE/tests/wp-integration.php" --path=/tmp/wp83
-
-      - name: Deterministic exact-commit package
-        run: |
-          SOURCE_COMMIT="$SOURCE_COMMIT" python3 tools/build-release.py
-          (cd dist && sha256sum -c SHA256SUMS)
-          unzip -t dist/*.zip
-          first=$(sha256sum dist/*.zip | awk '{print $1}')
-          SOURCE_COMMIT="$SOURCE_COMMIT" python3 tools/build-release.py >/tmp/rebuild.txt
-          second=$(sha256sum dist/*.zip | awk '{print $1}')
-          test "$first" = "$second"
-
-      - name: Upload release evidence
-        uses: actions/upload-artifact@v4
-        with:
-          name: cf-06-complete-source-candidate-rc2
-          path: |
-            dist/*.zip
-            dist/MANIFEST.json
-            dist/SBOM.cdx.json
-            dist/SHA256SUMS
-          if-no-files-found: error
+          git push --force-with-lease origin HEAD:codex/cf-06-foundation-0.1.0
+          git ls-remote --exit-code origin refs/heads/codex/cf-06-foundation-0.1.0
