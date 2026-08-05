@@ -8,7 +8,7 @@ php -r '$j=json_decode(file_get_contents("composer.json"),true,512,JSON_THROW_ON
 echo '== PHP syntax =='
 find . -path './dist' -prune -o -path './vendor' -prune -o -name '*.php' -print0 | sort -z | xargs -0 -n1 php -l
 
-echo '== Unit and contract tests =='
+echo '== Unit, contract, integration-contract and adversarial tests =='
 php tests/run-unit.php
 php tests/contracts.php
 php tests/review-round-1-ownership.php
@@ -22,7 +22,46 @@ if grep -RInE --exclude-dir=.git --exclude-dir=dist --exclude-dir=tests --exclud
   exit 1
 fi
 
-echo '== Documentation traceability =='
-for n in $(seq -w 1 34); do grep -q "CF06-FR-0${n}" docs/REQUIREMENTS-TRACEABILITY.md; done
+echo '== Requirement traceability and stale-evidence guard =='
+python3 - <<'PY'
+from pathlib import Path
+
+root = Path('.')
+rtm = (root / 'docs/REQUIREMENTS-TRACEABILITY.md').read_text(encoding='utf-8')
+missing = [f'CF06-FR-{i:03d}' for i in range(1, 35) if f'CF06-FR-{i:03d}' not in rtm]
+if missing:
+    raise SystemExit('Missing requirements: ' + ', '.join(missing))
+
+stale = (
+    '1.0.0-rc.1',
+    '5d994a98dd951a63fb86452655fd18c6895a45e4',
+    '45aca0b7881214756db301e836be6446dc98fd8e',
+)
+stale_hits = []
+for path in root.rglob('*'):
+    if not path.is_file() or '.git' in path.parts or 'dist' in path.parts or path.name == 'quality-check.sh':
+        continue
+    text = path.read_text(encoding='utf-8', errors='ignore')
+    for needle in stale:
+        if needle in text:
+            stale_hits.append(f'{path}:{needle}')
+if stale_hits:
+    raise SystemExit('Stale completion evidence: ' + '; '.join(stale_hits))
+
+required = {
+    'src/Contract/Manifest.php': ['private_or_high_risk_external_mt'],
+    'src/Application/IntegrationService.php': ['slto_verify_integration_acceptance_evidence'],
+    'src/Application/ExtractionService.php': ['slto_verify_extraction_evidence'],
+    'src/Application/QaEvidenceService.php': ['environment_name'],
+    'src/Application/BundleService.php': ["'performance'"],
+    'src/Application/ReleaseApprovalService.php': ['evidence_ref'],
+}
+for filename, needles in required.items():
+    text = (root / filename).read_text(encoding='utf-8')
+    for needle in needles:
+        if needle not in text:
+            raise SystemExit(f'Missing guard {needle!r} in {filename}')
+print('Traceability and evidence guard OK')
+PY
 
 echo 'QUALITY GATE PASS'
