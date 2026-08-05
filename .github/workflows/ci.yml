@@ -50,7 +50,22 @@ jobs:
         run: composer validate --strict --no-check-publish
 
       - name: Exact-source quality gate
-        run: bash tools/quality-check.sh
+        id: source_quality
+        shell: bash
+        run: |
+          set +e
+          bash tools/quality-check.sh 2>&1 | tee "quality-${{ matrix.php }}.log"
+          code=${PIPESTATUS[0]}
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          exit "$code"
+
+      - name: Upload source-quality diagnostic
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quality-log-${{ matrix.php }}
+          path: quality-${{ matrix.php }}.log
+          if-no-files-found: warn
 
       - name: Install WordPress and run MySQL integration suite
         shell: bash
