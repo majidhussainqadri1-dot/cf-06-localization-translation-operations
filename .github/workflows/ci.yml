@@ -30,10 +30,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cat .cf06-payload/part-* | base64 -d > /tmp/cf06-corrections.tar.gz
+          cat .cf06-payload/part-00 .cf06-payload/part-01-fixed .cf06-payload/part-{02..11} | base64 -d > /tmp/cf06-corrections.tar.gz
           echo '5d461cad54d64456a19ef900e3cd33b3fb9f3d180f10b94d9e7c194f37820724  /tmp/cf06-corrections.tar.gz' | sha256sum -c -
           tar -xzf /tmp/cf06-corrections.tar.gz -C .
-          rm -rf .cf06-payload
+          rm -rf .cf06-payload .cf06-fixed
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -A
