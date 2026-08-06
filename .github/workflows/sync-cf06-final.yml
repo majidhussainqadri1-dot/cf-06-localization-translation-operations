@@ -29,7 +29,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cat .cf06-sync/part-* | base64 --decode > /tmp/cf06-final.tar.gz
+          cat .cf06-sync/part-* | tr -cd 'A-Za-z0-9+/=' | base64 --decode > /tmp/cf06-final.tar.gz
           echo 'b7c7117b3dd829a58f90b6e34fa5bffa175117b2f55dc3081a31c849341948fe  /tmp/cf06-final.tar.gz' | sha256sum -c -
           tar -xzf /tmp/cf06-final.tar.gz -C .
           chmod +x tools/quality-check.sh tools/build-release.py
