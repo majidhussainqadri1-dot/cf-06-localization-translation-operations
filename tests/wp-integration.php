@@ -1,7 +1,5 @@
 <?php
 
-declare(strict_types=1);
-
 use Sabri\Localization\Application\IntegrationService;
 use Sabri\Localization\Infrastructure\Activator;
 use Sabri\Localization\Infrastructure\Database;
