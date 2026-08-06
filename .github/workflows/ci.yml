@@ -118,7 +118,7 @@ jobs:
       - name: Upload release evidence
         uses: actions/upload-artifact@v4
         with:
-          name: cf-06-complete-source-candidate-rc2
+          name: cf-06-complete-source-candidate-rc3
           path: |
             dist/*.zip
             dist/MANIFEST.json
