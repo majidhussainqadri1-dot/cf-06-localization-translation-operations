@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 import pathlib
+import re
 import shutil
 import sys
 import zipfile
@@ -17,6 +18,7 @@ PACKAGE_DIR = "sabri-localization-translation-operations"
 VERSION = "1.0.0-rc.3"
 ZIP_NAME = f"cf-06-sabri-localization-translation-operations-{VERSION}-SOURCE-CANDIDATE.zip"
 FIXED_TIME = (2026, 8, 6, 0, 0, 0)
+SOURCE_COMMIT = os.environ.get("SOURCE_COMMIT", "").strip()
 
 EXCLUDE_PARTS = {
     ".git", ".github", "tests", "tools", "dist", "vendor", ".idea", ".vscode"
@@ -55,6 +57,14 @@ def write_json(path: pathlib.Path, payload: object) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False, sort_keys=True, indent=2) + "\n", encoding="utf-8")
 
 
+def validated_source_commit() -> str:
+    if not SOURCE_COMMIT:
+        return "local-unbound"
+    if re.fullmatch(r"[0-9a-f]{40}", SOURCE_COMMIT) is None:
+        raise RuntimeError("SOURCE_COMMIT must be a lowercase 40-character Git SHA")
+    return SOURCE_COMMIT
+
+
 def build() -> pathlib.Path:
     DIST.mkdir(exist_ok=True)
     for old in DIST.iterdir():
@@ -76,6 +86,7 @@ def build() -> pathlib.Path:
         "contract_version": "1.1.0",
         "runtime_default": "disabled",
         "build_epoch": "2026-08-06T00:00:00Z",
+        "source_commit": validated_source_commit(),
         "requirements": {"first": "CF06-FR-001", "last": "CF06-FR-034", "count": 34},
         "files": manifest_files,
     }
@@ -97,6 +108,7 @@ def build() -> pathlib.Path:
                 "properties": [
                     {"name": "sabri:runtime-default", "value": "disabled"},
                     {"name": "sabri:contract-version", "value": "1.1.0"},
+                    {"name": "sabri:source-commit", "value": validated_source_commit()},
                 ],
             },
         },
