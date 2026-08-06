@@ -92,7 +92,10 @@ final class Activator
                 row_version bigint(20) unsigned NOT NULL DEFAULT 1,
                 created_at datetime NOT NULL,
                 updated_at datetime NOT NULL,
-                PRIMARY KEY  (id), UNIQUE KEY uuid (uuid), UNIQUE KEY locale_tag (locale_tag), KEY status (status)
+                PRIMARY KEY  (id),
+                UNIQUE KEY uuid (uuid),
+                UNIQUE KEY locale_tag (locale_tag),
+                KEY status (status)
             ) {$c};",
             "CREATE TABLE {$t('resources')} (
                 id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -119,7 +122,12 @@ final class Activator
                 row_version bigint(20) unsigned NOT NULL DEFAULT 1,
                 created_at datetime NOT NULL,
                 updated_at datetime NOT NULL,
-                PRIMARY KEY  (id), UNIQUE KEY uuid (uuid), UNIQUE KEY resource_key (resource_key), KEY source_locale (source_locale), KEY domain_risk (domain_name,risk_class), KEY status (status)
+                PRIMARY KEY  (id),
+                UNIQUE KEY uuid (uuid),
+                UNIQUE KEY resource_key (resource_key),
+                KEY source_locale (source_locale),
+                KEY domain_risk (domain_name,risk_class),
+                KEY status (status)
             ) {$c};",
             "CREATE TABLE {$t('secure_payloads')} (
                 id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -137,7 +145,10 @@ final class Activator
                 created_at datetime NOT NULL,
                 expires_at datetime NULL,
                 deleted_at datetime NULL,
-                PRIMARY KEY  (id), UNIQUE KEY uuid (uuid), KEY owner_lookup (owner_type,owner_uuid), KEY expires_at (expires_at)
+                PRIMARY KEY  (id),
+                UNIQUE KEY uuid (uuid),
+                KEY owner_lookup (owner_type,owner_uuid),
+                KEY expires_at (expires_at)
             ) {$c};",
             "CREATE TABLE {$t('projects')} (
                 id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -158,7 +169,10 @@ final class Activator
                 row_version bigint(20) unsigned NOT NULL DEFAULT 1,
                 created_at datetime NOT NULL,
                 updated_at datetime NOT NULL,
-                PRIMARY KEY  (id), UNIQUE KEY uuid (uuid), KEY status_due (status,due_at), KEY owner_id (owner_id)
+                PRIMARY KEY  (id),
+                UNIQUE KEY uuid (uuid),
+                KEY status_due (status,due_at),
+                KEY owner_id (owner_id)
             ) {$c};",
             "CREATE TABLE {$t('project_resources')} (
                 id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -168,7 +182,10 @@ final class Activator
                 source_version bigint(20) unsigned NOT NULL,
                 source_hash char(64) NOT NULL,
                 created_at datetime NOT NULL,
-                PRIMARY KEY  (id), UNIQUE KEY uuid (uuid), UNIQUE KEY project_resource (project_uuid,resource_uuid), KEY resource_uuid (resource_uuid)
+                PRIMARY KEY  (id),
+                UNIQUE KEY uuid (uuid),
+                UNIQUE KEY project_resource (project_uuid,resource_uuid),
+                KEY resource_uuid (resource_uuid)
             ) {$c};",
             "CREATE TABLE {$t('units')} (
                 id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -192,7 +209,11 @@ final class Activator
                 row_version bigint(20) unsigned NOT NULL DEFAULT 1,
                 created_at datetime NOT NULL,
                 updated_at datetime NOT NULL,
-                PRIMARY KEY  (id), UNIQUE KEY uuid (uuid), UNIQUE KEY resource_locale_project (project_uuid,resource_uuid,target_locale), KEY queue (target_locale,status), KEY resource_uuid (resource_uuid)
+                PRIMARY KEY  (id),
+                UNIQUE KEY uuid (uuid),
+                UNIQUE KEY resource_locale_project (project_uuid,resource_uuid,target_locale),
+                KEY queue (target_locale,status),
+                KEY resource_uuid (resource_uuid)
             ) {$c};",
             "CREATE TABLE {$t('assignments')} (
                 id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -211,7 +232,10 @@ final class Activator
                 created_by bigint(20) unsigned NOT NULL,
                 created_at datetime NOT NULL,
                 updated_at datetime NOT NULL,
-                PRIMARY KEY  (id), UNIQUE KEY uuid (uuid), UNIQUE KEY unit_role (unit_uuid,assignment_role), KEY assignee_queue (assignee_id,status,due_at)
+                PRIMARY KEY  (id),
+                UNIQUE KEY uuid (uuid),
+                UNIQUE KEY unit_role (unit_uuid,assignment_role),
+                KEY assignee_queue (assignee_id,status,due_at)
             ) {$c};",
             "CREATE TABLE {$t('comments')} (
                 id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -226,7 +250,9 @@ final class Activator
                 row_version bigint(20) unsigned NOT NULL DEFAULT 1,
                 created_at datetime NOT NULL,
                 updated_at datetime NOT NULL,
-                PRIMARY KEY  (id), UNIQUE KEY uuid (uuid), KEY unit_status (unit_uuid,status)
+                PRIMARY KEY  (id),
+                UNIQUE KEY uuid (uuid),
+                KEY unit_status (unit_uuid,status)
             ) {$c};",
             "CREATE TABLE {$t('terminology')} (
                 id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -250,7 +276,10 @@ final class Activator
                 row_version bigint(20) unsigned NOT NULL DEFAULT 1,
                 created_at datetime NOT NULL,
                 updated_at datetime NOT NULL,
-                PRIMARY KEY  (id), UNIQUE KEY uuid (uuid), UNIQUE KEY concept_locale (concept_id,target_locale,term_version), KEY lookup_term (target_locale,domain_name,status)
+                PRIMARY KEY  (id),
+                UNIQUE KEY uuid (uuid),
+                UNIQUE KEY concept_locale (concept_id,target_locale,term_version),
+                KEY lookup_term (target_locale,domain_name,status)
             ) {$c};",
             "CREATE TABLE {$t('style_guides')} (
                 id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -267,7 +296,10 @@ final class Activator
                 row_version bigint(20) unsigned NOT NULL DEFAULT 1,
                 created_at datetime NOT NULL,
                 updated_at datetime NOT NULL,
-                PRIMARY KEY  (id), UNIQUE KEY uuid (uuid), UNIQUE KEY locale_domain_version (locale_tag,domain_name,guide_version), KEY current_guide (locale_tag,domain_name,status)
+                PRIMARY KEY  (id),
+                UNIQUE KEY uuid (uuid),
+                UNIQUE KEY locale_domain_version (locale_tag,domain_name,guide_version),
+                KEY current_guide (locale_tag,domain_name,status)
             ) {$c};",
             "CREATE TABLE {$t('memory')} (
                 id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -286,7 +318,10 @@ final class Activator
                 created_from_unit_uuid char(36) NULL,
                 created_at datetime NOT NULL,
                 updated_at datetime NOT NULL,
-                PRIMARY KEY  (id), UNIQUE KEY uuid (uuid), KEY suggestion (source_locale,target_locale,domain_name,status), KEY source_hash (source_hash)
+                PRIMARY KEY  (id),
+                UNIQUE KEY uuid (uuid),
+                KEY suggestion (source_locale,target_locale,domain_name,status),
+                KEY source_hash (source_hash)
             ) {$c};",
             "CREATE TABLE {$t('providers')} (
                 id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -305,7 +340,10 @@ final class Activator
                 row_version bigint(20) unsigned NOT NULL DEFAULT 1,
                 created_at datetime NOT NULL,
                 updated_at datetime NOT NULL,
-                PRIMARY KEY  (id), UNIQUE KEY uuid (uuid), UNIQUE KEY provider_key (provider_key), KEY status (status)
+                PRIMARY KEY  (id),
+                UNIQUE KEY uuid (uuid),
+                UNIQUE KEY provider_key (provider_key),
+                KEY status (status)
             ) {$c};",
             "CREATE TABLE {$t('vendor_jobs')} (
                 id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -327,7 +365,10 @@ final class Activator
                 created_at datetime NOT NULL,
                 updated_at datetime NOT NULL,
                 purge_due_at datetime NULL,
-                PRIMARY KEY  (id), UNIQUE KEY uuid (uuid), KEY provider_status (provider_key,status), KEY purge_due_at (purge_due_at)
+                PRIMARY KEY  (id),
+                UNIQUE KEY uuid (uuid),
+                KEY provider_status (provider_key,status),
+                KEY purge_due_at (purge_due_at)
             ) {$c};",
             "CREATE TABLE {$t('bundles')} (
                 id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -349,7 +390,10 @@ final class Activator
                 row_version bigint(20) unsigned NOT NULL DEFAULT 1,
                 created_at datetime NOT NULL,
                 updated_at datetime NOT NULL,
-                PRIMARY KEY  (id), UNIQUE KEY uuid (uuid), UNIQUE KEY locale_version (locale_tag,bundle_version), KEY active_lookup (locale_tag,status)
+                PRIMARY KEY  (id),
+                UNIQUE KEY uuid (uuid),
+                UNIQUE KEY locale_version (locale_tag,bundle_version),
+                KEY active_lookup (locale_tag,status)
             ) {$c};",
             "CREATE TABLE {$t('qa_results')} (
                 id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -363,7 +407,10 @@ final class Activator
                 reviewer_id bigint(20) unsigned NULL,
                 fixed_at datetime NULL,
                 created_at datetime NOT NULL,
-                PRIMARY KEY  (id), UNIQUE KEY uuid (uuid), KEY target_lookup (target_type,target_uuid), KEY result_severity (result,severity)
+                PRIMARY KEY  (id),
+                UNIQUE KEY uuid (uuid),
+                KEY target_lookup (target_type,target_uuid),
+                KEY result_severity (result,severity)
             ) {$c};",
             "CREATE TABLE {$t('feedback')} (
                 id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -381,7 +428,10 @@ final class Activator
                 row_version bigint(20) unsigned NOT NULL DEFAULT 1,
                 created_at datetime NOT NULL,
                 updated_at datetime NOT NULL,
-                PRIMARY KEY  (id), UNIQUE KEY uuid (uuid), KEY queue (status,severity,created_at), KEY locale_tag (locale_tag)
+                PRIMARY KEY  (id),
+                UNIQUE KEY uuid (uuid),
+                KEY queue (status,severity,created_at),
+                KEY locale_tag (locale_tag)
             ) {$c};",
             "CREATE TABLE {$t('content_links')} (
                 id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -402,7 +452,10 @@ final class Activator
                 row_version bigint(20) unsigned NOT NULL DEFAULT 1,
                 created_at datetime NOT NULL,
                 updated_at datetime NOT NULL,
-                PRIMARY KEY  (id), UNIQUE KEY uuid (uuid), UNIQUE KEY owner_locale (owner_module,owner_object_id,target_locale), KEY publication_status (publication_status)
+                PRIMARY KEY  (id),
+                UNIQUE KEY uuid (uuid),
+                UNIQUE KEY owner_locale (owner_module,owner_object_id,target_locale),
+                KEY publication_status (publication_status)
             ) {$c};",
             "CREATE TABLE {$t('integration_evidence')} (
                 id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -420,7 +473,10 @@ final class Activator
                 row_version bigint(20) unsigned NOT NULL DEFAULT 1,
                 created_at datetime NOT NULL,
                 updated_at datetime NOT NULL,
-                PRIMARY KEY  (id), UNIQUE KEY uuid (uuid), UNIQUE KEY integration_key (integration_key), KEY status_expiry (status,expires_at)
+                PRIMARY KEY  (id),
+                UNIQUE KEY uuid (uuid),
+                UNIQUE KEY integration_key (integration_key),
+                KEY status_expiry (status,expires_at)
             ) {$c};",
             "CREATE TABLE {$t('extraction_evidence')} (
                 id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -439,7 +495,10 @@ final class Activator
                 row_version bigint(20) unsigned NOT NULL DEFAULT 1,
                 created_at datetime NOT NULL,
                 updated_at datetime NOT NULL,
-                PRIMARY KEY  (id), UNIQUE KEY uuid (uuid), UNIQUE KEY module_commit_hash (owner_module,source_commit,extraction_hash), KEY owner_status (owner_module,status)
+                PRIMARY KEY  (id),
+                UNIQUE KEY uuid (uuid),
+                UNIQUE KEY module_commit_hash (owner_module,source_commit,extraction_hash),
+                KEY owner_status (owner_module,status)
             ) {$c};",
             "CREATE TABLE {$t('qa_evidence')} (
                 id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -458,7 +517,10 @@ final class Activator
                 reviewer_id bigint(20) unsigned NOT NULL,
                 details_json longtext NULL,
                 created_at datetime NOT NULL,
-                PRIMARY KEY  (id), UNIQUE KEY uuid (uuid), KEY target_environment (target_type,target_uuid,environment_name), KEY result_test (result,test_id)
+                PRIMARY KEY  (id),
+                UNIQUE KEY uuid (uuid),
+                KEY target_environment (target_type,target_uuid,environment_name),
+                KEY result_test (result,test_id)
             ) {$c};",
             "CREATE TABLE {$t('release_approvals')} (
                 id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -474,7 +536,11 @@ final class Activator
                 row_version bigint(20) unsigned NOT NULL DEFAULT 1,
                 created_at datetime NOT NULL,
                 updated_at datetime NOT NULL,
-                PRIMARY KEY  (id), UNIQUE KEY uuid (uuid), UNIQUE KEY bundle_role (bundle_uuid,approval_role), KEY bundle_status (bundle_uuid,status), KEY approver_id (approver_id)
+                PRIMARY KEY  (id),
+                UNIQUE KEY uuid (uuid),
+                UNIQUE KEY bundle_role (bundle_uuid,approval_role),
+                KEY bundle_status (bundle_uuid,status),
+                KEY approver_id (approver_id)
             ) {$c};",
             "CREATE TABLE {$t('audit')} (
                 id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -490,7 +556,11 @@ final class Activator
                 previous_hash char(64) NOT NULL DEFAULT '',
                 event_hash char(64) NOT NULL,
                 created_at datetime NOT NULL,
-                PRIMARY KEY  (id), UNIQUE KEY uuid (uuid), KEY trace_id (trace_id), KEY object_lookup (object_type,object_key), KEY created_at (created_at)
+                PRIMARY KEY  (id),
+                UNIQUE KEY uuid (uuid),
+                KEY trace_id (trace_id),
+                KEY object_lookup (object_type,object_key),
+                KEY created_at (created_at)
             ) {$c};",
             "CREATE TABLE {$t('outbox')} (
                 id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -509,7 +579,10 @@ final class Activator
                 delivered_at datetime NULL,
                 last_error text NULL,
                 created_at datetime NOT NULL,
-                PRIMARY KEY  (id), UNIQUE KEY uuid (uuid), KEY dispatch_queue (status,available_at), KEY lease_until (lease_until)
+                PRIMARY KEY  (id),
+                UNIQUE KEY uuid (uuid),
+                KEY dispatch_queue (status,available_at),
+                KEY lease_until (lease_until)
             ) {$c};",
             "CREATE TABLE {$t('jobs')} (
                 id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -526,7 +599,11 @@ final class Activator
                 last_error text NULL,
                 created_at datetime NOT NULL,
                 updated_at datetime NOT NULL,
-                PRIMARY KEY  (id), UNIQUE KEY uuid (uuid), UNIQUE KEY job_dedupe (job_type,dedupe_key), KEY queue (status,available_at), KEY lease_until (lease_until)
+                PRIMARY KEY  (id),
+                UNIQUE KEY uuid (uuid),
+                UNIQUE KEY job_dedupe (job_type,dedupe_key),
+                KEY queue (status,available_at),
+                KEY lease_until (lease_until)
             ) {$c};",
             "CREATE TABLE {$t('idempotency')} (
                 id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -539,7 +616,9 @@ final class Activator
                 status varchar(24) NOT NULL DEFAULT 'processing',
                 created_at datetime NOT NULL,
                 expires_at datetime NOT NULL,
-                PRIMARY KEY  (id), UNIQUE KEY actor_route_key (actor_id,route_key,idempotency_key), KEY expires_at (expires_at)
+                PRIMARY KEY  (id),
+                UNIQUE KEY actor_route_key (actor_id,route_key,idempotency_key),
+                KEY expires_at (expires_at)
             ) {$c};",
             "CREATE TABLE {$t('rate_limits')} (
                 id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -547,7 +626,8 @@ final class Activator
                 window_start bigint(20) unsigned NOT NULL,
                 request_count int unsigned NOT NULL DEFAULT 0,
                 updated_at datetime NOT NULL,
-                PRIMARY KEY  (id), UNIQUE KEY bucket_window (bucket_key,window_start)
+                PRIMARY KEY  (id),
+                UNIQUE KEY bucket_window (bucket_key,window_start)
             ) {$c};",
             "CREATE TABLE {$t('migrations')} (
                 id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -559,7 +639,9 @@ final class Activator
                 started_at datetime NULL,
                 completed_at datetime NULL,
                 updated_at datetime NOT NULL,
-                PRIMARY KEY  (id), UNIQUE KEY migration_key (migration_key), KEY status (status)
+                PRIMARY KEY  (id),
+                UNIQUE KEY migration_key (migration_key),
+                KEY status (status)
             ) {$c};",
         );
     }
