@@ -36,6 +36,14 @@ jobs:
           tar -xzf /tmp/cf06-final.tar.gz -C .
           chmod +x tools/quality-check.sh tools/build-release.py
 
+      - name: Normalize documentation whitespace
+        shell: bash
+        run: |
+          set -euo pipefail
+          sed -i 's/[[:space:]]\+$//' \
+            docs/CODING-COMPLETE-REVIEW-AND-CORRECTION.md \
+            docs/FORTY-ROUND-REVIEW-CORRECTION-LEDGER.md
+
       - name: Remove temporary and superseded payload material
         shell: bash
         run: |
