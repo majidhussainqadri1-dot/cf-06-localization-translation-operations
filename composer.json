@@ -1,0 +1,22 @@
+{
+  "name": "sabri-platform/cf-06-localization-translation-operations",
+  "description": "Conditional localization and translation operations module for the Sabri Social Homeopathy Platform.",
+  "type": "wordpress-plugin",
+  "license": "GPL-2.0-or-later",
+  "require": {
+    "php": ">=8.1"
+  },
+  "autoload": {
+    "psr-4": {
+      "Sabri\\Localization\\": "src/"
+    }
+  },
+  "scripts": {
+    "test": "bash tools/quality-check.sh",
+    "package": "python3 tools/build-release.py"
+  },
+  "config": {
+    "sort-packages": true,
+    "allow-plugins": false
+  }
+}
