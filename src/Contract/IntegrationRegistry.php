@@ -4,20 +4,22 @@ declare(strict_types=1);
 
 namespace Sabri\Localization\Contract;
 
+/**
+ * Compatibility facade. Verified readiness is supplied by IntegrationService;
+ * bare booleans from filters are never accepted as release evidence.
+ */
 final class IntegrationRegistry
 {
-    public static function readiness(): array
+    public static function required(): array
     {
-        $defaults = array(
-            'file00_membership' => false,
-            'file20_shell' => false,
-            'file24_assurance' => false,
-            'file25_visual' => false,
-            'file26_search' => false,
-            'domain_contracts' => false,
+        return array(
+            'file00_membership',
+            'file20_shell',
+            'file24_assurance',
+            'file25_visual',
+            'file26_search',
+            'domain_contracts',
         );
-        $readiness = apply_filters('slto_integration_readiness', $defaults, Manifest::get());
-        return is_array($readiness) ? array_merge($defaults, $readiness) : $defaults;
     }
 
     public static function publishManifest(): void

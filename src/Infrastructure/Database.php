@@ -30,6 +30,10 @@ final class Database
         'idempotency' => 'slto_idempotency',
         'rate_limits' => 'slto_rate_limits',
         'migrations' => 'slto_migrations',
+        'integration_evidence' => 'slto_integration_evidence',
+        'extraction_evidence' => 'slto_extraction_evidence',
+        'qa_evidence' => 'slto_qa_evidence',
+        'release_approvals' => 'slto_release_approvals',
     );
 
     public static function table(string $entity): string

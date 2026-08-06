@@ -14,9 +14,9 @@ from datetime import datetime, timezone
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
 PACKAGE_DIR = "sabri-localization-translation-operations"
-VERSION = "1.0.0-rc.1"
+VERSION = "1.0.0-rc.3"
 ZIP_NAME = f"cf-06-sabri-localization-translation-operations-{VERSION}-SOURCE-CANDIDATE.zip"
-FIXED_TIME = (2026, 8, 5, 0, 0, 0)
+FIXED_TIME = (2026, 8, 6, 0, 0, 0)
 
 EXCLUDE_PARTS = {
     ".git", ".github", "tests", "tools", "dist", "vendor", ".idea", ".vscode"
@@ -72,10 +72,10 @@ def build() -> pathlib.Path:
     manifest = {
         "module": "CF-06 — Localization and Translation Operations",
         "plugin_version": VERSION,
-        "schema_version": "1.0.0",
-        "contract_version": "1.0.0",
+        "schema_version": "1.0.1",
+        "contract_version": "1.1.0",
         "runtime_default": "disabled",
-        "build_epoch": "2026-08-05T00:00:00Z",
+        "build_epoch": "2026-08-06T00:00:00Z",
         "requirements": {"first": "CF06-FR-001", "last": "CF06-FR-034", "count": 34},
         "files": manifest_files,
     }
@@ -88,7 +88,7 @@ def build() -> pathlib.Path:
         "serialNumber": "urn:uuid:cf060000-0000-4000-8000-000000000001",
         "version": 1,
         "metadata": {
-            "timestamp": "2026-08-05T00:00:00Z",
+            "timestamp": "2026-08-06T00:00:00Z",
             "component": {
                 "type": "application",
                 "name": "sabri-localization-translation-operations",
@@ -96,7 +96,7 @@ def build() -> pathlib.Path:
                 "licenses": [{"license": {"id": "GPL-2.0-or-later"}}],
                 "properties": [
                     {"name": "sabri:runtime-default", "value": "disabled"},
-                    {"name": "sabri:contract-version", "value": "1.0.0"},
+                    {"name": "sabri:contract-version", "value": "1.1.0"},
                 ],
             },
         },

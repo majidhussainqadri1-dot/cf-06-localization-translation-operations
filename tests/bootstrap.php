@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 if (! defined('SABRI_SLTO_CONTRACT_VERSION')) {
-    define('SABRI_SLTO_CONTRACT_VERSION', '1.0.0');
+    define('SABRI_SLTO_CONTRACT_VERSION', '1.1.0');
 }
 if (! defined('SLTO_BUNDLE_SIGNING_KEY')) {
     define('SLTO_BUNDLE_SIGNING_KEY', base64_encode(str_repeat('k', 32)));

@@ -15,6 +15,7 @@ php tests/review-round-1-ownership.php
 php tests/review-round-2-security.php
 php tests/review-round-3-lifecycle.php
 php tests/review-round-4-acceptance.php
+php tests/review-rounds-40.php
 
 echo '== Secret-pattern guard =='
 if grep -RInE --exclude-dir=.git --exclude-dir=dist --exclude-dir=tests --exclude='quality-check.sh' '(BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{20,}|sk_live_[A-Za-z0-9]{12,}|xox[baprs]-[A-Za-z0-9-]{10,})' .; then
@@ -27,6 +28,14 @@ for i in $(seq 1 34); do
   id=$(printf 'CF06-FR-%03d' "$i")
   grep -Fq "$id" docs/REQUIREMENTS-TRACEABILITY.md || { echo "Missing $id" >&2; exit 1; }
 done
+
+echo '== Repository hygiene and version coherence =='
+test ! -e .cf06-payload
+test ! -e .cf06-fixed
+test ! -e .github/workflows/export-source-for-review.yml
+grep -Fq 'Version:           1.0.0-rc.3' sabri-localization-translation-operations.php
+grep -Fq "SABRI_SLTO_SCHEMA_VERSION', '1.0.1" sabri-localization-translation-operations.php
+grep -Fq "SABRI_SLTO_CONTRACT_VERSION', '1.1.0" sabri-localization-translation-operations.php
 
 echo '== Critical corrective guards =='
 grep -Fq 'private_or_high_risk_external_mt' src/Contract/Manifest.php

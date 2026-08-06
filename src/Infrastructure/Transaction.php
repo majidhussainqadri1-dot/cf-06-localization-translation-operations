@@ -8,10 +8,11 @@ use RuntimeException;
 use Throwable;
 
 /**
- * Small transaction coordinator with savepoint-backed nested transactions.
+ * Savepoint-backed transaction coordinator.
  *
- * Application services may compose other services without accidentally
- * committing an outer operation. MySQL/MariaDB savepoints preserve atomicity.
+ * Depth is changed exactly once per scope. Commit and rollback failures are
+ * treated as integrity failures and the coordinator is reset at the root so a
+ * failed operation cannot poison later requests in the same PHP process.
  */
 final class Transaction
 {
@@ -22,29 +23,37 @@ final class Transaction
         global $wpdb;
 
         $isRoot = 0 === self::$depth;
-        $savepoint = 'slto_sp_' . self::$depth;
-        $statement = $isRoot ? 'START TRANSACTION' : 'SAVEPOINT ' . $savepoint;
+        $level = self::$depth;
+        $savepoint = 'slto_sp_' . $level;
+        $begin = $isRoot ? 'START TRANSACTION' : 'SAVEPOINT ' . $savepoint;
 
-        if (false === $wpdb->query($statement)) {
+        if (false === $wpdb->query($begin)) {
             throw new RuntimeException('Localization transaction could not be started.');
         }
 
-        ++self::$depth;
+        self::$depth = $level + 1;
+        $completed = false;
 
         try {
             $result = $callback();
-            --self::$depth;
-
             $commit = $isRoot ? 'COMMIT' : 'RELEASE SAVEPOINT ' . $savepoint;
             if (false === $wpdb->query($commit)) {
                 throw new RuntimeException('Localization transaction could not be committed.');
             }
-
+            $completed = true;
             return $result;
         } catch (Throwable $throwable) {
-            --self::$depth;
-            $wpdb->query($isRoot ? 'ROLLBACK' : 'ROLLBACK TO SAVEPOINT ' . $savepoint);
+            $rollback = $isRoot ? 'ROLLBACK' : 'ROLLBACK TO SAVEPOINT ' . $savepoint;
+            $rolledBack = $wpdb->query($rollback);
+            if (false === $rolledBack) {
+                throw new RuntimeException('Localization transaction rollback failed.', 0, $throwable);
+            }
             throw $throwable;
+        } finally {
+            self::$depth = $isRoot ? 0 : $level;
+            if (! $completed && self::$depth < 0) {
+                self::$depth = 0;
+            }
         }
     }
 }

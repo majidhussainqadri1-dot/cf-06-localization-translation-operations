@@ -1,21 +1,28 @@
 # Changelog
 
-## 1.0.0-rc.1 — Complete source candidate
+## 1.0.0-rc.3 — Forty-round corrected source candidate
 
-- Implemented and traced CF06-FR-001 through CF06-FR-034.
-- Added the complete locale, resource, project, unit, assignment, terminology, style-guide, translation-memory, provider, vendor-job, bundle, feedback and content-link data model.
-- Added strict state machines, optimistic concurrency, nested transaction savepoints, an audit hash chain, outbox delivery, background jobs, idempotency and rate limiting.
-- Added authenticated encryption for C4/C5 payloads, privacy export/erasure, MT redaction and fail-closed provider controls.
-- Added draft-only machine translation with durable sent/received/validated states, explicit qualified human review, provenance preservation and atomic failure reconciliation.
-- Added automated linguistic QA, exact placeholder/markup/bidi/number-unit protection, domain-review separation and terminology/style-guide governance.
-- Added deterministic signed locale bundles, required manual/in-context QA, staged/canary activation, cache invalidation and rollback.
-- Added versioned REST contracts, WP-CLI, administrator evidence UI, health, metrics, migration inventory/dry-run and cross-file readiness gates.
-- Added native-owner publication verification, staged-only bundle activation, all-row provider deprecation gates, privacy eraser registration, migration evidence persistence checks and bundle-QA audit evidence.
-- Added four independent executable review/correction suites, deterministic packaging, manifest, SHA-256 checksums and CycloneDX SBOM.
+- Completed forty distinct review, correction and fresh-retest rounds across database integrity, authorization, privacy, provider boundaries, release evidence and rollback.
+- Added durable integration-acceptance, extraction, QA and independent dual-release-approval evidence models and services.
+- Made File 00 membership assertions mandatory for privileged operations; extension filters are deny-only.
+- Corrected nested transaction depth, rollback failure handling, fail-closed repository reads, audit-chain locking and compound job idempotency.
+- Added bounded JSON, stricter UUID/date/host/credential validation and safer outbox event normalization.
+- Strengthened C3–C5/high-risk vendor and machine-translation denial, human review, provenance and provider purge evidence.
+- Strengthened project snapshots, locale/risk constraints, assignment eligibility/conflict/expiry and reviewer independence.
+- Corrected exact-unit bundle release, integration and dual-approval gates, integrity re-verification, cache sequencing and relational rollback reconciliation.
+- Expanded privacy export/erasure, retention holds and actor pseudonymization.
+- Added a real WordPress/MySQL activation and integration suite for PHP 8.1 and PHP 8.3.
+- Removed temporary hidden correction payloads and the temporary source-export workflow from the release branch.
+- Bumped database schema to 1.0.1 and public contract to 1.1.0.
 
 ### Truthful limitations
 
-Hostinger staging, real companion contracts/providers, browser/WCAG/RTL visual acceptance, load/restore/rollback rehearsal, penetration testing, live deployment and operational staffing remain separate acceptance gates.
+Hostinger staging, real companion contracts/providers, browser/WCAG/RTL visual acceptance, load/restore/rollback rehearsal, independent penetration/security/privacy acceptance, live deployment and operational staffing remain separate acceptance gates.
+
+## 1.0.0-rc.1 — Initial complete source candidate
+
+- Implemented and traced CF06-FR-001 through CF06-FR-034.
+- Added locale/resource registries, translation workflow, terminology, translation memory, draft MT, linguistic QA, signed bundles, REST/WP-CLI, privacy, migration and deterministic packaging.
 
 ## 0.1.0 — Foundation candidate
 

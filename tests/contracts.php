@@ -11,15 +11,15 @@ $allPhp = implode("\n", array_map(static fn (string $f): string => (string) file
 
 $t->test('Plugin identity and safe default', function () use ($read): void {
     $main = $read('sabri-localization-translation-operations.php');
-    TestHarness::assertTrue(str_contains($main, 'Version:           1.0.0-rc.1'));
-    TestHarness::assertTrue(str_contains($main, "define('SABRI_SLTO_VERSION', '1.0.0-rc.1')"));
+    TestHarness::assertTrue(str_contains($main, 'Version:           1.0.0-rc.3'));
+    TestHarness::assertTrue(str_contains($main, "define('SABRI_SLTO_VERSION', '1.0.0-rc.3')"));
     $activator = $read('src/Infrastructure/Activator.php');
     TestHarness::assertTrue(str_contains($activator, "add_option('slto_runtime_enabled', false"));
 });
 
 $t->test('All canonical data domains have tables', function () use ($read): void {
     $db = $read('src/Infrastructure/Database.php');
-    foreach (array('locales','resources','secure_payloads','projects','project_resources','assignments','units','comments','terminology','style_guides','memory','providers','vendor_jobs','bundles','qa_results','feedback','content_links','audit','outbox','jobs','idempotency','rate_limits','migrations') as $entity) {
+    foreach (array('locales','resources','secure_payloads','projects','project_resources','assignments','units','comments','terminology','style_guides','memory','providers','vendor_jobs','bundles','qa_results','feedback','content_links','audit','outbox','jobs','idempotency','rate_limits','migrations','integration_evidence','extraction_evidence','qa_evidence','release_approvals') as $entity) {
         TestHarness::assertTrue(str_contains($db, "'{$entity}' =>"), "Missing table entity {$entity}");
     }
 });
@@ -64,10 +64,11 @@ $t->test('External MT is draft-only and privacy-bound', function () use ($read):
 
 $t->test('Release requires signature, critical coverage and integrations', function () use ($read): void {
     $bundle = $read('src/Application/BundleService.php');
+    $integrations = $read('src/Contract/IntegrationRegistry.php') . $read('src/Application/IntegrationService.php');
     TestHarness::assertTrue(str_contains($bundle, 'critical_coverage'));
     TestHarness::assertTrue(str_contains($bundle, 'DeterministicBundle::verify'));
     foreach (array('file00_membership','file20_shell','file24_assurance','file25_visual','domain_contracts') as $dependency) {
-        TestHarness::assertTrue(str_contains($bundle, $dependency), "Missing gate {$dependency}");
+        TestHarness::assertTrue(str_contains($integrations, $dependency), "Missing gate {$dependency}");
     }
 });
 

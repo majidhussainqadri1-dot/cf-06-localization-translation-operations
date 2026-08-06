@@ -21,8 +21,10 @@ final class Activator
 
     public static function maybeUpgrade(): void
     {
-        $installed = (string) get_option('slto_schema_version', '0.0.0');
-        if (version_compare($installed, SABRI_SLTO_SCHEMA_VERSION, '>=')) {
+        $installedSchema = (string) get_option('slto_schema_version', '0.0.0');
+        $installedContract = (string) get_option('slto_contract_version', '0.0.0');
+        if (version_compare($installedSchema, SABRI_SLTO_SCHEMA_VERSION, '>=')
+            && version_compare($installedContract, SABRI_SLTO_CONTRACT_VERSION, '>=')) {
             return;
         }
         if (get_transient('slto_schema_upgrade_lock')) {
@@ -42,13 +44,21 @@ final class Activator
         require_once ABSPATH . 'wp-admin/includes/upgrade.php';
         $c = $wpdb->get_charset_collate();
         foreach (self::schema($c) as $sql) {
-            dbDelta($sql);
+            $result = dbDelta($sql);
+            if (! is_array($result) || '' !== (string) $wpdb->last_error) {
+                throw new \RuntimeException('CF-06 schema migration failed.');
+            }
         }
+        self::normalizeIndexes();
         self::verifySchema();
-        update_option('slto_schema_version', SABRI_SLTO_SCHEMA_VERSION, false);
+        if (false === update_option('slto_schema_version', SABRI_SLTO_SCHEMA_VERSION, false) && (string) get_option('slto_schema_version', '') !== SABRI_SLTO_SCHEMA_VERSION) {
+            throw new \RuntimeException('CF-06 schema version could not be persisted.');
+        }
         add_option('slto_runtime_enabled', false, '', false);
         add_option('slto_default_locale', 'en-US', '', false);
-        add_option('slto_contract_version', SABRI_SLTO_CONTRACT_VERSION, '', false);
+        if (false === update_option('slto_contract_version', SABRI_SLTO_CONTRACT_VERSION, false) && (string) get_option('slto_contract_version', '') !== SABRI_SLTO_CONTRACT_VERSION) {
+            throw new \RuntimeException('CF-06 contract version could not be persisted.');
+        }
         add_option('slto_last_release_status', 'source-candidate', '', false);
         self::seedLocales();
         self::grantCapabilities();
@@ -394,6 +404,78 @@ final class Activator
                 updated_at datetime NOT NULL,
                 PRIMARY KEY  (id), UNIQUE KEY uuid (uuid), UNIQUE KEY owner_locale (owner_module,owner_object_id,target_locale), KEY publication_status (publication_status)
             ) {$c};",
+            "CREATE TABLE {$t('integration_evidence')} (
+                id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+                uuid char(36) NOT NULL,
+                integration_key varchar(80) NOT NULL,
+                contract_version varchar(40) NOT NULL,
+                manifest_hash char(64) NOT NULL,
+                evidence_hash char(64) NOT NULL,
+                evidence_ref varchar(191) NOT NULL,
+                environment_name varchar(24) NOT NULL,
+                approved_by bigint(20) unsigned NOT NULL,
+                approved_at datetime NOT NULL,
+                expires_at datetime NULL,
+                status varchar(24) NOT NULL DEFAULT 'accepted',
+                row_version bigint(20) unsigned NOT NULL DEFAULT 1,
+                created_at datetime NOT NULL,
+                updated_at datetime NOT NULL,
+                PRIMARY KEY  (id), UNIQUE KEY uuid (uuid), UNIQUE KEY integration_key (integration_key), KEY status_expiry (status,expires_at)
+            ) {$c};",
+            "CREATE TABLE {$t('extraction_evidence')} (
+                id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+                uuid char(36) NOT NULL,
+                owner_module varchar(40) NOT NULL,
+                repository_ref varchar(191) NOT NULL,
+                source_commit varchar(64) NOT NULL,
+                inventory_hash char(64) NOT NULL,
+                extraction_hash char(64) NOT NULL,
+                evidence_ref varchar(191) NOT NULL,
+                resource_count bigint(20) unsigned NOT NULL DEFAULT 0,
+                environment_name varchar(24) NOT NULL,
+                approved_by bigint(20) unsigned NOT NULL,
+                approved_at datetime NOT NULL,
+                status varchar(24) NOT NULL DEFAULT 'accepted',
+                row_version bigint(20) unsigned NOT NULL DEFAULT 1,
+                created_at datetime NOT NULL,
+                updated_at datetime NOT NULL,
+                PRIMARY KEY  (id), UNIQUE KEY uuid (uuid), UNIQUE KEY module_commit_hash (owner_module,source_commit,extraction_hash), KEY owner_status (owner_module,status)
+            ) {$c};",
+            "CREATE TABLE {$t('qa_evidence')} (
+                id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+                uuid char(36) NOT NULL,
+                target_type varchar(40) NOT NULL,
+                target_uuid varchar(191) NOT NULL,
+                environment_name varchar(24) NOT NULL,
+                plugin_version varchar(40) NOT NULL,
+                build_sha varchar(64) NOT NULL,
+                test_id varchar(80) NOT NULL,
+                expected_hash char(64) NOT NULL,
+                actual_hash char(64) NOT NULL,
+                result varchar(16) NOT NULL,
+                artifact_ref varchar(191) NOT NULL,
+                artifact_hash char(64) NOT NULL,
+                reviewer_id bigint(20) unsigned NOT NULL,
+                details_json longtext NULL,
+                created_at datetime NOT NULL,
+                PRIMARY KEY  (id), UNIQUE KEY uuid (uuid), KEY target_environment (target_type,target_uuid,environment_name), KEY result_test (result,test_id)
+            ) {$c};",
+            "CREATE TABLE {$t('release_approvals')} (
+                id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+                uuid char(36) NOT NULL,
+                bundle_uuid char(36) NOT NULL,
+                approval_role varchar(32) NOT NULL,
+                approver_id bigint(20) unsigned NOT NULL,
+                evidence_ref varchar(191) NOT NULL,
+                evidence_hash char(64) NOT NULL,
+                step_up_at datetime NOT NULL,
+                approved_at datetime NOT NULL,
+                status varchar(24) NOT NULL DEFAULT 'valid',
+                row_version bigint(20) unsigned NOT NULL DEFAULT 1,
+                created_at datetime NOT NULL,
+                updated_at datetime NOT NULL,
+                PRIMARY KEY  (id), UNIQUE KEY uuid (uuid), UNIQUE KEY bundle_role (bundle_uuid,approval_role), KEY bundle_status (bundle_uuid,status), KEY approver_id (approver_id)
+            ) {$c};",
             "CREATE TABLE {$t('audit')} (
                 id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
                 uuid char(36) NOT NULL,
@@ -444,7 +526,7 @@ final class Activator
                 last_error text NULL,
                 created_at datetime NOT NULL,
                 updated_at datetime NOT NULL,
-                PRIMARY KEY  (id), UNIQUE KEY uuid (uuid), UNIQUE KEY dedupe_key (dedupe_key), KEY queue (status,available_at), KEY lease_until (lease_until)
+                PRIMARY KEY  (id), UNIQUE KEY uuid (uuid), UNIQUE KEY job_dedupe (job_type,dedupe_key), KEY queue (status,available_at), KEY lease_until (lease_until)
             ) {$c};",
             "CREATE TABLE {$t('idempotency')} (
                 id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -482,6 +564,23 @@ final class Activator
         );
     }
 
+    private static function normalizeIndexes(): void
+    {
+        global $wpdb;
+        $jobs = Database::table('jobs');
+        $legacy = $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema=DATABASE() AND table_name=%s AND index_name='dedupe_key'", $jobs));
+        if ('' !== (string) $wpdb->last_error) {
+            throw new \RuntimeException('CF-06 job index inventory failed.');
+        }
+        if ((int) $legacy > 0 && false === $wpdb->query("ALTER TABLE {$jobs} DROP INDEX dedupe_key")) {
+            throw new \RuntimeException('CF-06 legacy job dedupe index could not be removed.');
+        }
+        $compound = $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema=DATABASE() AND table_name=%s AND index_name='job_dedupe'", $jobs));
+        if ('' !== (string) $wpdb->last_error || (int) $compound < 2) {
+            throw new \RuntimeException('CF-06 compound job dedupe index is unavailable.');
+        }
+    }
+
     private static function verifySchema(): void
     {
         global $wpdb;
@@ -495,6 +594,19 @@ final class Activator
         }
         if (! empty($missing)) {
             throw new \RuntimeException('CF-06 schema activation failed: ' . implode(', ', $missing));
+        }
+        $required = array(
+            'integration_evidence'=>array('integration_key','manifest_hash','evidence_hash','environment_name','expires_at'),
+            'extraction_evidence'=>array('owner_module','source_commit','inventory_hash','extraction_hash'),
+            'qa_evidence'=>array('environment_name','build_sha','test_id','artifact_hash'),
+            'release_approvals'=>array('bundle_uuid','approval_role','approver_id','evidence_hash','step_up_at'),
+        );
+        foreach ($required as $entity => $columns) {
+            $table = Database::table($entity);
+            $found = $wpdb->get_col("SHOW COLUMNS FROM {$table}", 0);
+            if (! is_array($found) || '' !== (string) $wpdb->last_error || array_diff($columns, $found)) {
+                throw new \RuntimeException('CF-06 required schema columns are unavailable for ' . $entity . '.');
+            }
         }
     }
 
@@ -513,13 +625,16 @@ final class Activator
             if (null === $parsed) {
                 continue;
             }
-            $wpdb->query($wpdb->prepare(
+            $written = $wpdb->query($wpdb->prepare(
                 "INSERT INTO {$table} (uuid,locale_tag,language_subtag,script_subtag,region_subtag,direction,fallback_tag,plural_rules_version,format_data_version,enabled_surfaces,status,owner,row_version,created_at,updated_at)
                 VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,1,%s,%s)
                 ON DUPLICATE KEY UPDATE direction=VALUES(direction),fallback_tag=VALUES(fallback_tag),enabled_surfaces=VALUES(enabled_surfaces),updated_at=VALUES(updated_at)",
                 Database::uuid(), $parsed['tag'], $parsed['language'], $parsed['script'], $parsed['region'], LocaleValidator::direction($parsed['tag']),
                 $seed['fallback'], 'CLDR-49', 'CLDR-49', wp_json_encode($seed['surfaces']), $seed['status'], 'CF-06', $now, $now
             ));
+            if (false === $written) {
+                throw new \RuntimeException('CF-06 seed locale could not be persisted.');
+            }
         }
     }
 
@@ -536,10 +651,10 @@ final class Activator
     private static function scheduleJobs(): void
     {
         if (! wp_next_scheduled('slto_process_jobs')) {
-            wp_schedule_event(time() + 60, 'hourly', 'slto_process_jobs');
+            if (false === wp_schedule_event(time() + 60, 'hourly', 'slto_process_jobs')) { throw new \RuntimeException('CF-06 job schedule could not be created.'); }
         }
         if (! wp_next_scheduled('slto_daily_reconciliation')) {
-            wp_schedule_event(time() + 300, 'daily', 'slto_daily_reconciliation');
+            if (false === wp_schedule_event(time() + 300, 'daily', 'slto_daily_reconciliation')) { throw new \RuntimeException('CF-06 reconciliation schedule could not be created.'); }
         }
     }
 }

@@ -31,6 +31,10 @@ final class MachineTranslationService
 
     public function prepare(array $unitUuids, string $purpose = 'draft_translation', bool $explicitHighRiskApproval = false): array
     {
+        $purpose = sanitize_key($purpose);
+        if (! in_array($purpose, array('draft_translation','terminology_draft','backfill_draft'), true)) {
+            throw new InvalidArgumentException('Machine translation purpose is invalid.');
+        }
         $unitUuids = array_values(array_unique(array_filter(array_map('strval', $unitUuids))));
         if (empty($unitUuids) || count($unitUuids) > 100) {
             throw new InvalidArgumentException('Vendor job requires 1–100 units.');
@@ -72,33 +76,27 @@ final class MachineTranslationService
         }
 
         $uuid = \Sabri\Localization\Infrastructure\Database::uuid();
-        $hash = hash('sha256', wp_json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
-        $job = $this->repo->insert('vendor_jobs', array(
-            'uuid' => $uuid,
-            'provider_key' => $this->provider->key(),
-            'model_version' => 'configured-at-send',
-            'region_code' => '',
-            'purpose' => $purpose,
-            'project_uuid' => null,
-            'unit_uuids' => wp_json_encode($unitUuids),
-            'outbound_hash' => $hash,
-            'inbound_hash' => null,
-            'redaction_summary' => wp_json_encode($summary),
-            'provider_reference' => null,
-            'status' => 'prepared',
-            'deletion_evidence' => null,
-            'row_version' => 1,
-            'created_by' => get_current_user_id(),
-            'purge_due_at' => gmdate('Y-m-d H:i:s', time() + 7 * DAY_IN_SECONDS),
-        ));
-        $this->audit->record('vendor_job', $uuid, 'vendor_job_prepared', 'success', array(
-            'provider' => $this->provider->key(),
-            'unit_count' => count($unitUuids),
-            'outbound_hash' => $hash,
-            'redaction_summary_hash' => hash('sha256', wp_json_encode($summary)),
-        ));
-
-        return array('job' => $job, 'payload' => $payload);
+        $payloadJson = wp_json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        $unitsJson = wp_json_encode($unitUuids, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        $summaryJson = wp_json_encode($summary, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        if (! is_string($payloadJson) || ! is_string($unitsJson) || ! is_string($summaryJson) || strlen($payloadJson) > 5_000_000) {
+            throw new InvalidArgumentException('Machine translation preparation evidence is invalid or oversized.');
+        }
+        $hash = hash('sha256', $payloadJson);
+        $job = $this->tx->run(function () use ($uuid, $purpose, $unitsJson, $hash, $summaryJson, $unitUuids): array {
+            $job = $this->repo->insert('vendor_jobs', array(
+                'uuid'=>$uuid,'provider_key'=>$this->provider->key(),'model_version'=>'configured-at-send','region_code'=>'',
+                'purpose'=>$purpose,'project_uuid'=>null,'unit_uuids'=>$unitsJson,'outbound_hash'=>$hash,'inbound_hash'=>null,
+                'redaction_summary'=>$summaryJson,'provider_reference'=>null,'status'=>'prepared','deletion_evidence'=>null,
+                'row_version'=>1,'created_by'=>get_current_user_id(),'purge_due_at'=>gmdate('Y-m-d H:i:s', time()+7*DAY_IN_SECONDS),
+            ));
+            $this->audit->record('vendor_job',$uuid,'vendor_job_prepared','success',array(
+                'provider'=>$this->provider->key(),'unit_count'=>count($unitUuids),'outbound_hash'=>$hash,
+                'redaction_summary_hash'=>hash('sha256',$summaryJson),
+            ));
+            return $job;
+        });
+        return array('job'=>$job,'payload'=>$payload);
     }
 
     public function send(string $jobUuid, array $payload, int $version): array
@@ -106,18 +104,20 @@ final class MachineTranslationService
         $job = $this->repo->find('vendor_jobs', $jobUuid) ?? throw new InvalidArgumentException('Vendor job not found.');
         StateMachine::assert('vendor_job', (string) $job['status'], 'sent');
 
-        $requestHash = hash('sha256', wp_json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+        $requestJson = wp_json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        if (! is_string($requestJson) || strlen($requestJson) > 5_000_000) { throw new InvalidArgumentException('Vendor payload is invalid or oversized.'); }
+        $requestHash = hash('sha256', $requestJson);
         if (! hash_equals((string) $job['outbound_hash'], $requestHash)) {
             throw new InvalidArgumentException('Vendor payload hash mismatch.');
         }
 
         // Persist "sent" before external I/O so an outage leaves a truthful,
         // reconcilable state rather than an ambiguous prepared job.
-        $sent = $this->repo->updateVersioned('vendor_jobs', $jobUuid, $version, array('status' => 'sent'));
-        $this->audit->record('vendor_job', $jobUuid, 'vendor_job_sent', 'success', array(
-            'provider' => $sent['provider_key'],
-            'outbound_hash' => $sent['outbound_hash'],
-        ));
+        $sent = $this->tx->run(function () use ($jobUuid, $version): array {
+            $sent = $this->repo->updateVersioned('vendor_jobs', $jobUuid, $version, array('status'=>'sent'));
+            $this->audit->record('vendor_job',$jobUuid,'vendor_job_sent','success',array('provider'=>$sent['provider_key'],'outbound_hash'=>$sent['outbound_hash']));
+            return $sent;
+        });
 
         try {
             $response = $this->provider->submit($sent, $payload);
@@ -186,6 +186,9 @@ final class MachineTranslationService
         if (! in_array($decision, array('accept', 'reject'), true)) {
             throw new InvalidArgumentException('Vendor job review decision is invalid.');
         }
+        if ('reject' === $decision && '' === trim($reason)) {
+            throw new InvalidArgumentException('Vendor job rejection reason is required.');
+        }
         $unitUuids = json_decode((string) $job['unit_uuids'], true);
         if (! is_array($unitUuids) || empty($unitUuids)) {
             throw new InvalidArgumentException('Vendor job unit evidence is invalid.');
@@ -238,9 +241,10 @@ final class MachineTranslationService
         }
         StateMachine::assert('vendor_job', (string) $job['status'], 'purged');
         $evidence = $this->provider->purge((string) $job['provider_reference']);
+        $evidenceJson = wp_json_encode($evidence, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        if (! is_string($evidenceJson) || strlen($evidenceJson) > 262144) { throw new InvalidArgumentException('Provider purge evidence is invalid or oversized.'); }
         $updated = $this->repo->updateVersioned('vendor_jobs', $jobUuid, $version, array(
-            'status' => 'purged',
-            'deletion_evidence' => wp_json_encode($evidence),
+            'status'=>'purged','deletion_evidence'=>$evidenceJson,
         ));
         $this->audit->record('vendor_job', $jobUuid, 'vendor_job_purged', 'success', array(
             'provider' => $job['provider_key'],

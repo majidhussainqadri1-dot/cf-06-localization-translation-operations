@@ -15,6 +15,7 @@ final class Manifest
             'schema_version' => SABRI_SLTO_SCHEMA_VERSION,
             'contract_version' => SABRI_SLTO_CONTRACT_VERSION,
             'runtime_default' => 'disabled-fail-closed',
+            'privacy_invariants' => array('private_or_high_risk_external_mt' => 'deny'),
             'canonical_owners' => array(
                 'locale_registry', 'translatable_resource_inventory', 'translation_workflow',
                 'terminology', 'translation_memory', 'draft_mt_orchestration', 'linguistic_qa',
