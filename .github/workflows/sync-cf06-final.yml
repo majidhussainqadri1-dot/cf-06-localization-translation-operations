@@ -65,7 +65,7 @@ jobs:
           git add -A
           git diff --cached --check
           git commit -m 'fix: complete forty-round CF-06 review and correction'
-          git push --force-with-lease=refs/heads/codex/cf-06-foundation-0.1.0:${GITHUB_SHA} origin HEAD:refs/heads/codex/cf-06-foundation-0.1.0
+          git push origin HEAD:refs/heads/codex/cf-06-foundation-0.1.0
 
       - name: Dispatch exact-head complete quality gate
         env:
