@@ -102,6 +102,28 @@ jobs:
           SOURCE_COMMIT: ${{ github.sha }}
         run: python3 tools/build-release.py
 
+      - name: Verify exact-source manifest and SBOM binding
+        shell: bash
+        env:
+          SOURCE_COMMIT: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import os
+          manifest = json.load(open('dist/MANIFEST.json', encoding='utf-8'))
+          expected = os.environ['SOURCE_COMMIT']
+          if manifest.get('source_commit') != expected:
+              raise SystemExit('Manifest source commit mismatch')
+          sbom = json.load(open('dist/SBOM.cdx.json', encoding='utf-8'))
+          properties = {
+              item['name']: item['value']
+              for item in sbom['metadata']['component']['properties']
+          }
+          if properties.get('sabri:source-commit') != expected:
+              raise SystemExit('SBOM source commit mismatch')
+          PY
+
       - name: Verify manifest, checksum, ZIP and deterministic rebuild parity
         shell: bash
         env:
