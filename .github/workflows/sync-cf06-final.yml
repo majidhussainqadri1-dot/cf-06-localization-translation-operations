@@ -19,10 +19,10 @@ jobs:
   apply:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out target branch
+      - name: Check out exact triggering commit
         uses: actions/checkout@v4
         with:
-          ref: codex/cf-06-foundation-0.1.0
+          ref: ${{ github.sha }}
           fetch-depth: 0
 
       - name: Reconstruct and verify correction payload
@@ -56,7 +56,7 @@ jobs:
         shell: bash
         run: bash tools/quality-check.sh
 
-      - name: Commit corrected source
+      - name: Commit and publish corrected source
         shell: bash
         run: |
           set -euo pipefail
@@ -65,8 +65,7 @@ jobs:
           git add -A
           git diff --cached --check
           git commit -m 'fix: complete forty-round CF-06 review and correction'
-          git pull --rebase origin codex/cf-06-foundation-0.1.0
-          git push origin HEAD:codex/cf-06-foundation-0.1.0
+          git push --force-with-lease=refs/heads/codex/cf-06-foundation-0.1.0:${GITHUB_SHA} origin HEAD:refs/heads/codex/cf-06-foundation-0.1.0
 
       - name: Dispatch exact-head complete quality gate
         env:
