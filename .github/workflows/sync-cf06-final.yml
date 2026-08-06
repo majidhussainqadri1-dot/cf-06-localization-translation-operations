@@ -60,11 +60,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git config user.name 'github-actions[bot]]'
+          git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -A
           git diff --cached --check
           git commit -m 'fix: complete forty-round CF-06 review and correction'
+          git pull --rebase origin codex/cf-06-foundation-0.1.0
           git push origin HEAD:codex/cf-06-foundation-0.1.0
 
       - name: Dispatch exact-head complete quality gate
