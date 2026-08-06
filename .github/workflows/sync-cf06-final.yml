@@ -1,66 +1,52 @@
-name: Apply CF-06 Forty-Round Corrections
+name: Repair CF-06 Reviewed RC3 Schema
 
 on:
   push:
     branches: ['codex/cf-06-foundation-0.1.0']
     paths:
-      - '.cf06-sync/**'
       - '.github/workflows/sync-cf06-final.yml'
 
 permissions:
   contents: write
 
 concurrency:
-  group: cf06-final-sync
+  group: cf06-reviewed-schema-repair
   cancel-in-progress: false
 
 jobs:
-  apply:
+  repair:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out exact triggering commit
+      - name: Check out reviewed RC3 branch
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.sha }}
+          ref: codex/cf-06-forty-round-reviewed-rc3
           fetch-depth: 0
 
-      - name: Reconstruct and verify correction payload
+      - name: Repair dbDelta-compatible index layout
         shell: bash
         run: |
           set -euo pipefail
-          cat .cf06-sync/part-* | tr -cd 'A-Za-z0-9+/=' | base64 --decode > /tmp/cf06-final.tar.gz
-          echo 'b7c7117b3dd829a58f90b6e34fa5bffa175117b2f55dc3081a31c849341948fe  /tmp/cf06-final.tar.gz' | sha256sum -c -
-          tar -xzf /tmp/cf06-final.tar.gz -C .
-          chmod +x tools/quality-check.sh tools/build-release.py
-          sed -i 's/[[:space:]]\+$//' \
-            docs/CODING-COMPLETION-REPORT.md \
-            docs/FORTY-ROUND-REVIEW-CORRECTION-LEDGER.md
-
-      - name: Run corrected clean-source quality gate
-        shell: bash
-        run: |
-          set -euo pipefail
-          rm -rf .cf06-fixed .cf06-payload .cf06-sync
-          rm -f .github/workflows/export-source-for-review.yml
-          rm -f .github/workflows/sync-cf06-final.yml
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('src/Infrastructure/Activator.php')
+          source = path.read_text(encoding='utf-8')
+          repaired = source.replace(', UNIQUE KEY ', ',\n                UNIQUE KEY ')
+          repaired = repaired.replace(', KEY ', ',\n                KEY ')
+          if repaired == source:
+              raise SystemExit('No dbDelta index-layout repair was applied.')
+          path.write_text(repaired, encoding='utf-8')
+          PY
+          php -l src/Infrastructure/Activator.php
           bash tools/quality-check.sh
 
-      - name: Restore transport and workflow files unchanged
-        shell: bash
-        run: |
-          set -euo pipefail
-          while IFS= read -r path; do
-            git checkout "$GITHUB_SHA" -- "$path"
-          done < <(git ls-tree -r --name-only "$GITHUB_SHA" -- .cf06-fixed .cf06-payload .cf06-sync .github/workflows)
-
-      - name: Commit and publish reviewed source branch
+      - name: Commit and publish schema repair
         shell: bash
         run: |
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -A
+          git add src/Infrastructure/Activator.php
           git diff --cached --check
-          git diff --cached --quiet && { echo 'No corrected source changes found'; exit 1; } || true
-          git commit -m 'fix: complete forty-round CF-06 review and correction'
-          git push origin HEAD:refs/heads/codex/cf-06-forty-round-reviewed-rc3
+          git commit -m 'fix: make CF-06 schema compatible with dbDelta'
+          git push origin HEAD:codex/cf-06-forty-round-reviewed-rc3
