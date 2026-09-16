@@ -34,24 +34,29 @@ final class IntegrationService
         if (! in_array($key, IntegrationRegistry::required(), true)) {
             throw new InvalidArgumentException('Localization integration key is not recognized.');
         }
+        $configuredEnvironment = self::deploymentEnvironment();
+        $environment = sanitize_key((string)($input['environment_name'] ?? ''));
+        if (null === $configuredEnvironment || $environment !== $configuredEnvironment) {
+            throw new InvalidArgumentException('Integration evidence must match the explicitly configured deployment environment.');
+        }
         $contractVersion = trim((string)($input['contract_version'] ?? ''));
         $manifestHash = strtolower(trim((string)($input['manifest_hash'] ?? '')));
         $evidenceHash = strtolower(trim((string)($input['evidence_hash'] ?? '')));
         $evidenceRef = sanitize_text_field((string)($input['evidence_ref'] ?? ''));
-        $environment = sanitize_key((string)($input['environment_name'] ?? ''));
         $expiresAt = $this->dateOrNull($input['expires_at'] ?? null);
         if (1 !== preg_match('/^\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?$/D', $contractVersion)
             || 1 !== preg_match('/^[a-f0-9]{64}$/D', $manifestHash)
             || 1 !== preg_match('/^[a-f0-9]{64}$/D', $evidenceHash)
-            || '' === $evidenceRef || strlen($evidenceRef) > 191
-            || ! in_array($environment, array('staging','production'), true)) {
+            || '' === $evidenceRef || strlen($evidenceRef) > 191) {
             throw new InvalidArgumentException('Integration acceptance evidence is incomplete or invalid.');
         }
         if (null !== $expiresAt && strtotime($expiresAt) <= time()) {
             throw new InvalidArgumentException('Integration acceptance evidence is already expired.');
         }
+        $storageKey = self::evidenceStorageKey($key, $environment);
         $evidence = array(
             'integration_key'=>$key,
+            'storage_key'=>$storageKey,
             'contract_version'=>$contractVersion,
             'manifest_hash'=>$manifestHash,
             'evidence_hash'=>$evidenceHash,
@@ -64,12 +69,23 @@ final class IntegrationService
         if (true !== apply_filters('slto_verify_integration_acceptance_evidence', false, $evidence)) {
             throw new InvalidArgumentException('Integration acceptance evidence could not be independently verified.');
         }
-        return $this->tx->run(function() use ($evidence, $key): array {
-            $existing = $this->repo->findOne('integration_evidence', 'integration_key', $key);
-            $data = array_merge($evidence, array('status'=>'accepted','row_version'=>1));
+        return $this->tx->run(function() use ($evidence, $key, $storageKey): array {
+            $existing = $this->repo->findOne('integration_evidence', 'integration_key', $storageKey);
+            $data = array(
+                'integration_key'=>$storageKey,
+                'contract_version'=>$evidence['contract_version'],
+                'manifest_hash'=>$evidence['manifest_hash'],
+                'evidence_hash'=>$evidence['evidence_hash'],
+                'evidence_ref'=>$evidence['evidence_ref'],
+                'environment_name'=>$evidence['environment_name'],
+                'approved_by'=>$evidence['approved_by'],
+                'approved_at'=>$evidence['approved_at'],
+                'expires_at'=>$evidence['expires_at'],
+                'status'=>'accepted',
+            );
             $row = is_array($existing)
-                ? $this->repo->updateVersioned('integration_evidence', (string)$existing['uuid'], (int)$existing['row_version'], array_diff_key($data, array('row_version'=>true)))
-                : $this->repo->insert('integration_evidence', $data);
+                ? $this->repo->updateVersioned('integration_evidence', (string)$existing['uuid'], (int)$existing['row_version'], $data)
+                : $this->repo->insert('integration_evidence', array_merge($data, array('row_version'=>1)));
             $this->audit->record('integration', $key, 'integration_acceptance_recorded', 'success', array(
                 'contract_version'=>$evidence['contract_version'],'manifest_hash'=>$evidence['manifest_hash'],
                 'evidence_hash'=>$evidence['evidence_hash'],'environment'=>$evidence['environment_name'],
@@ -77,6 +93,7 @@ final class IntegrationService
             $this->outbox->enqueue('LocalizationIntegrationAccepted', 'integration', (string)$row['uuid'], array(
                 'integration_key'=>$key,'contract_version'=>$evidence['contract_version'],'environment'=>$evidence['environment_name'],
             ));
+            $row['canonical_integration_key'] = $key;
             return $row;
         });
     }
@@ -90,7 +107,9 @@ final class IntegrationService
         }
         return $this->tx->run(function() use ($row, $version, $reason): array {
             $updated = $this->repo->updateVersioned('integration_evidence', (string)$row['uuid'], $version, array('status'=>'revoked'));
-            $this->audit->record('integration', (string)$row['integration_key'], 'integration_acceptance_revoked', 'success', array('reason'=>$reason));
+            $this->audit->record('integration', self::canonicalKey((string)$row['integration_key']), 'integration_acceptance_revoked', 'success', array(
+                'reason'=>$reason,'environment'=>$row['environment_name']??'',
+            ));
             return $updated;
         });
     }
@@ -103,7 +122,7 @@ final class IntegrationService
         }
         $result = array();
         foreach (IntegrationRegistry::required() as $key) {
-            $row = $this->repo->findOne('integration_evidence', 'integration_key', $key);
+            $row = $this->repo->findOne('integration_evidence', 'integration_key', self::evidenceStorageKey($key, $environment));
             $valid = is_array($row)
                 && 'accepted' === (string)$row['status']
                 && $environment === (string)$row['environment_name']
@@ -126,6 +145,21 @@ final class IntegrationService
                 throw new InvalidArgumentException('Required localization integration is not accepted for ' . $environment . ': ' . $key);
             }
         }
+    }
+
+    private static function evidenceStorageKey(string $key, string $environment): string
+    {
+        $value = $key . '@' . $environment;
+        if (strlen($value) > 80) {
+            throw new InvalidArgumentException('Environment-qualified integration key exceeds the database contract.');
+        }
+        return $value;
+    }
+
+    private static function canonicalKey(string $stored): string
+    {
+        $parts = explode('@', $stored, 2);
+        return sanitize_key((string)$parts[0]);
     }
 
     private function dateOrNull(mixed $value): ?string
