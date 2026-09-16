@@ -35,8 +35,8 @@ final class LocaleService
         $fallback = isset($input['fallback']) ? LocaleValidator::canonicalize((string) $input['fallback']) : null;
         FallbackChainValidator::validate($parsed['tag'], $fallback, fn (string $tag): ?array => $this->repo->findOne('locales', 'locale_tag', $tag));
         $status = (string) ($input['status'] ?? 'proposed');
-        if (! in_array($status, array('proposed', 'tested', 'content_ready'), true)) {
-            throw new InvalidArgumentException('New locale has an invalid initial state.');
+        if ('proposed' !== $status) {
+            throw new InvalidArgumentException('New locales must begin in proposed state and advance through governed transitions.');
         }
         return $this->tx->run(function () use ($parsed, $fallback, $status, $input): array {
             $row = $this->repo->insert('locales', array(
