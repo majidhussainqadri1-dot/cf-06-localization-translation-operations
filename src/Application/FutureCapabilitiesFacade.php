@@ -6,6 +6,7 @@ namespace Sabri\Localization\Application;
 
 use Sabri\Localization\Domain\Future\FutureCapabilityGuard;
 use Sabri\Localization\Domain\Future\ProviderEligibilityGuard;
+use Sabri\Localization\Domain\Future\SemanticIntegrityGuard;
 
 /**
  * Canonical exposed Future40 service. The underlying handler collection stays
@@ -34,6 +35,6 @@ final class FutureCapabilitiesFacade
         if ('CF06-FUT-034' === $id) {
             $out['result']['score_semantics'] = '0-100-normalized-utility-higher-is-better';
         }
-        return $out;
+        return SemanticIntegrityGuard::apply($id, $input, $out);
     }
 }
