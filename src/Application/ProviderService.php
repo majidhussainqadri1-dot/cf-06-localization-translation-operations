@@ -28,7 +28,7 @@ final class ProviderService
             $host=strtolower(rtrim(trim((string)$host),'.'));
             if(1===preg_match('/^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/D',$host)){$hosts[]=$host;}
         }
-        $hosts=array_values(array_unique($hosts));
+        $hosts=array_values(array_unique($hosts));sort($hosts,SORT_STRING);
         if(''===$key||''===$type){throw new InvalidArgumentException('Provider identity is required.');}
         if(''!==$url){UrlGuard::assertPublicHttps($url,$hosts);}
         if(!empty($input['training_allowed'])){throw new InvalidArgumentException('Provider training is denied by default.');}
@@ -38,13 +38,20 @@ final class ProviderService
         if(1!==preg_match('/^\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?$/D',$contractVersion)){throw new InvalidArgumentException('Provider contract version is invalid.');}
         $region=sanitize_text_field((string)($input['region']??''));
         if(''!==$region&&1!==preg_match('/^[A-Za-z0-9-]{2,32}$/D',$region)){throw new InvalidArgumentException('Provider region code is invalid.');}
-        $hostsJson=wp_json_encode($hosts);$subsJson=wp_json_encode(array_slice(is_array($input['subprocessors']??null)?$input['subprocessors']:[],0,100));
+        $subprocessors=array_slice(is_array($input['subprocessors']??null)?$input['subprocessors']:[],0,100);
+        $hostsJson=wp_json_encode($hosts);$subsJson=wp_json_encode($subprocessors);
         if(!is_string($hostsJson)||!is_string($subsJson)){throw new InvalidArgumentException('Provider metadata could not be encoded.');}
         return $this->tx->run(function() use ($input,$key,$type,$url,$hostsJson,$subsJson,$credentialRef,$contractVersion,$region): array {
             $existing=$this->repo->findOne('providers','provider_key',$key);
             $data=array('provider_key'=>$key,'provider_type'=>$type,'base_url'=>$url?:null,'allowed_hosts'=>$hostsJson,
                 'region_code'=>$region?:null,'retention_days'=>max(0,min(30,(int)($input['retention_days']??0))),
                 'training_allowed'=>0,'subprocessors_json'=>$subsJson,'credential_reference'=>$credentialRef?:null,'contract_version'=>$contractVersion);
+            if(is_array($existing)&&'active'===(string)$existing['status']){
+                foreach($data as $field=>$value){
+                    if((string)($existing[$field]??'')!==(string)($value??'')){throw new InvalidArgumentException('An active provider must be disabled before governance-relevant configuration is changed.');}
+                }
+                return $existing;
+            }
             if(is_array($existing)){$data['status']=$existing['status'];$row=$this->repo->updateVersioned('providers',(string)$existing['uuid'],(int)($input['row_version']??$existing['row_version']),$data);}
             else{$data['status']='disabled';$row=$this->repo->insert('providers',array_merge($data,array('row_version'=>1)));}
             $this->audit->record('provider',$key,'localization_provider_registered','success',array('type'=>$type,'region'=>$data['region_code'],'retention_days'=>$data['retention_days'],'status'=>$row['status']));
