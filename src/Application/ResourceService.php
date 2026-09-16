@@ -32,6 +32,7 @@ final class ResourceService
         $domain=sanitize_key((string)($input['domain']??'platform'))?:'platform';
         $schema=PlaceholderValidator::normalizeSchema($input['placeholders']??array());PlaceholderValidator::assertSource($text,$schema);
         $existing=$this->repo->findOne('resources','resource_key',$key);
+        if(is_array($existing)&&'retired'===(string)($existing['status']??'')){throw new InvalidArgumentException('A retired translatable resource cannot be reactivated through ordinary registration.');}
         $hash=hash('sha256',wp_json_encode(array('key'=>$key,'locale'=>$locale,'text'=>$text,'context'=>(string)($input['context']??''),'domain'=>$domain,'risk'=>$risk,'data'=>$data,'placeholders'=>$schema),JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES));
         if(is_array($existing)&&'active'===(string)$existing['status']&&hash_equals((string)$existing['source_hash'],$hash)){return array('changed'=>false,'record'=>$existing);}
 
