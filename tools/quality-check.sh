@@ -26,6 +26,7 @@ php tests/review-round-10-final.php
 php tests/review-fresh-round-01-environment.php
 php tests/review-fresh-round-02-boot-parity.php
 php tests/review-fresh-round-03-idempotency.php
+php tests/review-fresh-round-04-provider-governance.php
 
 echo '== Secret-pattern guard =='
 if grep -RInE --exclude-dir=.git --exclude-dir=dist --exclude-dir=tests --exclude='quality-check.sh' '(BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{20,}|sk_live_[A-Za-z0-9]{12,}|xox[baprs]-[A-Za-z0-9-]{10,})' .; then
@@ -72,6 +73,8 @@ grep -Fq 'retained_audit_metadata' src/Application/PrivacyService.php
 grep -Fq 'assignedActorIsCurrent' src/Application/TranslationService.php
 grep -Fq 'QA evidence is frozen once a bundle is approved for release' src/Application/BundleService.php
 grep -Fq 'assertActiveProvider' src/Application/MachineTranslationService.php
+grep -Fq 'assertGovernedProviderForPurge' src/Application/MachineTranslationService.php
+grep -Fq 'response must attest the approved provider region' src/Application/MachineTranslationService.php
 grep -Fq 'An active provider must be disabled before governance-relevant configuration is changed' src/Application/ProviderService.php
 grep -Fq 'strictUtcTimestamp' src/Application/ReleaseApprovalService.php
 grep -Fq 'Expired idempotency state could not be retired' src/Infrastructure/Repository/LocalizationRepository.php
