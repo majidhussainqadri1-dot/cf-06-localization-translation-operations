@@ -83,13 +83,20 @@ final class FutureCapabilityGuard
         if (! is_array($links) || [] === $links) {
             throw new InvalidArgumentException('links must be a non-empty array.');
         }
+        $normalized = [];
         foreach ($links as $row) {
             if (! is_array($row)) {
                 throw new InvalidArgumentException('Each SEO link row must be an object.');
             }
             $hreflang = trim((string)($row['hreflang'] ?? ''));
-            if ('x-default' !== strtolower($hreflang) && null === LocaleValidator::canonicalize($hreflang)) {
-                throw new InvalidArgumentException('hreflang must be x-default or a valid BCP47-style tag.');
+            if ('x-default' === strtolower($hreflang)) {
+                $row['hreflang'] = 'x-default';
+            } else {
+                $canonical = LocaleValidator::canonicalize($hreflang);
+                if (null === $canonical) {
+                    throw new InvalidArgumentException('hreflang must be x-default or a valid BCP47-style tag.');
+                }
+                $row['hreflang'] = $canonical;
             }
             foreach (['url', 'canonical'] as $field) {
                 $url = trim((string)($row[$field] ?? ''));
@@ -100,8 +107,11 @@ final class FutureCapabilityGuard
                 if (isset($parts['user']) || isset($parts['pass'])) {
                     throw new InvalidArgumentException($field . ' must not contain embedded credentials.');
                 }
+                $row[$field] = $url;
             }
+            $normalized[] = $row;
         }
+        $input['links'] = $normalized;
         return $input;
     }
 
