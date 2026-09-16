@@ -26,11 +26,10 @@ final class FutureCapabilitiesFacade
     public function evaluate(string $id, array $input): array
     {
         $id = strtoupper(trim($id));
-        // Release/freshness evidence is checked before any privacy filter can
-        // silently discard an invalid row and make the supplied evidence look clean.
         $input = ReleaseLifecycleGuard::normalize($id, $input);
         $input = FutureCapabilityGuard::normalize($id, $input);
         $input = LocaleAccessibilityGuard::normalize($id, $input);
+        $input = SemanticIntegrityGuard::normalize($id, $input);
         if ('CF06-FUT-033' === $id) {
             $input = ProviderEligibilityGuard::normalize($input);
         }
