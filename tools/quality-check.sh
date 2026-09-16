@@ -19,6 +19,7 @@ php tests/review-rounds-40.php
 php tests/future40.php
 php tests/future40-validation.php
 php tests/future40-privacy-provider.php
+php tests/future40-semantic-integrity.php
 
 echo '== Secret-pattern guard =='
 if grep -RInE --exclude-dir=.git --exclude-dir=dist --exclude-dir=tests --exclude='quality-check.sh' '(BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{20,}|sk_live_[A-Za-z0-9]{12,}|xox[baprs]-[A-Za-z0-9-]{10,})' .; then
@@ -74,6 +75,7 @@ grep -Fq "'approval_authority' => false" src/Application/FutureCapabilitiesServi
 grep -Fq 'FutureCapabilitiesFacade' src/Plugin.php
 grep -Fq 'FutureCapabilityGuard::normalize' src/Application/FutureCapabilitiesFacade.php
 grep -Fq 'ProviderEligibilityGuard::normalize' src/Application/FutureCapabilitiesFacade.php
+grep -Fq 'SemanticIntegrityGuard::apply' src/Application/FutureCapabilitiesFacade.php
 grep -Fq 'live_deployment_verification' src/Contract/FutureCapabilities.php
 grep -Fq 'MAX_EVALUATION_BYTES' src/Rest/FutureRoutes.php
 grep -Fq 'if (! isset(self::MAP[$action]))' src/Security/Authorization.php
