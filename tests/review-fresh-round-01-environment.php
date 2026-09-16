@@ -15,8 +15,8 @@ $t->test('Integration acceptance is bound to configured deployment environment',
 
 $t->test('Staging and production evidence use distinct durable identities', function () use ($code): void {
     TestHarness::assertTrue(str_contains($code, 'evidenceStorageKey'));
-    TestHarness::assertTrue(str_contains($code, "$key . '@' . $environment"));
-    TestHarness::assertTrue(str_contains($code, "findOne('integration_evidence', 'integration_key', self::evidenceStorageKey($key, $environment))"));
+    TestHarness::assertTrue(str_contains($code, '$key . \'@\' . $environment'));
+    TestHarness::assertTrue(str_contains($code, "findOne('integration_evidence', 'integration_key', self::evidenceStorageKey(\$key, \$environment))"));
 });
 
 $t->test('Environment-qualified evidence remains bounded by current schema', function () use ($code): void {
