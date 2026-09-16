@@ -6,6 +6,7 @@ namespace Sabri\Localization\Rest;
 
 use InvalidArgumentException;
 use Sabri\Localization\Application\FutureCapabilitiesService;
+use Sabri\Localization\Contract\FutureCapabilities;
 use Sabri\Localization\Security\Authorization;
 use Throwable;
 use WP_Error;
@@ -31,7 +32,9 @@ final class FutureRoutes
             'callback' => fn (): WP_REST_Response => new WP_REST_Response([
                 'items' => array_values($this->future->catalogue()),
                 'default_state' => 'disabled',
-                'activation' => 'founder-change-control-plus-staging',
+                'activation' => 'all-governing-gates-required',
+                'activation_gates' => FutureCapabilities::activationGates(),
+                'activation_ready' => false,
             ], 200),
             'permission_callback' => fn (): bool => Authorization::allowed('audit') || Authorization::allowed('manage'),
         ]);
