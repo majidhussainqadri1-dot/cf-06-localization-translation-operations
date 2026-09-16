@@ -12,10 +12,7 @@ final class PlaceholderValidator
 
     public static function extract(string $text): array
     {
-        preg_match_all('/(?<!\{)\{([A-Za-z][A-Za-z0-9_]*)\}(?!\})/', $text, $matches);
-        $items = array_values(array_unique($matches[1] ?? array()));
-        sort($items, SORT_STRING);
-        return $items;
+        return MessageFormatValidator::analyze($text)['arguments'];
     }
 
     public static function normalizeSchema(mixed $provided): array
@@ -49,7 +46,11 @@ final class PlaceholderValidator
     public static function assertTarget(string $source, string $target, array $schema): void
     {
         self::assertSource($source, $schema);
-        if (self::extract($target) !== array_keys($schema)) {
+        MessageFormatValidator::assertEquivalent($source, $target);
+        $targetArguments = self::extract($target);
+        $declared = array_keys($schema);
+        sort($declared, SORT_STRING);
+        if ($targetArguments !== $declared) {
             throw new InvalidArgumentException('Translation placeholders do not exactly match the source schema.');
         }
     }
