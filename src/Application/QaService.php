@@ -18,9 +18,9 @@ final class QaService
     public function unit(array $unit,array $resource,string $target):array
     {
         $checks=[];$schema=json_decode((string)$resource['placeholders'],true)?:array();
-        $checks[]=$this->check('placeholders',fn()=>PlaceholderValidator::assertTarget($this->resources->text($resource),$target,$schema),'critical');
+        $checks[]=$this->check('placeholders_icu',fn()=>PlaceholderValidator::assertTarget($this->resources->text($resource),$target,$schema),'critical');
         $checks[]=$this->check('markup',fn()=>MarkupValidator::assertEquivalent($this->resources->text($resource),$target),'high');
-        $checks[]=$this->check('bidi',fn()=>BidiValidator::assertSafe($target),'high');
+        $checks[]=$this->check('bidi',fn()=>BidiValidator::assertSafe($target,true),'high');
         $checks[]=$this->check('numbers_units',fn()=>NumberUnitGuard::assertImmutable($this->resources->text($resource),$target,RiskPolicy::requiresDomainReview((string)$resource['risk_class'],(string)$resource['domain_name'])),'critical');
         $checks[]=$this->terminology($resource,$unit,$target);
         foreach($checks as $check){$this->repo->insert('qa_results',array('target_type'=>'unit','target_uuid'=>$unit['uuid'],'rule_code'=>$check['rule'],'result'=>$check['result'],'severity'=>$check['severity'],'details_json'=>wp_json_encode($check['details']),'reviewer_id'=>get_current_user_id(),'fixed_at'=>null));}
