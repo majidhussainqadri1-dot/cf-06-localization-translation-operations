@@ -23,6 +23,10 @@ final class FutureCapabilitiesFacade
     {
         $id = strtoupper(trim($id));
         $input = FutureCapabilityGuard::normalize($id, $input);
-        return $this->handlers->evaluate($id, $input);
+        $out = $this->handlers->evaluate($id, $input);
+        if ('CF06-FUT-018' === $id && isset($out['result']['fallback_chain']) && is_array($out['result']['fallback_chain'])) {
+            $out['result']['fallback_chain'] = array_values(array_unique(array_map('strval', $out['result']['fallback_chain'])));
+        }
+        return $out;
     }
 }
