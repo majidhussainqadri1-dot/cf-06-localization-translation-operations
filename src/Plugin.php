@@ -50,8 +50,15 @@ final class Plugin
     public function boot(): void
     {
         if ($this->booted) { return; }
-        $this->booted = true;
         Activator::maybeUpgrade();
+        $installedSchema=(string)get_option('slto_schema_version','0.0.0');
+        $installedContract=(string)get_option('slto_contract_version','0.0.0');
+        if(version_compare($installedSchema,SABRI_SLTO_SCHEMA_VERSION,'<')||version_compare($installedContract,SABRI_SLTO_CONTRACT_VERSION,'<')){
+            throw new \RuntimeException('CF-06 schema or contract upgrade is incomplete; runtime boot is denied.');
+        }
+        // Mark booted only after migration parity has been verified. A failed
+        // upgrade must not poison this PHP process by leaving a false booted flag.
+        $this->booted = true;
 
         add_action('init', static function(): void {
             load_plugin_textdomain('sabri-localization-translation-operations', false, dirname(plugin_basename(SABRI_SLTO_FILE)).'/languages');
@@ -80,7 +87,7 @@ final class Plugin
         $metrics = new MetricsService($repo);
         $health = new HealthService($crypto,$metrics,$integrations);
         $privacy = new PrivacyService($jobs,$audit,$tx);
-        $migration = new MigrationService($audit);
+        $migration = new MigrationService($audit,$tx);
         $contentLinks = new ContentLinkService($repo,$audit,$tx);
         $providers = new ProviderService($repo,$audit,$tx);
         $future = new FutureCapabilitiesFacade();
