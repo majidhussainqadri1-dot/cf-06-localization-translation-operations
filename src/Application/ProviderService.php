@@ -36,12 +36,14 @@ final class ProviderService
         if(''!==$credentialRef&&1!==preg_match('/^env:[A-Z][A-Z0-9_]{2,127}$/D',$credentialRef)){throw new InvalidArgumentException('Provider credentials must use a bounded environment reference.');}
         $contractVersion=sanitize_text_field((string)($input['contract_version']??''));
         if(1!==preg_match('/^\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?$/D',$contractVersion)){throw new InvalidArgumentException('Provider contract version is invalid.');}
+        $region=sanitize_text_field((string)($input['region']??''));
+        if(''!==$region&&1!==preg_match('/^[A-Za-z0-9-]{2,32}$/D',$region)){throw new InvalidArgumentException('Provider region code is invalid.');}
         $hostsJson=wp_json_encode($hosts);$subsJson=wp_json_encode(array_slice(is_array($input['subprocessors']??null)?$input['subprocessors']:[],0,100));
         if(!is_string($hostsJson)||!is_string($subsJson)){throw new InvalidArgumentException('Provider metadata could not be encoded.');}
-        return $this->tx->run(function() use ($input,$key,$type,$url,$hostsJson,$subsJson,$credentialRef,$contractVersion): array {
+        return $this->tx->run(function() use ($input,$key,$type,$url,$hostsJson,$subsJson,$credentialRef,$contractVersion,$region): array {
             $existing=$this->repo->findOne('providers','provider_key',$key);
             $data=array('provider_key'=>$key,'provider_type'=>$type,'base_url'=>$url?:null,'allowed_hosts'=>$hostsJson,
-                'region_code'=>sanitize_text_field((string)($input['region']??''))?:null,'retention_days'=>max(0,min(30,(int)($input['retention_days']??0))),
+                'region_code'=>$region?:null,'retention_days'=>max(0,min(30,(int)($input['retention_days']??0))),
                 'training_allowed'=>0,'subprocessors_json'=>$subsJson,'credential_reference'=>$credentialRef?:null,'contract_version'=>$contractVersion);
             if(is_array($existing)){$data['status']=$existing['status'];$row=$this->repo->updateVersioned('providers',(string)$existing['uuid'],(int)($input['row_version']??$existing['row_version']),$data);}
             else{$data['status']='disabled';$row=$this->repo->insert('providers',array_merge($data,array('row_version'=>1)));}
@@ -57,7 +59,10 @@ final class ProviderService
         if(!in_array($to,$map[(string)$row['status']]??[],true)){throw new InvalidArgumentException('Invalid provider transition.');}
         if('active'===$to){
             if(!defined('SLTO_PROVIDER_ACTIVATION_APPROVED')||true!==SLTO_PROVIDER_ACTIVATION_APPROVED){throw new InvalidArgumentException('Provider activation has not received Founder approval.');}
-            if(empty($row['base_url'])||empty($row['allowed_hosts'])||empty($row['credential_reference'])||empty($row['contract_version'])){throw new InvalidArgumentException('Provider activation prerequisites are incomplete.');}
+            if(empty($row['base_url'])||empty($row['allowed_hosts'])||empty($row['credential_reference'])||empty($row['contract_version'])||empty($row['region_code'])){throw new InvalidArgumentException('Provider activation prerequisites are incomplete.');}
+            if(0!==(int)($row['training_allowed']??0)){throw new InvalidArgumentException('Provider training reuse must remain disabled.');}
+            $evidence=apply_filters('slto_verify_provider_activation_evidence',false,$row);
+            if(true!==$evidence){throw new InvalidArgumentException('Provider privacy/security/region/retention/exit evidence is incomplete.');}
         }
         if('deprecated'===$to&&$this->repo->count('vendor_jobs',['provider_key'=>$row['provider_key']],['purged'])>0){throw new InvalidArgumentException('Provider has unpurged jobs and cannot be deprecated.');}
         return $this->tx->run(function() use ($row,$uuid,$to,$version,$reason): array {
