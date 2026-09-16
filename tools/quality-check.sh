@@ -22,6 +22,7 @@ php tests/future40-privacy-provider.php
 php tests/future40-semantic-integrity.php
 php tests/future40-locale-accessibility.php
 php tests/review-round-9-traceability.php
+php tests/review-round-10-final.php
 
 echo '== Secret-pattern guard =='
 if grep -RInE --exclude-dir=.git --exclude-dir=dist --exclude-dir=tests --exclude='quality-check.sh' '(BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{20,}|sk_live_[A-Za-z0-9]{12,}|xox[baprs]-[A-Za-z0-9-]{10,})' .; then
@@ -30,27 +31,16 @@ if grep -RInE --exclude-dir=.git --exclude-dir=dist --exclude-dir=tests --exclud
 fi
 
 echo '== Requirement traceability =='
-for i in $(seq 1 34); do
-  id=$(printf 'CF06-FR-%03d' "$i")
-  grep -Fq "$id" docs/REQUIREMENTS-TRACEABILITY.md || { echo "Missing $id" >&2; exit 1; }
-done
-for i in $(seq 1 10); do
-  id=$(printf 'CF06-CEN-%02d' "$i")
-  grep -Fq "$id" docs/REQUIREMENTS-TRACEABILITY.md || { echo "Missing $id" >&2; exit 1; }
-done
-for i in $(seq 1 6); do
-  id=$(printf 'CF06-NJ-%02d' "$i")
-  grep -Fq "$id" docs/REQUIREMENTS-TRACEABILITY.md || { echo "Missing $id" >&2; exit 1; }
-done
+for i in $(seq 1 34); do id=$(printf 'CF06-FR-%03d' "$i"); grep -Fq "$id" docs/REQUIREMENTS-TRACEABILITY.md || { echo "Missing $id" >&2; exit 1; }; done
+for i in $(seq 1 10); do id=$(printf 'CF06-CEN-%02d' "$i"); grep -Fq "$id" docs/REQUIREMENTS-TRACEABILITY.md || { echo "Missing $id" >&2; exit 1; }; done
+for i in $(seq 1 6); do id=$(printf 'CF06-NJ-%02d' "$i"); grep -Fq "$id" docs/REQUIREMENTS-TRACEABILITY.md || { echo "Missing $id" >&2; exit 1; }; done
 for i in $(seq 1 40); do
   id=$(printf 'CF06-FUT-%03d' "$i")
   grep -Fq "$id" docs/REQUIREMENTS-TRACEABILITY.md || { echo "Missing $id" >&2; exit 1; }
   grep -Fq "$id" docs/FUTURE40.md || { echo "Missing Future40 specification $id" >&2; exit 1; }
   grep -Fq "$id" docs/FUTURE40-TRACEABILITY-EVIDENCE.md || { echo "Missing Future40 evidence row $id" >&2; exit 1; }
 done
-for field in 'Security/privacy/safety enforcement' 'Automated evidence' 'Canonical owner boundary' 'Package / staging / live evidence'; do
-  grep -Fq "$field" docs/FUTURE40-TRACEABILITY-EVIDENCE.md || { echo "Missing Future40 evidence dimension: $field" >&2; exit 1; }
-done
+for field in 'Security/privacy/safety enforcement' 'Automated evidence' 'Canonical owner boundary' 'Package / staging / live evidence'; do grep -Fq "$field" docs/FUTURE40-TRACEABILITY-EVIDENCE.md || { echo "Missing Future40 evidence dimension: $field" >&2; exit 1; }; done
 
 echo '== Repository hygiene and version coherence =='
 test ! -e .cf06-payload
@@ -69,6 +59,18 @@ grep -Fq "'C1' !== strtoupper(\$dataClass)" src/Domain/Translation/RiskPolicy.ph
 grep -Fq 'MessageFormatValidator::assertEquivalent' src/Domain/Translation/PlaceholderValidator.php
 grep -Fq "status='invalidated'" src/Infrastructure/DependencyInvalidator.php
 grep -Fq 'slto_verify_integration_acceptance_evidence' src/Application/IntegrationService.php
+grep -Fq 'deploymentEnvironment' src/Application/IntegrationService.php
+grep -Fq 'slto_verify_production_activation_evidence' src/Application/HealthService.php
+grep -Fq 'expected and actual hashes differ' src/Application/QaEvidenceService.php
+grep -Fq "status='running' AND lease_until IS NOT NULL" src/Infrastructure/JobQueue.php
+grep -Fq 'retained_audit_metadata' src/Application/PrivacyService.php
+grep -Fq 'assignedActorIsCurrent' src/Application/TranslationService.php
+grep -Fq 'QA evidence is frozen once a bundle is approved for release' src/Application/BundleService.php
+grep -Fq 'assertActiveProvider' src/Application/MachineTranslationService.php
+grep -Fq 'An active provider must be disabled before governance-relevant configuration is changed' src/Application/ProviderService.php
+grep -Fq 'strictUtcTimestamp' src/Application/ReleaseApprovalService.php
+grep -Fq 'Expired idempotency state could not be retired' src/Infrastructure/Repository/LocalizationRepository.php
+grep -Fq "'status'=>'runtime_disabled'" src/functions.php
 grep -Fq 'slto_verify_extraction_evidence' src/Application/ExtractionService.php
 grep -Fq 'environment_name' src/Application/QaEvidenceService.php
 grep -Fq "'performance'" src/Application/BundleService.php
