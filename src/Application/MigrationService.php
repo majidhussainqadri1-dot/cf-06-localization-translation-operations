@@ -8,10 +8,11 @@ use InvalidArgumentException;
 use RuntimeException;
 use Sabri\Localization\Infrastructure\Database;
 use Sabri\Localization\Infrastructure\Repository\AuditRepository;
+use Sabri\Localization\Infrastructure\Transaction;
 
 final class MigrationService
 {
-    public function __construct(private readonly AuditRepository $audit){}
+    public function __construct(private readonly AuditRepository $audit, private readonly Transaction $tx){}
 
     public function inventory(): array
     {
@@ -28,18 +29,31 @@ final class MigrationService
 
     public function dryRun(string $key,array $source): array
     {
-        global $wpdb;if(''===$key||strlen($key)>191||count($source)>100000){throw new InvalidArgumentException('Migration key or source inventory is invalid.');}
-        $report=['migration_key'=>$key,'mode'=>'dry-run','source_count'=>count($source),'create'=>0,'update'=>0,'skip'=>0,'quarantine'=>0,'conflicts'=>[]];
+        global $wpdb;
+        $key=trim($key);
+        if(''===$key||strlen($key)>191||1!==preg_match('/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,190}$/D',$key)||count($source)>100000){throw new InvalidArgumentException('Migration key or source inventory is invalid.');}
+        $report=['migration_key'=>$key,'migration_version'=>SABRI_SLTO_SCHEMA_VERSION,'mode'=>'dry-run','source_count'=>count($source),'create'=>0,'update'=>0,'skip'=>0,'quarantine'=>0,'conflicts'=>[]];
         foreach($source as $item){
-            if(!is_array($item)||empty($item['resource_key'])||empty($item['source_hash'])||1!==preg_match('/^[a-f0-9]{64}$/D',(string)$item['source_hash'])){$report['quarantine']++;continue;}
-            $existing=$wpdb->get_row($wpdb->prepare('SELECT source_hash FROM '.Database::table('resources').' WHERE resource_key=%s',(string)$item['resource_key']),ARRAY_A);
+            if(!is_array($item)){$report['quarantine']++;continue;}
+            $resourceKey=trim((string)($item['resource_key']??''));$sourceHash=(string)($item['source_hash']??'');
+            if(''===$resourceKey||strlen($resourceKey)>191||1!==preg_match('/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,190}$/D',$resourceKey)||1!==preg_match('/^[a-f0-9]{64}$/D',$sourceHash)){$report['quarantine']++;continue;}
+            $existing=$wpdb->get_row($wpdb->prepare('SELECT source_hash FROM '.Database::table('resources').' WHERE resource_key=%s',$resourceKey),ARRAY_A);
             if(''!==(string)$wpdb->last_error){throw new RuntimeException('Migration dry-run source comparison failed.');}
-            if(!is_array($existing)){$report['create']++;}elseif(hash_equals((string)$existing['source_hash'],(string)$item['source_hash'])){$report['skip']++;}else{$report['update']++;$report['conflicts'][]=(string)$item['resource_key'];}
+            if(!is_array($existing)){$report['create']++;}elseif(hash_equals((string)$existing['source_hash'],$sourceHash)){$report['skip']++;}else{$report['update']++;if(count($report['conflicts'])<1000){$report['conflicts'][]=$resourceKey;}}
         }
-        $checkpoint=wp_json_encode(['offset'=>0]);$encoded=wp_json_encode($report,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
-        if(!is_string($checkpoint)||!is_string($encoded)){throw new RuntimeException('Migration dry-run evidence could not be encoded.');}
-        $written=$wpdb->query($wpdb->prepare("INSERT INTO ".Database::table('migrations')." (migration_key,migration_version,status,checkpoint_json,dry_run_report,updated_at) VALUES (%s,%s,'dry_run',%s,%s,%s) ON DUPLICATE KEY UPDATE status='dry_run',dry_run_report=VALUES(dry_run_report),updated_at=VALUES(updated_at)",$key,SABRI_SLTO_SCHEMA_VERSION,$checkpoint,$encoded,Database::now()));
-        if(false===$written){throw new RuntimeException('Migration dry-run evidence could not be persisted.');}
-        $this->audit->record('migration',$key,'migration_dry_run','success',['report_hash'=>hash('sha256',$encoded)]);return $report;
+        $report['conflicts_truncated']=$report['update']>count($report['conflicts']);
+        $checkpoint=wp_json_encode(['offset'=>0,'source_count'=>count($source),'schema_version'=>SABRI_SLTO_SCHEMA_VERSION],JSON_UNESCAPED_SLASHES);
+        $encoded=wp_json_encode($report,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+        if(!is_string($checkpoint)||!is_string($encoded)||strlen($encoded)>5_000_000){throw new RuntimeException('Migration dry-run evidence could not be encoded within the governed limit.');}
+
+        return $this->tx->run(function() use ($wpdb,$key,$checkpoint,$encoded,$report): array {
+            $written=$wpdb->query($wpdb->prepare(
+                "INSERT INTO ".Database::table('migrations')." (migration_key,migration_version,status,checkpoint_json,dry_run_report,updated_at) VALUES (%s,%s,'dry_run',%s,%s,%s) ON DUPLICATE KEY UPDATE migration_version=VALUES(migration_version),status='dry_run',checkpoint_json=VALUES(checkpoint_json),dry_run_report=VALUES(dry_run_report),started_at=NULL,completed_at=NULL,updated_at=VALUES(updated_at)",
+                $key,SABRI_SLTO_SCHEMA_VERSION,$checkpoint,$encoded,Database::now()
+            ));
+            if(false===$written){throw new RuntimeException('Migration dry-run evidence could not be persisted.');}
+            $this->audit->record('migration',$key,'migration_dry_run','success',['report_hash'=>hash('sha256',$encoded),'schema_version'=>SABRI_SLTO_SCHEMA_VERSION]);
+            return $report;
+        });
     }
 }
