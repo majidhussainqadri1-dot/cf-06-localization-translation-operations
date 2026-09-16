@@ -45,6 +45,18 @@ $t->test('Future40 evaluation payload is bounded and internal errors do not log 
     TestHarness::assertTrue(str_contains($r, "get_class(\$exception)"));
     TestHarness::assertTrue(! str_contains($r, "evaluation error: ' . \$exception->getMessage()"));
 });
+$t->test('Admin release-sensitive actions require release authorization', function () use ($root): void {
+    $code = file_get_contents($root . '/src/Admin/AdminPage.php');
+    TestHarness::assertTrue(str_contains($code, "'build_bundle','deactivate_runtime'=>'release'"));
+    TestHarness::assertTrue(str_contains($code, 'Authorization::allowed($requiredAction)'));
+    TestHarness::assertTrue(str_contains($code, "Authorization::allowed('release')"));
+});
+$t->test('Admin runtime deactivation verifies persistence and hides raw exceptions', function () use ($root): void {
+    $code = file_get_contents($root . '/src/Admin/AdminPage.php');
+    TestHarness::assertTrue(str_contains($code, 'Localization runtime state could not be persisted.'));
+    TestHarness::assertTrue(str_contains($code, "'message'=>'Localization action failed safely.'"));
+    TestHarness::assertTrue(! str_contains($code, "['type'=>'error','message'=>\$e->getMessage()]"));
+});
 $t->test('WordPress privacy eraser queues audited background erasure', function () use ($root): void {
     $code = file_get_contents($root . '/src/Plugin.php');
     TestHarness::assertTrue(str_contains($code, 'wp_privacy_personal_data_erasers'));
