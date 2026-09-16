@@ -1,5 +1,6 @@
 <?php
 
+use Sabri\Localization\Application\FutureCapabilitiesFacade;
 use Sabri\Localization\Application\IntegrationService;
 use Sabri\Localization\Infrastructure\Activator;
 use Sabri\Localization\Infrastructure\Database;
@@ -48,6 +49,7 @@ $indexColumns = is_array($indexRows) ? array_column($indexRows, 'Column_name') :
 $check(array('job_type', 'dedupe_key') === array_values($indexColumns), 'compound job dedupe index mismatch');
 
 $check(Authorization::allowed('manage'), 'approved File 00 assertion should permit administrator capability');
+$check(! Authorization::allowed('unknown_action'), 'unknown authorization actions must fail closed');
 $deny = static fn (): bool => false;
 add_filter('slto_authorize_action', $deny, 10, 5);
 $check(! Authorization::allowed('manage'), 'authorization extension must be able to deny');
@@ -111,11 +113,17 @@ $check(1 === $outerCount && 0 === $innerCount, 'nested savepoint behavior is inc
 $wpdb->query($wpdb->prepare('DELETE FROM ' . Database::table('rate_limits') . ' WHERE bucket_key IN (%s,%s)', $bucketOuter, $bucketInner));
 
 $future = Plugin::instance()->service('future');
-$check($future instanceof \Sabri\Localization\Application\FutureCapabilitiesService, 'Future40 service unavailable');
+$check($future instanceof FutureCapabilitiesFacade, 'guarded Future40 facade unavailable');
 $catalogue = $future->catalogue();
 $check(40 === count($catalogue), 'Future40 capability count mismatch');
 $probe = $future->evaluate('CF06-FUT-027', array('scope'=>'resource:test','kill'=>true,'reason'=>'integration-test'));
 $check('disabled' === ($probe['default_state'] ?? ''), 'Future40 must remain disabled by default');
+try {
+    $future->evaluate('CF06-FUT-020', array('canonical_iso_date'=>'2026-99-99','display_mode'=>'dual'));
+    throw new RuntimeException('Future40 validation guard did not reject impossible date');
+} catch (InvalidArgumentException $exception) {
+    $check(str_contains($exception->getMessage(), 'real Gregorian date'), 'unexpected Future40 validation error');
+}
 
 $check(false !== wp_next_scheduled('slto_process_jobs'), 'job schedule missing');
 $check(false !== wp_next_scheduled('slto_daily_reconciliation'), 'reconciliation schedule missing');
