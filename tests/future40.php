@@ -11,6 +11,7 @@ require dirname(__DIR__) . '/src/Domain/Future/FutureCapabilityGuard.php';
 require dirname(__DIR__) . '/src/Domain/Future/LocaleAccessibilityGuard.php';
 require dirname(__DIR__) . '/src/Domain/Future/ProviderEligibilityGuard.php';
 require dirname(__DIR__) . '/src/Domain/Future/SemanticIntegrityGuard.php';
+require dirname(__DIR__) . '/src/Domain/Future/ReleaseLifecycleGuard.php';
 require dirname(__DIR__) . '/src/Application/FutureCapabilitiesService.php';
 require dirname(__DIR__) . '/src/Application/FutureCapabilitiesFacade.php';
 
@@ -69,12 +70,12 @@ $cases = [
     'CF06-FUT-023' => ['text'=>'ایک لمبی سطر، دوسری سطر','locale'=>'ur-PK'],
     'CF06-FUT-024' => ['locale'=>'ur-PK','text'=>'اردو input'],
     'CF06-FUT-025' => ['links'=>[['hreflang'=>'ur-PK','url'=>'https://example.test/ur','canonical'=>'https://example.test/ur']]],
-    'CF06-FUT-026' => ['coverage_percent'=>99,'critical_missing'=>0,'threshold_percent'=>95],
-    'CF06-FUT-027' => ['scope'=>'resource:medical.warning','kill'=>true,'reason'=>'critical mistranslation'],
-    'CF06-FUT-028' => ['approvals'=>[['role'=>'linguistic'],['role'=>'domain']],'expires_in_minutes'=>60],
-    'CF06-FUT-029' => ['old'=>['a'=>'1','b'=>'2'],'new'=>['a'=>'1','b'=>'3','c'=>'4']],
-    'CF06-FUT-030' => ['resources'=>[['key'=>'home.title','text'=>'Home','data_class'=>'C1','risk_class'=>'low','domain'=>'platform','public'=>true,'approved'=>true,'current'=>true]]],
-    'CF06-FUT-031' => ['bundle'=>['a'=>['text'=>'A','data_class'=>'C1','risk_class'=>'low','domain'=>'platform','public'=>true,'approved'=>true]]],
+    'CF06-FUT-026' => ['locale'=>'ur-PK','feature_id'=>'home.title','domain'=>'platform','coverage_percent'=>99,'critical_missing'=>0,'threshold_percent'=>95],
+    'CF06-FUT-027' => ['scope'=>'resource:medical.warning','kill'=>true,'reason'=>'critical mistranslation','actor_ref'=>'reviewer-1','evidence_ref'=>'incident-1'],
+    'CF06-FUT-028' => ['approvals'=>[['role'=>'linguistic','actor_id'=>'ling-1','approved'=>true,'approved_at'=>'2026-09-16T10:00:00+05:00'],['role'=>'domain','actor_id'=>'domain-1','approved'=>true,'approved_at'=>'2026-09-16T10:01:00+05:00']],'expires_in_minutes'=>60,'evidence_ref'=>'hotfix-1'],
+    'CF06-FUT-029' => ['old'=>['a'=>'1','b'=>'2'],'new'=>['a'=>'1','b'=>'3','c'=>'4'],'old_locale'=>'ur-PK','new_locale'=>'ur-PK','old_version'=>'1.0.0','new_version'=>'1.0.1'],
+    'CF06-FUT-030' => ['resources'=>[['key'=>'home.title','text'=>'Home','data_class'=>'C1','risk_class'=>'low','domain'=>'platform','public'=>true,'approved'=>true,'current'=>true,'stale'=>false]]],
+    'CF06-FUT-031' => ['bundle'=>['a'=>['text'=>'A','data_class'=>'C1','risk_class'=>'low','domain'=>'platform','public'=>true,'approved'=>true,'current'=>true,'stale'=>false]]],
     'CF06-FUT-032' => ['endpoint'=>'http://localhost:8080/v1/translate','approved_hosts'=>['localhost'],'allow_insecure_local'=>true],
     'CF06-FUT-033' => ['locale'=>'ur-PK','data_class'=>'C1','risk_class'=>'low','domain'=>'platform','region'=>'PK','providers'=>[['id'=>'p1','approved'=>true,'healthy'=>true,'quality'=>90,'data_classes'=>['C1'],'locales'=>['ur-PK'],'regions'=>['PK']]]],
     'CF06-FUT-034' => ['samples'=>[['accuracy'=>90,'terminology'=>90,'privacy'=>100,'latency'=>80,'cost'=>70]]],
@@ -97,6 +98,21 @@ foreach ($cases as $id => $input) {
         TestHarness::assertTrue(is_array($out['result']));
     });
 }
+
+$t->test('Release lifecycle rejects stale low-bandwidth content', fn () => TestHarness::assertThrows(
+    fn () => $s->evaluate('CF06-FUT-031', ['bundle'=>['a'=>['text'=>'A','data_class'=>'C1','risk_class'=>'low','domain'=>'platform','public'=>true,'approved'=>true,'current'=>true,'stale'=>true]]]),
+    InvalidArgumentException::class
+));
+
+$t->test('Release lifecycle rejects ambiguous hotfix approval actors', fn () => TestHarness::assertThrows(
+    fn () => $s->evaluate('CF06-FUT-028', ['approvals'=>[['role'=>'linguistic','actor_id'=>'same','approved'=>true,'approved_at'=>'2026-09-16T10:00:00+05:00'],['role'=>'domain','actor_id'=>'same','approved'=>true,'approved_at'=>'2026-09-16T10:01:00+05:00']],'expires_in_minutes'=>30,'evidence_ref'=>'hotfix-2']),
+    InvalidArgumentException::class
+));
+
+$t->test('Release lifecycle rejects same-version delta bundle', fn () => TestHarness::assertThrows(
+    fn () => $s->evaluate('CF06-FUT-029', ['old'=>['a'=>'1'],'new'=>['a'=>'2'],'old_locale'=>'ur-PK','new_locale'=>'ur-PK','old_version'=>'1.0.0','new_version'=>'1.0.0']),
+    InvalidArgumentException::class
+));
 
 $t->test('Unknown future capability fails closed', fn () => TestHarness::assertThrows(
     fn () => $s->evaluate('CF06-FUT-999', []),
