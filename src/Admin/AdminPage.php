@@ -24,7 +24,16 @@ final class AdminPage
     }
     public function handle():void
     {
-        if(!Authorization::allowed('manage')){wp_die(esc_html__('You are not allowed to manage localization operations.','sabri-localization-translation-operations'));}check_admin_referer('slto_admin_action');$action=sanitize_key((string)($_POST['slto_action']??''));
+        check_admin_referer('slto_admin_action');
+        $action=sanitize_key((string)($_POST['slto_action']??''));
+        $requiredAction=match($action){
+            'build_bundle','deactivate_runtime'=>'release',
+            'process_jobs','dispatch_events'=>'manage',
+            default=>'manage',
+        };
+        if(!Authorization::allowed($requiredAction)){
+            wp_die(esc_html__('You are not allowed to perform this localization operation.','sabri-localization-translation-operations'));
+        }
         try{
             $result=match($action){
                 'build_bundle'=>$this->s['bundle']->build(sanitize_text_field((string)($_POST['locale']??''))),
@@ -34,10 +43,19 @@ final class AdminPage
                 default=>throw new \InvalidArgumentException('Unknown localization administrator action.'),
             };
             set_transient('slto_admin_notice_'.get_current_user_id(),['type'=>'success','message'=>'Localization action completed.','details'=>$result],60);
-        }catch(Throwable $e){set_transient('slto_admin_notice_'.get_current_user_id(),['type'=>'error','message'=>$e->getMessage()],60);}
+        }catch(Throwable $e){
+            do_action('slto_safe_error','slto_admin_action_failed',\Sabri\Localization\Infrastructure\Database::uuid(),$e);
+            set_transient('slto_admin_notice_'.get_current_user_id(),['type'=>'error','message'=>'Localization action failed safely.'],60);
+        }
         wp_safe_redirect(add_query_arg(['page'=>'sabri-localization','tab'=>sanitize_key((string)($_POST['return_tab']??'overview'))],admin_url('admin.php')));exit;
     }
-    private function deactivateRuntime():array{update_option('slto_runtime_enabled',false,false);return ['runtime_enabled'=>false];}
+    private function deactivateRuntime():array
+    {
+        if(false===update_option('slto_runtime_enabled',false,false)&&(bool)get_option('slto_runtime_enabled',true)!==false){
+            throw new \RuntimeException('Localization runtime state could not be persisted.');
+        }
+        return ['runtime_enabled'=>false];
+    }
     public function render():void
     {
         if(!Authorization::allowed('manage')){wp_die(esc_html__('You are not allowed to view localization operations.','sabri-localization-translation-operations'));}
@@ -52,11 +70,13 @@ final class AdminPage
     }
     private function overview():void
     {
-        $health=$this->s['health']->report();echo '<section class="slto-grid" aria-label="'.esc_attr__('Localization overview','sabri-localization-translation-operations').'">';foreach(['runtime_enabled'=>'Runtime enabled','status'=>'Health status'] as $key=>$label){echo '<article class="slto-card"><h2><span class="dashicons dashicons-info-outline" aria-hidden="true"></span> '.esc_html($label).'</h2><p>'.esc_html(is_bool($health[$key]??null)?(($health[$key]??false)?'Yes':'No'):(string)($health[$key]??'Unknown')).'</p></article>';}echo '<article class="slto-card"><h2><span class="dashicons dashicons-chart-bar" aria-hidden="true"></span> Metrics</h2><pre>'.esc_html(wp_json_encode($health['metrics'],JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE)).'</pre></article></section>';$this->actionForm('process_jobs','Process queued jobs','overview');$this->actionForm('dispatch_events','Dispatch outbox events','overview');if($health['runtime_enabled']){$this->actionForm('deactivate_runtime','Deactivate runtime safely','overview');}
+        $health=$this->s['health']->report();echo '<section class="slto-grid" aria-label="'.esc_attr__('Localization overview','sabri-localization-translation-operations').'">';foreach(['runtime_enabled'=>'Runtime enabled','status'=>'Health status'] as $key=>$label){echo '<article class="slto-card"><h2><span class="dashicons dashicons-info-outline" aria-hidden="true"></span> '.esc_html($label).'</h2><p>'.esc_html(is_bool($health[$key]??null)?(($health[$key]??false)?'Yes':'No'):(string)($health[$key]??'Unknown')).'</p></article>';}echo '<article class="slto-card"><h2><span class="dashicons dashicons-chart-bar" aria-hidden="true"></span> Metrics</h2><pre>'.esc_html(wp_json_encode($health['metrics'],JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE)).'</pre></article></section>';$this->actionForm('process_jobs','Process queued jobs','overview');$this->actionForm('dispatch_events','Dispatch outbox events','overview');if($health['runtime_enabled']&&Authorization::allowed('release')){$this->actionForm('deactivate_runtime','Deactivate runtime safely','overview');}
     }
     private function releases():void
     {
-        $this->table('Locale Bundles',$this->s['repo']->list('bundles',[],200,0,'bundle_version DESC'),['locale_tag','bundle_version','coverage','critical_coverage','bundle_hash','status','activated_at']);echo '<h2>Build candidate bundle</h2><form method="post" action="'.esc_url(admin_url('admin-post.php')).'">';wp_nonce_field('slto_admin_action');echo '<input type="hidden" name="action" value="slto_admin_action"><input type="hidden" name="slto_action" value="build_bundle"><input type="hidden" name="return_tab" value="releases"><label for="slto-locale">Locale</label> <input id="slto-locale" name="locale" required pattern="[A-Za-z0-9-]{2,35}"> <button class="button button-primary"><span class="dashicons dashicons-hammer" aria-hidden="true"></span> Build</button></form>';
+        $this->table('Locale Bundles',$this->s['repo']->list('bundles',[],200,0,'bundle_version DESC'),['locale_tag','bundle_version','coverage','critical_coverage','bundle_hash','status','activated_at']);
+        if(!Authorization::allowed('release')){return;}
+        echo '<h2>Build candidate bundle</h2><form method="post" action="'.esc_url(admin_url('admin-post.php')).'">';wp_nonce_field('slto_admin_action');echo '<input type="hidden" name="action" value="slto_admin_action"><input type="hidden" name="slto_action" value="build_bundle"><input type="hidden" name="return_tab" value="releases"><label for="slto-locale">Locale</label> <input id="slto-locale" name="locale" required pattern="[A-Za-z0-9-]{2,35}"> <button class="button button-primary"><span class="dashicons dashicons-hammer" aria-hidden="true"></span> Build</button></form>';
     }
     private function health():void{$report=$this->s['health']->report();echo '<h2>Health and activation gates</h2><table class="widefat striped"><thead><tr><th>Gate</th><th>Status</th></tr></thead><tbody>';foreach($report['gates'] as $key=>$value){echo '<tr><th scope="row">'.esc_html($key).'</th><td><span class="dashicons '.($value?'dashicons-yes-alt':'dashicons-warning').'" aria-hidden="true"></span> '.esc_html($value?'Ready':'Not ready').'</td></tr>';}echo '</tbody></table><h2>Evidence</h2><pre>'.esc_html(wp_json_encode($report,JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE)).'</pre>';}
     private function table(string $title,array $rows,array $columns):void
