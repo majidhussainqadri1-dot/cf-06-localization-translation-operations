@@ -73,4 +73,51 @@ The candidate records and tests the cross-file laws `CEN-GOV-001`, `CEN-OWN-001`
 
 The central localization/internationalization constitution is additionally enforced by translation keys, explicit source locale/version, American-English technical-source policy, Urdu/Arabic RTL support, deterministic fallback, typed placeholders and ICU MessageFormat structure, locale-aware formatting metadata, safe bidi isolates, human high-risk review, SEO/content-link ownership boundaries and runtime fail-closed gates.
 
+## Founder-approved Future40 expansion
+
+| Requirement | Capability | Source enforcement | Evidence |
+|---|---|---|---|
+| CF06-FUT-001 | Pseudolocalization Lab | FutureCapabilitiesService::f001; FutureCapabilities registry | tests/future40.php + docs/FUTURE40.md |
+| CF06-FUT-002 | Visual Context Translation Editor | FutureCapabilitiesService::f002; FutureCapabilities registry | tests/future40.php + docs/FUTURE40.md |
+| CF06-FUT-003 | Device Preview Matrix | FutureCapabilitiesService::f003; FutureCapabilities registry | tests/future40.php + docs/FUTURE40.md |
+| CF06-FUT-004 | Source Authoring Linter | FutureCapabilitiesService::f004; FutureCapabilities registry | tests/future40.php + docs/FUTURE40.md |
+| CF06-FUT-005 | Semantic Equivalence Checker | FutureCapabilitiesService::f005; FutureCapabilities registry | tests/future40.php + docs/FUTURE40.md |
+| CF06-FUT-006 | Translation Risk Diff | FutureCapabilitiesService::f006; FutureCapabilities registry | tests/future40.php + docs/FUTURE40.md |
+| CF06-FUT-007 | Automatic Terminology Mining | FutureCapabilitiesService::f007; FutureCapabilities registry | tests/future40.php + docs/FUTURE40.md |
+| CF06-FUT-008 | Terminology Concept Graph | FutureCapabilitiesService::f008; FutureCapabilities registry | tests/future40.php + docs/FUTURE40.md |
+| CF06-FUT-009 | Citation Integrity Lock | FutureCapabilitiesService::f009; FutureCapabilities registry | tests/future40.php + docs/FUTURE40.md |
+| CF06-FUT-010 | Protected Domain Tokens | FutureCapabilitiesService::f010; FutureCapabilities registry | tests/future40.php + docs/FUTURE40.md |
+| CF06-FUT-011 | Transcript Localization | FutureCapabilitiesService::f011; FutureCapabilities registry | tests/future40.php + docs/FUTURE40.md |
+| CF06-FUT-012 | Subtitle Localization & Timing QA | FutureCapabilitiesService::f012; FutureCapabilities registry | tests/future40.php + docs/FUTURE40.md |
+| CF06-FUT-013 | Human-Reviewed AI Dubbing | FutureCapabilitiesService::f013; FutureCapabilities registry | tests/future40.php + docs/FUTURE40.md |
+| CF06-FUT-014 | Pronunciation Lexicon | FutureCapabilitiesService::f014; FutureCapabilities registry | tests/future40.php + docs/FUTURE40.md |
+| CF06-FUT-015 | PDF/eBook Localization Workflow | FutureCapabilitiesService::f015; FutureCapabilities registry | tests/future40.php + docs/FUTURE40.md |
+| CF06-FUT-016 | OCR Intake Review | FutureCapabilitiesService::f016; FutureCapabilities registry | tests/future40.php + docs/FUTURE40.md |
+| CF06-FUT-017 | Multilingual Accessibility Text | FutureCapabilitiesService::f017; FutureCapabilities registry | tests/future40.php + docs/FUTURE40.md |
+| CF06-FUT-018 | Regional/Dialect Locale Packs | FutureCapabilitiesService::f018; FutureCapabilities registry | tests/future40.php + docs/FUTURE40.md |
+| CF06-FUT-019 | Register & Honorific Profiles | FutureCapabilitiesService::f019; FutureCapabilities registry | tests/future40.php + docs/FUTURE40.md |
+| CF06-FUT-020 | Hijri/Gregorian Calendar Layer | FutureCapabilitiesService::f020; FutureCapabilities registry | tests/future40.php + docs/FUTURE40.md |
+| CF06-FUT-021 | Numeral-System Support | FutureCapabilitiesService::f021; FutureCapabilities registry | tests/future40.php + docs/FUTURE40.md |
+| CF06-FUT-022 | Font/Glyph Coverage Scanner | FutureCapabilitiesService::f022; FutureCapabilities registry | tests/future40.php + docs/FUTURE40.md |
+| CF06-FUT-023 | Locale Line-Break Engine | FutureCapabilitiesService::f023; FutureCapabilities registry | tests/future40.php + docs/FUTURE40.md |
+| CF06-FUT-024 | Input Method Compatibility | FutureCapabilitiesService::f024; FutureCapabilities registry | tests/future40.php + docs/FUTURE40.md |
+| CF06-FUT-025 | International SEO Auditor | FutureCapabilitiesService::f025; FutureCapabilities registry | tests/future40.php + docs/FUTURE40.md |
+| CF06-FUT-026 | Locale Launch Gate per Feature | FutureCapabilitiesService::f026; FutureCapabilities registry | tests/future40.php + docs/FUTURE40.md |
+| CF06-FUT-027 | Critical Copy Kill Switch | FutureCapabilitiesService::f027; FutureCapabilities registry | tests/future40.php + docs/FUTURE40.md |
+| CF06-FUT-028 | Emergency Translation Hotfix Lane | FutureCapabilitiesService::f028; FutureCapabilities registry | tests/future40.php + docs/FUTURE40.md |
+| CF06-FUT-029 | Delta Locale Bundles | FutureCapabilitiesService::f029; FutureCapabilities registry | tests/future40.php + docs/FUTURE40.md |
+| CF06-FUT-030 | Offline Locale Packs | FutureCapabilitiesService::f030; FutureCapabilities registry | tests/future40.php + docs/FUTURE40.md |
+| CF06-FUT-031 | Low-Bandwidth Localization Mode | FutureCapabilitiesService::f031; FutureCapabilities registry | tests/future40.php + docs/FUTURE40.md |
+| CF06-FUT-032 | Private/Self-Hosted MT Adapter | FutureCapabilitiesService::f032; FutureCapabilities registry | tests/future40.php + docs/FUTURE40.md |
+| CF06-FUT-033 | Multi-Provider Translation Router | FutureCapabilitiesService::f033; FutureCapabilities registry | tests/future40.php + docs/FUTURE40.md |
+| CF06-FUT-034 | Provider Benchmark Sandbox | FutureCapabilitiesService::f034; FutureCapabilities registry | tests/future40.php + docs/FUTURE40.md |
+| CF06-FUT-035 | Data-Residency Routing | FutureCapabilitiesService::f035; FutureCapabilities registry | tests/future40.php + docs/FUTURE40.md |
+| CF06-FUT-036 | AI Quality Estimation | FutureCapabilitiesService::f036; FutureCapabilities registry | tests/future40.php + docs/FUTURE40.md |
+| CF06-FUT-037 | Translation Debt Forecasting | FutureCapabilitiesService::f037; FutureCapabilities registry | tests/future40.php + docs/FUTURE40.md |
+| CF06-FUT-038 | Reviewer Calibration & Adjudication | FutureCapabilitiesService::f038; FutureCapabilities registry | tests/future40.php + docs/FUTURE40.md |
+| CF06-FUT-039 | Community Translation Suggestions | FutureCapabilitiesService::f039; FutureCapabilities registry | tests/future40.php + docs/FUTURE40.md |
+| CF06-FUT-040 | Founder Localization Command Center | FutureCapabilitiesService::f040; FutureCapabilities registry | tests/future40.php + docs/FUTURE40.md |
+
+All Future40 handlers are source-coded but default-disabled and return evidence-preview/validation envelopes only. They do not themselves publish, deploy, contact a provider, replace a native domain owner, or bypass qualified human review. `FutureRoutes` requires privileged authorization; `PlanCompliance` binds activation to Founder change-control, companion parity, staging, rollback and live verification.
+
 Every row above is a source-code requirement. Staging/manual acceptance evidence remains tracked separately and cannot be inferred from this table.
