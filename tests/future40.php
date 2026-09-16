@@ -18,6 +18,23 @@ $t->test('Future40 registry contains exact 40 capabilities', function (): void {
     TestHarness::assertSame('CF06-FUT-040', FutureCapabilities::ids()[39]);
 });
 
+$t->test('Future40 activation contract exposes every governing gate', function (): void {
+    $expected = [
+        'founder_change_control',
+        'privacy_security_domain_review',
+        'companion_contract_parity',
+        'staging_acceptance',
+        'rollback_restore_rehearsal',
+        'live_deployment_verification',
+    ];
+    TestHarness::assertSame($expected, FutureCapabilities::activationGates());
+    foreach (FutureCapabilities::all() as $capability) {
+        TestHarness::assertSame('disabled', $capability['default_state']);
+        TestHarness::assertSame('all-governing-gates-required', $capability['activation']);
+        TestHarness::assertSame($expected, $capability['activation_gates']);
+    }
+});
+
 $cases = [
     'CF06-FUT-001' => ['text'=>'Hello {name}','rtl_probe'=>true],
     'CF06-FUT-002' => ['resource_key'=>'home.title','route'=>'/ur/home','screenshot_ref'=>'shot-1'],
@@ -67,6 +84,8 @@ foreach ($cases as $id => $input) {
         TestHarness::assertSame($id, $out['capability']);
         TestHarness::assertSame('disabled', $out['default_state']);
         TestHarness::assertTrue($out['requires_founder_activation']);
+        TestHarness::assertSame(FutureCapabilities::activationGates(), $out['activation_gates']);
+        TestHarness::assertSame(false, $out['activation_ready']);
         TestHarness::assertTrue(is_array($out['result']));
     });
 }
