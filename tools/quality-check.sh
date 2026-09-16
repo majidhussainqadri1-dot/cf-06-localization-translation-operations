@@ -21,6 +21,7 @@ php tests/future40-validation.php
 php tests/future40-privacy-provider.php
 php tests/future40-semantic-integrity.php
 php tests/future40-locale-accessibility.php
+php tests/review-round-9-traceability.php
 
 echo '== Secret-pattern guard =='
 if grep -RInE --exclude-dir=.git --exclude-dir=dist --exclude-dir=tests --exclude='quality-check.sh' '(BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{20,}|sk_live_[A-Za-z0-9]{12,}|xox[baprs]-[A-Za-z0-9-]{10,})' .; then
@@ -45,6 +46,10 @@ for i in $(seq 1 40); do
   id=$(printf 'CF06-FUT-%03d' "$i")
   grep -Fq "$id" docs/REQUIREMENTS-TRACEABILITY.md || { echo "Missing $id" >&2; exit 1; }
   grep -Fq "$id" docs/FUTURE40.md || { echo "Missing Future40 specification $id" >&2; exit 1; }
+  grep -Fq "$id" docs/FUTURE40-TRACEABILITY-EVIDENCE.md || { echo "Missing Future40 evidence row $id" >&2; exit 1; }
+done
+for field in 'Security/privacy/safety enforcement' 'Automated evidence' 'Canonical owner boundary' 'Package / staging / live evidence'; do
+  grep -Fq "$field" docs/FUTURE40-TRACEABILITY-EVIDENCE.md || { echo "Missing Future40 evidence dimension: $field" >&2; exit 1; }
 done
 
 echo '== Repository hygiene and version coherence =='
@@ -79,6 +84,8 @@ grep -Fq 'ProviderEligibilityGuard::normalize' src/Application/FutureCapabilitie
 grep -Fq 'SemanticIntegrityGuard::apply' src/Application/FutureCapabilitiesFacade.php
 grep -Fq 'LocaleAccessibilityGuard::normalize' src/Application/FutureCapabilitiesFacade.php
 grep -Fq 'LocaleAccessibilityGuard::apply' src/Application/FutureCapabilitiesFacade.php
+grep -Fq 'ReleaseLifecycleGuard::normalize' src/Application/FutureCapabilitiesFacade.php
+grep -Fq 'ReleaseLifecycleGuard::apply' src/Application/FutureCapabilitiesFacade.php
 grep -Fq 'live_deployment_verification' src/Contract/FutureCapabilities.php
 grep -Fq 'MAX_EVALUATION_BYTES' src/Rest/FutureRoutes.php
 grep -Fq 'if (! isset(self::MAP[$action]))' src/Security/Authorization.php
@@ -86,5 +93,9 @@ grep -Fq 'approved public low-risk C1' src/Domain/Future/FutureCapabilityGuard.p
 grep -Fq 'Data residency is uncertain' src/Domain/Future/FutureCapabilityGuard.php
 grep -Fq 'BidiValidator::assertSafe' src/Domain/Future/LocaleAccessibilityGuard.php
 grep -Fq 'canonical_numeric_value_mutated' src/Domain/Future/LocaleAccessibilityGuard.php
+grep -Fq "'file19'" src/Contract/PlanCompliance.php
+grep -Fq "'file22'" src/Contract/PlanCompliance.php
+grep -Fq "'file23'" src/Contract/PlanCompliance.php
+grep -Fq "'file24'" src/Contract/PlanCompliance.php
 
 echo 'QUALITY GATE PASS'
