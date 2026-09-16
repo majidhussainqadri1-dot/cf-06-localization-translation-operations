@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.0.0-rc.5 — Founder-approved Future40 source candidate
+
+- Added the complete `CF06-FUT-001` through `CF06-FUT-040` capability catalogue and machine-readable manifest binding.
+- Implemented all forty Future40 handlers in `FutureCapabilitiesService`, covering pseudolocalization, visual/device context, source linting, semantic/risk checks, terminology mining/concept graph, citation/token integrity, transcript/subtitle/dubbing/pronunciation workflows, PDF/OCR/accessibility intake, regional/register/calendar/numeral/glyph/line-break/input-method support, international SEO, feature launch gates, critical-copy kill switch, emergency hotfix lane, delta/offline/low-bandwidth packs, private MT, provider routing/benchmarking/residency, AI quality estimation, debt forecasting, reviewer calibration, community suggestions and Founder command-center aggregation.
+- Added privileged REST catalogue/evidence-preview routes without enabling publication or runtime activation.
+- Added 40/40 traceability in the RTM and a dedicated `docs/FUTURE40.md` governing specification.
+- Added `tests/future40.php` so every Future40 ID executes under a fail-closed default-state assertion.
+- Kept high-risk human review mandatory, AI/community auto-publication disabled, external/private data boundaries fail-closed, and companion-file ownership unchanged.
+- Bumped plugin candidate to `1.0.0-rc.5` and public contract to `1.3.0`; database schema remains `1.0.1` because Future40 does not introduce a schema migration in this candidate.
+- Updated deterministic package/SBOM metadata to bind the exact source commit and Future40 requirement range.
+
+### Truthful limitations
+
+Future40 is source-coded and automated-testable but **disabled by default**. Real visual editor integration, browser/device rendering, media/OCR/dubbing providers, approved calendar/font engines, self-hosted/external provider infrastructure, qualified-human staffing, companion-file integration, Hostinger-equivalent staging, restore/rollback rehearsal, live deployment and operational monitoring remain separate acceptance gates.
+
 ## 1.0.0-rc.4 — Latest central-plan + CF-06 reconciliation candidate
 
 - Re-audited the source candidate against the newly supplied central governing plan and CF-06 master plan/completion addendum.
