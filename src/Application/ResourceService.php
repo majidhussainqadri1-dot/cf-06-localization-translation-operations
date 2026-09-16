@@ -46,17 +46,18 @@ final class ResourceService
                 if(!empty($existing['secure_payload_id'])&&(int)$existing['secure_payload_id']!==(int)$secureId){$this->repo->retireSecurePayload((int)$existing['secure_payload_id']);}
                 $stale=$this->repo->markDependentUnitsStale($uuid,'source_changed');
                 $links=DependencyInvalidator::markContentLinksStale($uuid);
-                $this->audit->record('resource',$key,'resource_versioned','success',array('source_version'=>$base['source_version'],'stale_units'=>$stale,'stale_content_links'=>$links,'hash'=>$hash));
-                $this->outbox->enqueue('TranslatableResourceChanged','resource',$uuid,array('resource_key'=>$key,'source_version'=>$base['source_version'],'source_hash'=>$hash,'stale_units'=>$stale,'stale_content_links'=>$links));
-                if($stale>0||$links>0){$this->outbox->enqueue('LocalizationCoverageDegraded','resource',$uuid,array('resource_key'=>$key,'reason'=>'source_changed','stale_units'=>$stale,'stale_content_links'=>$links));}
-                return array('changed'=>true,'record'=>$updated,'stale_units'=>$stale,'stale_content_links'=>$links);
+                $bundles=DependencyInvalidator::invalidateActiveBundles($uuid);
+                $this->audit->record('resource',$key,'resource_versioned','success',array('source_version'=>$base['source_version'],'stale_units'=>$stale,'stale_content_links'=>$links,'invalidated_bundles'=>$bundles,'hash'=>$hash));
+                $this->outbox->enqueue('TranslatableResourceChanged','resource',$uuid,array('resource_key'=>$key,'source_version'=>$base['source_version'],'source_hash'=>$hash,'stale_units'=>$stale,'stale_content_links'=>$links,'invalidated_bundles'=>$bundles));
+                if($stale>0||$links>0||$bundles>0){$this->outbox->enqueue('LocalizationCoverageDegraded','resource',$uuid,array('resource_key'=>$key,'reason'=>'source_changed','stale_units'=>$stale,'stale_content_links'=>$links,'invalidated_bundles'=>$bundles));}
+                return array('changed'=>true,'record'=>$updated,'stale_units'=>$stale,'stale_content_links'=>$links,'invalidated_bundles'=>$bundles);
             }
             $base['uuid']=$uuid;$base['source_version']=1;$base['created_by']=get_current_user_id();$base['row_version']=1;
             $created=$this->repo->insert('resources',$base);
             $this->audit->record('resource',$key,'resource_registered','success',array('source_version'=>1,'hash'=>$hash,'risk'=>$risk,'data_class'=>$data));
-            return array('changed'=>true,'record'=>$created,'stale_units'=>0,'stale_content_links'=>0);
+            return array('changed'=>true,'record'=>$created,'stale_units'=>0,'stale_content_links'=>0,'invalidated_bundles'=>0);
         });
-        if(($result['stale_units']??0)>0||($result['stale_content_links']??0)>0){wp_cache_flush();}
+        if(($result['stale_units']??0)>0||($result['stale_content_links']??0)>0||($result['invalidated_bundles']??0)>0){wp_cache_flush();}
         return $result;
     }
 
@@ -71,10 +72,11 @@ final class ResourceService
             $updated=$this->repo->updateVersioned('resources',$uuid,$version,array('status'=>'retired','updated_by'=>get_current_user_id()));
             $stale=$this->repo->markDependentUnitsStale($uuid,'source_retired');
             $links=DependencyInvalidator::markContentLinksStale($uuid);
-            $this->audit->record('resource',(string)$resource['resource_key'],'resource_retired','success',array('reason'=>$reason,'stale_units'=>$stale,'stale_content_links'=>$links));
-            $this->outbox->enqueue('TranslatableResourceChanged','resource',$uuid,array('resource_key'=>$resource['resource_key'],'source_version'=>(int)$resource['source_version'],'source_hash'=>$resource['source_hash'],'status'=>'retired','reason'=>$reason,'stale_units'=>$stale,'stale_content_links'=>$links));
-            $this->outbox->enqueue('LocalizationCoverageDegraded','resource',$uuid,array('resource_key'=>$resource['resource_key'],'reason'=>'source_retired','stale_units'=>$stale,'stale_content_links'=>$links));
-            return array('record'=>$updated,'stale_units'=>$stale,'stale_content_links'=>$links);
+            $bundles=DependencyInvalidator::invalidateActiveBundles($uuid);
+            $this->audit->record('resource',(string)$resource['resource_key'],'resource_retired','success',array('reason'=>$reason,'stale_units'=>$stale,'stale_content_links'=>$links,'invalidated_bundles'=>$bundles));
+            $this->outbox->enqueue('TranslatableResourceChanged','resource',$uuid,array('resource_key'=>$resource['resource_key'],'source_version'=>(int)$resource['source_version'],'source_hash'=>$resource['source_hash'],'status'=>'retired','reason'=>$reason,'stale_units'=>$stale,'stale_content_links'=>$links,'invalidated_bundles'=>$bundles));
+            $this->outbox->enqueue('LocalizationCoverageDegraded','resource',$uuid,array('resource_key'=>$resource['resource_key'],'reason'=>'source_retired','stale_units'=>$stale,'stale_content_links'=>$links,'invalidated_bundles'=>$bundles));
+            return array('record'=>$updated,'stale_units'=>$stale,'stale_content_links'=>$links,'invalidated_bundles'=>$bundles);
         });
         wp_cache_flush();
         return $result;
