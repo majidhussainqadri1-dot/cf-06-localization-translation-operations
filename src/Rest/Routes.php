@@ -81,7 +81,19 @@ final class Routes
     {
         $key=trim((string)$request->get_header('Idempotency-Key'));if($requireKey&&(''===$key||strlen($key)>191)){return new WP_Error('slto_idempotency_required','A valid Idempotency-Key header is required.',['status'=>400]);}if(''===$key){$key=hash('sha256',$route.'|'.wp_json_encode($request->get_json_params()).'|'.microtime(true));}
         $actor=get_current_user_id();$hash=hash('sha256',wp_json_encode($request->get_json_params(),JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES));$state=$this->s['repo']->storeIdempotency($actor,$route,$key,$hash);if(!$state['new']&&'completed'===$state['record']['status']){$body=json_decode((string)$state['record']['response_json'],true)?:[];return new WP_REST_Response($body,(int)$state['record']['response_code']);}if(!$state['new']){return new WP_Error('slto_request_in_progress','An identical operation is already processing.',['status'=>409]);}
-        try{$result=$operation();$body=['data'=>$result,'trace_id'=>\Sabri\Localization\Infrastructure\Database::uuid()];$this->s['repo']->completeIdempotency($actor,$route,$key,$status,$body);return new WP_REST_Response($body,$status);}catch(Throwable $e){$this->s['repo']->failIdempotency($actor,$route,$key,sanitize_key(get_class($e)));throw $e;}
+        try{
+            $result=$operation();
+        }catch(Throwable $e){
+            try{$this->s['repo']->failIdempotency($actor,$route,$key,sanitize_key(get_class($e)));}catch(Throwable $persistenceFailure){do_action('slto_idempotency_failure_persistence_error',$route,$key,$persistenceFailure);}
+            throw $e;
+        }
+        $body=['data'=>$result,'trace_id'=>\Sabri\Localization\Infrastructure\Database::uuid()];
+        // A completed business operation must never be relabeled as failed merely
+        // because replay-state persistence failed. If completion persistence throws,
+        // the row remains processing and retries fail closed instead of re-executing
+        // a mutation whose side effects may already be committed.
+        $this->s['repo']->completeIdempotency($actor,$route,$key,$status,$body);
+        return new WP_REST_Response($body,$status);
     }
     private function ok(mixed $data,int $status=200):WP_REST_Response{return new WP_REST_Response(['data'=>$data],$status);}
     private function error(Throwable $e):WP_Error{$trace=\Sabri\Localization\Infrastructure\Database::uuid();$code='slto_internal_error';$status=500;$message='Localization operation failed.';if($e instanceof InvalidArgumentException){$code='slto_invalid_request';$status=422;$message=$e->getMessage();}elseif($e instanceof DomainException&&'stale_version'===$e->getMessage()){$code='slto_stale_version';$status=409;$message='The record changed; reload before retrying.';}elseif($e instanceof DomainException&&'idempotency_conflict'===$e->getMessage()){$code='slto_idempotency_conflict';$status=409;$message='The idempotency key was reused with a different request.';}do_action('slto_safe_error',$code,$trace,$e);return new WP_Error($code,$message,['status'=>$status,'trace_id'=>$trace]);}
