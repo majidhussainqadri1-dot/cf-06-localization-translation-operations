@@ -21,6 +21,13 @@ final class IntegrationService
         private readonly Transaction $tx
     ) {}
 
+    public static function deploymentEnvironment(): ?string
+    {
+        $value = defined('SLTO_DEPLOYMENT_ENV') ? (string) SLTO_DEPLOYMENT_ENV : (string) getenv('SLTO_DEPLOYMENT_ENV');
+        $value = sanitize_key($value);
+        return in_array($value, array('staging','production'), true) ? $value : null;
+    }
+
     public function accept(array $input): array
     {
         $key = sanitize_key((string)($input['integration_key'] ?? ''));
@@ -88,14 +95,18 @@ final class IntegrationService
         });
     }
 
-    public function readiness(): array
+    public function readiness(?string $environment = null): array
     {
+        $environment = null === $environment ? self::deploymentEnvironment() : sanitize_key($environment);
+        if (! in_array($environment, array('staging','production'), true)) {
+            return array_fill_keys(IntegrationRegistry::required(), false);
+        }
         $result = array();
         foreach (IntegrationRegistry::required() as $key) {
             $row = $this->repo->findOne('integration_evidence', 'integration_key', $key);
             $valid = is_array($row)
                 && 'accepted' === (string)$row['status']
-                && in_array((string)$row['environment_name'], array('staging','production'), true)
+                && $environment === (string)$row['environment_name']
                 && (empty($row['expires_at']) || strtotime((string)$row['expires_at']) > time())
                 && 1 === preg_match('/^[a-f0-9]{64}$/D', (string)$row['manifest_hash'])
                 && 1 === preg_match('/^[a-f0-9]{64}$/D', (string)$row['evidence_hash']);
@@ -104,11 +115,15 @@ final class IntegrationService
         return $result;
     }
 
-    public function assertReady(): void
+    public function assertReady(?string $environment = null): void
     {
-        foreach ($this->readiness() as $key => $ready) {
+        $environment = null === $environment ? self::deploymentEnvironment() : sanitize_key($environment);
+        if (! in_array($environment, array('staging','production'), true)) {
+            throw new InvalidArgumentException('CF-06 deployment environment is not explicitly configured.');
+        }
+        foreach ($this->readiness($environment) as $key => $ready) {
             if (! $ready) {
-                throw new InvalidArgumentException('Required localization integration is not accepted: ' . $key);
+                throw new InvalidArgumentException('Required localization integration is not accepted for ' . $environment . ': ' . $key);
             }
         }
     }
