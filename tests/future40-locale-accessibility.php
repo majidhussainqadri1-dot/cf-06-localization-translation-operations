@@ -10,6 +10,7 @@ require dirname(__DIR__) . '/src/Contract/FutureCapabilities.php';
 require dirname(__DIR__) . '/src/Domain/Future/FutureCapabilityGuard.php';
 require dirname(__DIR__) . '/src/Domain/Future/LocaleAccessibilityGuard.php';
 require dirname(__DIR__) . '/src/Domain/Future/ProviderEligibilityGuard.php';
+require dirname(__DIR__) . '/src/Domain/Future/ReleaseLifecycleGuard.php';
 require dirname(__DIR__) . '/src/Domain/Future/SemanticIntegrityGuard.php';
 require dirname(__DIR__) . '/src/Application/FutureCapabilitiesService.php';
 require dirname(__DIR__) . '/src/Application/FutureCapabilitiesFacade.php';
@@ -29,9 +30,7 @@ $t->test('Pseudolocalization preserves placeholders and URLs while adding probes
 $t->test('Device matrix always includes governed 320-1920 core and rejects sub-320 widths', function () use ($s): void {
     $out = $s->evaluate('CF06-FUT-003', ['viewports'=>[2048]]);
     $widths = array_values(array_unique(array_column($out['result']['matrix'], 'width')));
-    foreach ([320,375,768,1024,1440,1920,2048] as $required) {
-        TestHarness::assertTrue(in_array($required, $widths, true));
-    }
+    foreach ([320,375,768,1024,1440,1920,2048] as $required) { TestHarness::assertTrue(in_array($required, $widths, true)); }
     TestHarness::assertThrows(fn () => $s->evaluate('CF06-FUT-003', ['viewports'=>[300]]), InvalidArgumentException::class);
 });
 $t->test('Multilingual accessibility requires canonical target locale and all text groups', function () use ($s): void {
