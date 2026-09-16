@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace Sabri\Localization\Contract;
 
 /**
- * Machine-readable reconciliation map for the latest central governing plan and
- * CF-06 completion addendum. This is source-code evidence only; staging/live
- * acceptance remains separate evidence.
+ * Machine-readable reconciliation map for the latest central governing plan,
+ * CF-06 completion addendum and Founder-approved Future40 expansion.
+ * This is source-code evidence only; staging/live acceptance remains separate.
  */
 final class PlanCompliance
 {
@@ -19,6 +19,11 @@ final class PlanCompliance
     public static function nativeJourneys(): array
     {
         return array_map(static fn (int $i): string => sprintf('CF06-NJ-%02d', $i), range(1, 6));
+    }
+
+    public static function futureRequirements(): array
+    {
+        return FutureCapabilities::ids();
     }
 
     public static function centralLaws(): array
@@ -43,6 +48,17 @@ final class PlanCompliance
             ),
             'cf06_completion_requirements' => self::completionRequirements(),
             'cf06_native_journeys' => self::nativeJourneys(),
+            'cf06_future40' => self::futureRequirements(),
+            'future40_activation_law' => array(
+                'default_state' => 'disabled',
+                'founder_change_control_required' => true,
+                'companion_contract_parity_required' => true,
+                'staging_acceptance_required' => true,
+                'rollback_rehearsal_required' => true,
+                'live_verification_required' => true,
+                'high_risk_human_review_required' => true,
+                'ai_or_community_auto_publish' => false,
+            ),
             'source_language_policy' => 'american-english-technical-source-with-explicit-domain-source-locale',
             'first_class_locales' => array('ur', 'ar', 'en-US'),
             'external_mt_policy' => array(
@@ -51,12 +67,14 @@ final class PlanCompliance
                 'allowed_data_class' => 'C1',
                 'high_risk_domains' => 'deny',
                 'training_reuse' => 'deny-by-default',
+                'self_hosted_adapter_does_not_remove_human_review' => true,
             ),
             'critical_release_gate' => '100-percent-current-critical-resources',
             'owner_boundaries' => array(
                 'file20' => 'language-preference-and-shell',
                 'file25' => 'visual-rtl-ltr-implementation',
                 'file26' => 'transliteration-and-search-ranking',
+                'cf04' => 'canonical-media-processing',
                 'domain_owners' => 'source-truth-and-final-publication-approval',
                 'cf06' => 'localization-workflow-and-bundle-governance',
             ),
