@@ -29,7 +29,7 @@ final class QaEvidenceService
         $artifactRef = sanitize_text_field((string)($input['artifact_ref'] ?? ''));
         $artifactHash = strtolower(trim((string)($input['artifact_hash'] ?? '')));
         if (! in_array($environmentName, array('ci','staging','production'), true)
-            || '' === $pluginVersion || '' === $testId
+            || '' === $pluginVersion || strlen($pluginVersion) > 40 || '' === $testId
             || ! in_array($result, array('pass','fail','blocked'), true)
             || 1 !== preg_match('/^[a-f0-9]{7,64}$/D', $buildSha)
             || 1 !== preg_match('/^[a-f0-9]{64}$/D', $expectedHash)
@@ -37,6 +37,9 @@ final class QaEvidenceService
             || '' === $artifactRef || strlen($artifactRef) > 191
             || 1 !== preg_match('/^[a-f0-9]{64}$/D', $artifactHash)) {
             throw new InvalidArgumentException('QA evidence is incomplete or invalid.');
+        }
+        if ('pass' === $result && ! hash_equals($expectedHash, $actualHash)) {
+            throw new InvalidArgumentException('QA evidence cannot pass when expected and actual hashes differ.');
         }
         return $this->tx->run(function() use ($input, $environmentName, $pluginVersion, $buildSha, $testId, $result, $expectedHash, $actualHash, $artifactRef, $artifactHash): array {
             $row = $this->repo->insert('qa_evidence', array(
@@ -55,17 +58,47 @@ final class QaEvidenceService
         });
     }
 
-    public function passed(string $targetType, string $targetUuid, array $requiredTestIds, string $environment = 'staging'): bool
-    {
+    public function passed(
+        string $targetType,
+        string $targetUuid,
+        array $requiredTestIds,
+        string $environment = 'staging',
+        ?string $pluginVersion = null,
+        ?string $buildSha = null
+    ): bool {
+        $environment = sanitize_key($environment);
+        if (! in_array($environment, array('ci','staging','production'), true)) {
+            return false;
+        }
+        $pluginVersion = null === $pluginVersion ? null : sanitize_text_field($pluginVersion);
+        $buildSha = null === $buildSha ? null : strtolower(trim($buildSha));
+        if (null !== $buildSha && 1 !== preg_match('/^[a-f0-9]{7,64}$/D', $buildSha)) {
+            return false;
+        }
         $rows = $this->repo->list('qa_evidence', array(
-            'target_type'=>sanitize_key($targetType),'target_uuid'=>$targetUuid,'environment_name'=>sanitize_key($environment),
+            'target_type'=>sanitize_key($targetType),'target_uuid'=>$targetUuid,'environment_name'=>$environment,
         ), 500, 0, 'created_at DESC');
-        $passed = array();
+        $latest = array();
         foreach ($rows as $row) {
-            if ('pass' === (string)$row['result']) { $passed[(string)$row['test_id']] = true; }
+            $testId = (string)($row['test_id'] ?? '');
+            if ('' === $testId || isset($latest[$testId])) {
+                continue;
+            }
+            if (null !== $pluginVersion && $pluginVersion !== (string)$row['plugin_version']) {
+                continue;
+            }
+            if (null !== $buildSha && ! hash_equals($buildSha, strtolower((string)$row['build_sha']))) {
+                continue;
+            }
+            $latest[$testId] = $row;
         }
         foreach ($requiredTestIds as $id) {
-            if (empty($passed[sanitize_key((string)$id)])) { return false; }
+            $id = sanitize_key((string)$id);
+            $row = $latest[$id] ?? null;
+            if (! is_array($row) || 'pass' !== (string)$row['result']
+                || ! hash_equals((string)$row['expected_hash'], (string)$row['actual_hash'])) {
+                return false;
+            }
         }
         return true;
     }
