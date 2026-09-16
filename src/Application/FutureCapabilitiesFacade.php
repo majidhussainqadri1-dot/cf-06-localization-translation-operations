@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Sabri\Localization\Application;
 
 use Sabri\Localization\Domain\Future\FutureCapabilityGuard;
+use Sabri\Localization\Domain\Future\HotfixApprovalGuard;
 use Sabri\Localization\Domain\Future\LocaleAccessibilityGuard;
 use Sabri\Localization\Domain\Future\ProviderEligibilityGuard;
 use Sabri\Localization\Domain\Future\ReleaseLifecycleGuard;
@@ -27,6 +28,9 @@ final class FutureCapabilitiesFacade
     {
         $id = strtoupper(trim($id));
         $input = ReleaseLifecycleGuard::normalize($id, $input);
+        if ('CF06-FUT-028' === $id) {
+            $input = HotfixApprovalGuard::normalize($input);
+        }
         $input = FutureCapabilityGuard::normalize($id, $input);
         $input = LocaleAccessibilityGuard::normalize($id, $input);
         $input = SemanticIntegrityGuard::normalize($id, $input);
