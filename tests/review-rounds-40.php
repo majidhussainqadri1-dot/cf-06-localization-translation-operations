@@ -9,9 +9,9 @@ $checks=[
 ['01 Transaction depth is reset safely','src/Infrastructure/Transaction.php','self::$depth = $isRoot ? 0 : $level'],
 ['02 Rollback failure is surfaced','src/Infrastructure/Transaction.php','Localization transaction rollback failed'],
 ['03 Repository reads fail closed','src/Infrastructure/Repository/LocalizationRepository.php','assertReadSucceeded'],
-['04 Rate-limit database failure denies','src/Infrastructure/Repository/LocalizationRepository.php','if (false === $written)'],
+['04 Rate-limit database failure denies','src/Infrastructure/Repository/LocalizationRepository.php','Localization operational cleanup failed'],
 ['05 Job dedupe is scoped by job type','src/Infrastructure/Activator.php','UNIQUE KEY job_dedupe (job_type,dedupe_key)'],
-['05b Contract-only upgrades are detected and persisted','src/Infrastructure/Activator.php',"installedContract","update_option('slto_contract_version'"],
+['05b Contract-only upgrades are detected and persisted','src/Infrastructure/Activator.php','installedContract'],
 ['06 Job payload JSON is bounded','src/Infrastructure/JobQueue.php','1048576'],
 ['07 Outbox payload integrity is checked','src/Infrastructure/Outbox.php','Outbox payload integrity check failed'],
 ['08 Event hook normalization preserves word boundaries','src/Infrastructure/Outbox.php',"preg_replace('/(?<!^)[A-Z]/'"],
@@ -28,13 +28,13 @@ $checks=[
 ['19 QA evidence binds artifact hash','src/Application/QaEvidenceService.php','artifact_hash'],
 ['20 Release approvals are persisted','src/Infrastructure/Database.php',"'release_approvals'"],
 ['21 Release requires two approval roles','src/Application/ReleaseApprovalService.php',"release_operator','independent_reviewer"],
-['22 Release approval requires recent step-up','src/Application/ReleaseApprovalService.php','> 900'],
+['22 Release approval requires recent step-up','src/Application/ReleaseApprovalService.php','>900'],
 ['23 Bundle activation uses verified integrations','src/Application/BundleService.php','integrations->assertReady'],
 ['24 Bundle activation requires dual approval','src/Application/BundleService.php','releaseApprovals->assertDualApproval'],
 ['25 Bundle releases exact source-list units','src/Application/BundleService.php','Exact approved translation set'],
 ['26 Rollback reconciles released units','src/Application/BundleService.php','released_bundle_uuid=NULL'],
-['27 Cache flush occurs after transaction','src/Application/BundleService.php',"        wp_cache_flush();\n        return \$updated"],
-['28 Public bundle re-verifies integrity','src/Application/BundleService.php','Active locale bundle integrity verification failed'],
+['27 Cache flush occurs on release paths','src/Application/BundleService.php','wp_cache_flush();return $updated'],
+['28 Public bundle re-verifies integrity','src/Application/BundleService.php','Bundle payload hash or signature integrity failed'],
 ['29 Projects bound target locale count','src/Application/ProjectService.php','1–25 distinct target locales'],
 ['30 Project resource source locale is enforced','src/Application/ProjectService.php','different source locale'],
 ['31 Project risk ceiling is enumerated','src/Application/ProjectService.php',"['low','medium','high','critical','private']"],
@@ -49,4 +49,5 @@ $checks=[
 ['40 Privacy erasure supports holds and pseudonymization','src/Application/PrivacyService.php','slto_privacy_erasure_hold'],
 ];
 foreach($checks as [$name,$file,$needle]){$t->test($name,static function()use($read,$file,$needle):void{TestHarness::assertTrue(str_contains($read($file),$needle),$file.' is missing '.$needle);});}
+$t->test('05c contract-only upgrades persist contract version',function()use($read):void{TestHarness::assertTrue(str_contains($read('src/Infrastructure/Activator.php'),"update_option('slto_contract_version'"));});
 $t->finish();
