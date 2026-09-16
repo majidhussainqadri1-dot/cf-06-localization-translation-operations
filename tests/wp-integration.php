@@ -32,7 +32,7 @@ wp_set_current_user(1);
 Activator::activate();
 Activator::activate();
 $check('1.0.1' === (string) get_option('slto_schema_version'), 'schema version mismatch');
-$check('1.1.0' === (string) get_option('slto_contract_version'), 'contract version mismatch');
+$check('1.2.0' === (string) get_option('slto_contract_version'), 'contract version mismatch');
 $check(false === (bool) get_option('slto_runtime_enabled', false), 'runtime must remain disabled');
 
 foreach (Database::ENTITIES as $entity => $suffix) {
