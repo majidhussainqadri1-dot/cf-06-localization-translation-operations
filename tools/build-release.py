@@ -14,7 +14,7 @@ import zipfile
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
 PACKAGE_DIR = "sabri-localization-translation-operations"
-VERSION = "1.0.0-rc.4"
+VERSION = "1.0.0-rc.5"
 ZIP_NAME = f"cf-06-sabri-localization-translation-operations-{VERSION}-SOURCE-CANDIDATE.zip"
 FIXED_TIME = (2026, 9, 16, 0, 0, 0)
 SOURCE_COMMIT = os.environ.get("SOURCE_COMMIT", "").strip()
@@ -82,7 +82,7 @@ def build() -> pathlib.Path:
         "module": "CF-06 — Localization and Translation Operations",
         "plugin_version": VERSION,
         "schema_version": "1.0.1",
-        "contract_version": "1.2.0",
+        "contract_version": "1.3.0",
         "runtime_default": "disabled",
         "build_epoch": "2026-09-16T00:00:00Z",
         "source_commit": validated_source_commit(),
@@ -96,6 +96,9 @@ def build() -> pathlib.Path:
             "native_journey_first": "CF06-NJ-01",
             "native_journey_last": "CF06-NJ-06",
             "native_journey_count": 6,
+            "future_first": "CF06-FUT-001",
+            "future_last": "CF06-FUT-040",
+            "future_count": 40,
         },
         "files": manifest_files,
     }
@@ -116,8 +119,9 @@ def build() -> pathlib.Path:
                 "licenses": [{"license": {"id": "GPL-2.0-or-later"}}],
                 "properties": [
                     {"name": "sabri:runtime-default", "value": "disabled"},
-                    {"name": "sabri:contract-version", "value": "1.2.0"},
-                    {"name": "sabri:plan-reconciliation", "value": "central+cf06-latest"},
+                    {"name": "sabri:contract-version", "value": "1.3.0"},
+                    {"name": "sabri:plan-reconciliation", "value": "central+cf06-latest+future40"},
+                    {"name": "sabri:future40-default", "value": "disabled"},
                     {"name": "sabri:source-commit", "value": validated_source_commit()},
                 ],
             },
