@@ -15,7 +15,13 @@ final class Manifest
             'schema_version' => SABRI_SLTO_SCHEMA_VERSION,
             'contract_version' => SABRI_SLTO_CONTRACT_VERSION,
             'runtime_default' => 'disabled-fail-closed',
-            'privacy_invariants' => array('private_or_high_risk_external_mt' => 'deny'),
+            'coding_scope_status' => 'latest-plans-reconciled-source-candidate',
+            'privacy_invariants' => array(
+                'external_mt' => 'low-risk-c1-draft-only',
+                'c2_c5_external_mt' => 'deny',
+                'private_or_high_risk_external_mt' => 'deny',
+                'provider_training_reuse' => 'deny-by-default',
+            ),
             'canonical_owners' => array(
                 'locale_registry', 'translatable_resource_inventory', 'translation_workflow',
                 'terminology', 'translation_memory', 'draft_mt_orchestration', 'linguistic_qa',
@@ -27,6 +33,9 @@ final class Manifest
             ),
             'events' => Events::ALL,
             'requirements' => array_map(static fn (int $i): string => sprintf('CF06-FR-%03d', $i), range(1, 34)),
+            'completion_requirements' => PlanCompliance::completionRequirements(),
+            'native_journeys' => PlanCompliance::nativeJourneys(),
+            'plan_compliance' => PlanCompliance::get(),
         );
     }
 }
