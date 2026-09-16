@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build a deterministic installable CF-06 WordPress ZIP plus evidence files."""
+"""Build a deterministic, exact-commit-bound installable CF-06 WordPress ZIP."""
 from __future__ import annotations
 
 import hashlib
@@ -19,15 +19,9 @@ ZIP_NAME = f"cf-06-sabri-localization-translation-operations-{VERSION}-SOURCE-CA
 FIXED_TIME = (2026, 9, 16, 0, 0, 0)
 SOURCE_COMMIT = os.environ.get("SOURCE_COMMIT", "").strip()
 
-EXCLUDE_PARTS = {
-    ".git", ".github", "tests", "tools", "dist", "vendor", ".idea", ".vscode"
-}
-EXCLUDE_NAMES = {
-    "composer.lock", "phpunit.xml", "phpunit.xml.dist", ".gitignore", ".gitattributes"
-}
-INCLUDE_ROOT_DOCS = {
-    "README.md", "CHANGELOG.md", "SECURITY.md", "LICENSE", "readme.txt", "composer.json"
-}
+EXCLUDE_PARTS = {".git", ".github", "tests", "tools", "dist", "vendor", ".idea", ".vscode"}
+EXCLUDE_NAMES = {"composer.lock", "phpunit.xml", "phpunit.xml.dist", ".gitignore", ".gitattributes"}
+INCLUDE_ROOT_DOCS = {"README.md", "CHANGELOG.md", "SECURITY.md", "LICENSE", "readme.txt", "composer.json"}
 
 
 def sha256(path: pathlib.Path) -> str:
@@ -36,6 +30,10 @@ def sha256(path: pathlib.Path) -> str:
         for chunk in iter(lambda: fh.read(1024 * 1024), b""):
             h.update(chunk)
     return h.hexdigest()
+
+
+def sha256_bytes(payload: bytes) -> str:
+    return hashlib.sha256(payload).hexdigest()
 
 
 def source_files() -> list[pathlib.Path]:
@@ -57,14 +55,13 @@ def write_json(path: pathlib.Path, payload: object) -> None:
 
 
 def validated_source_commit() -> str:
-    if not SOURCE_COMMIT:
-        return "local-unbound"
     if re.fullmatch(r"[0-9a-f]{40}", SOURCE_COMMIT) is None:
-        raise RuntimeError("SOURCE_COMMIT must be a lowercase 40-character Git SHA")
+        raise RuntimeError("SOURCE_COMMIT must bind the candidate to an exact lowercase 40-character Git SHA")
     return SOURCE_COMMIT
 
 
 def build() -> pathlib.Path:
+    source_commit = validated_source_commit()
     DIST.mkdir(exist_ok=True)
     for old in DIST.iterdir():
         if old.is_file():
@@ -73,6 +70,8 @@ def build() -> pathlib.Path:
             shutil.rmtree(old)
 
     files = source_files()
+    if not files:
+        raise RuntimeError("No package source files were discovered")
     manifest_files = []
     for path in files:
         rel = path.relative_to(ROOT).as_posix()
@@ -85,20 +84,12 @@ def build() -> pathlib.Path:
         "contract_version": "1.3.0",
         "runtime_default": "disabled",
         "build_epoch": "2026-09-16T00:00:00Z",
-        "source_commit": validated_source_commit(),
+        "source_commit": source_commit,
         "requirements": {
-            "functional_first": "CF06-FR-001",
-            "functional_last": "CF06-FR-034",
-            "functional_count": 34,
-            "completion_first": "CF06-CEN-01",
-            "completion_last": "CF06-CEN-10",
-            "completion_count": 10,
-            "native_journey_first": "CF06-NJ-01",
-            "native_journey_last": "CF06-NJ-06",
-            "native_journey_count": 6,
-            "future_first": "CF06-FUT-001",
-            "future_last": "CF06-FUT-040",
-            "future_count": 40,
+            "functional_first": "CF06-FR-001", "functional_last": "CF06-FR-034", "functional_count": 34,
+            "completion_first": "CF06-CEN-01", "completion_last": "CF06-CEN-10", "completion_count": 10,
+            "native_journey_first": "CF06-NJ-01", "native_journey_last": "CF06-NJ-06", "native_journey_count": 6,
+            "future_first": "CF06-FUT-001", "future_last": "CF06-FUT-040", "future_count": 40,
         },
         "files": manifest_files,
     }
@@ -106,28 +97,26 @@ def build() -> pathlib.Path:
     write_json(manifest_path, manifest)
 
     sbom = {
-        "bomFormat": "CycloneDX",
-        "specVersion": "1.5",
-        "serialNumber": "urn:uuid:cf060000-0000-4000-8000-000000000001",
-        "version": 1,
+        "bomFormat": "CycloneDX", "specVersion": "1.5",
+        "serialNumber": "urn:uuid:cf060000-0000-4000-8000-000000000001", "version": 1,
         "metadata": {
             "timestamp": "2026-09-16T00:00:00Z",
             "component": {
-                "type": "application",
-                "name": "sabri-localization-translation-operations",
-                "version": VERSION,
+                "type": "application", "name": "sabri-localization-translation-operations", "version": VERSION,
                 "licenses": [{"license": {"id": "GPL-2.0-or-later"}}],
                 "properties": [
                     {"name": "sabri:runtime-default", "value": "disabled"},
                     {"name": "sabri:contract-version", "value": "1.3.0"},
                     {"name": "sabri:plan-reconciliation", "value": "central+cf06-latest+future40"},
                     {"name": "sabri:future40-default", "value": "disabled"},
-                    {"name": "sabri:source-commit", "value": validated_source_commit()},
+                    {"name": "sabri:source-commit", "value": source_commit},
                 ],
             },
         },
-        "components": [{"type": "framework", "name": "WordPress", "version": ">=6.0"},
-                       {"type": "platform", "name": "PHP", "version": ">=8.1"}],
+        "components": [
+            {"type": "framework", "name": "WordPress", "version": ">=6.0"},
+            {"type": "platform", "name": "PHP", "version": ">=8.1"},
+        ],
     }
     sbom_path = DIST / "SBOM.cdx.json"
     write_json(sbom_path, sbom)
@@ -146,6 +135,7 @@ def build() -> pathlib.Path:
             info.external_attr = 0o644 << 16
             zf.writestr(info, evidence.read_bytes(), compress_type=zipfile.ZIP_DEFLATED, compresslevel=9)
 
+    manifest_by_path = {row["path"]: row for row in manifest_files}
     with zipfile.ZipFile(zip_path, "r") as zf:
         bad = zf.testzip()
         if bad:
@@ -156,7 +146,15 @@ def build() -> pathlib.Path:
         expected = {f"{PACKAGE_DIR}/{p.relative_to(ROOT).as_posix()}" for p in files}
         actual = {n for n in names if pathlib.PurePosixPath(n).name not in {"MANIFEST.json", "SBOM.cdx.json"}}
         if expected != actual:
-            raise RuntimeError("Source/package parity failed")
+            raise RuntimeError("Source/package path parity failed")
+        for rel, row in manifest_by_path.items():
+            payload = zf.read(f"{PACKAGE_DIR}/{rel}")
+            if len(payload) != row["bytes"] or sha256_bytes(payload) != row["sha256"]:
+                raise RuntimeError(f"Source/package byte parity failed for {rel}")
+        if zf.read(f"{PACKAGE_DIR}/MANIFEST.json") != manifest_path.read_bytes():
+            raise RuntimeError("Embedded manifest parity failed")
+        if zf.read(f"{PACKAGE_DIR}/SBOM.cdx.json") != sbom_path.read_bytes():
+            raise RuntimeError("Embedded SBOM parity failed")
 
     sums = DIST / "SHA256SUMS"
     sums.write_text(
