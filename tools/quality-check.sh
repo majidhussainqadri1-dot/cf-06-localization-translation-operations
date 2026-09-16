@@ -28,17 +28,28 @@ for i in $(seq 1 34); do
   id=$(printf 'CF06-FR-%03d' "$i")
   grep -Fq "$id" docs/REQUIREMENTS-TRACEABILITY.md || { echo "Missing $id" >&2; exit 1; }
 done
+for i in $(seq 1 10); do
+  id=$(printf 'CF06-CEN-%02d' "$i")
+  grep -Fq "$id" docs/REQUIREMENTS-TRACEABILITY.md || { echo "Missing $id" >&2; exit 1; }
+done
+for i in $(seq 1 6); do
+  id=$(printf 'CF06-NJ-%02d' "$i")
+  grep -Fq "$id" docs/REQUIREMENTS-TRACEABILITY.md || { echo "Missing $id" >&2; exit 1; }
+done
 
 echo '== Repository hygiene and version coherence =='
 test ! -e .cf06-payload
 test ! -e .cf06-fixed
 test ! -e .github/workflows/export-source-for-review.yml
-grep -Fq 'Version:           1.0.0-rc.3' sabri-localization-translation-operations.php
+grep -Fq 'Version:           1.0.0-rc.4' sabri-localization-translation-operations.php
 grep -Fq "SABRI_SLTO_SCHEMA_VERSION', '1.0.1" sabri-localization-translation-operations.php
-grep -Fq "SABRI_SLTO_CONTRACT_VERSION', '1.1.0" sabri-localization-translation-operations.php
+grep -Fq "SABRI_SLTO_CONTRACT_VERSION', '1.2.0" sabri-localization-translation-operations.php
 
 echo '== Critical corrective guards =='
-grep -Fq 'private_or_high_risk_external_mt' src/Contract/Manifest.php
+grep -Fq "'external_mt' => 'low-risk-c1-draft-only'" src/Contract/Manifest.php
+grep -Fq "'C1' !== strtoupper(\$dataClass)" src/Domain/Translation/RiskPolicy.php
+grep -Fq 'MessageFormatValidator::assertEquivalent' src/Domain/Translation/PlaceholderValidator.php
+grep -Fq "status='invalidated'" src/Infrastructure/DependencyInvalidator.php
 grep -Fq 'slto_verify_integration_acceptance_evidence' src/Application/IntegrationService.php
 grep -Fq 'slto_verify_extraction_evidence' src/Application/ExtractionService.php
 grep -Fq 'environment_name' src/Application/QaEvidenceService.php
