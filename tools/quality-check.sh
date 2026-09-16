@@ -18,6 +18,7 @@ php tests/review-round-4-acceptance.php
 php tests/review-rounds-40.php
 php tests/future40.php
 php tests/future40-validation.php
+php tests/future40-privacy-provider.php
 
 echo '== Secret-pattern guard =='
 if grep -RInE --exclude-dir=.git --exclude-dir=dist --exclude-dir=tests --exclude='quality-check.sh' '(BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{20,}|sk_live_[A-Za-z0-9]{12,}|xox[baprs]-[A-Za-z0-9-]{10,})' .; then
@@ -72,8 +73,11 @@ grep -Fq "'direct_publish' => false" src/Application/FutureCapabilitiesService.p
 grep -Fq "'approval_authority' => false" src/Application/FutureCapabilitiesService.php
 grep -Fq 'FutureCapabilitiesFacade' src/Plugin.php
 grep -Fq 'FutureCapabilityGuard::normalize' src/Application/FutureCapabilitiesFacade.php
+grep -Fq 'ProviderEligibilityGuard::normalize' src/Application/FutureCapabilitiesFacade.php
 grep -Fq 'live_deployment_verification' src/Contract/FutureCapabilities.php
 grep -Fq 'MAX_EVALUATION_BYTES' src/Rest/FutureRoutes.php
 grep -Fq 'if (! isset(self::MAP[$action]))' src/Security/Authorization.php
+grep -Fq 'approved public low-risk C1' src/Domain/Future/FutureCapabilityGuard.php
+grep -Fq 'Data residency is uncertain' src/Domain/Future/FutureCapabilityGuard.php
 
 echo 'QUALITY GATE PASS'
