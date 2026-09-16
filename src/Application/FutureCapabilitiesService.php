@@ -40,6 +40,8 @@ final class FutureCapabilitiesService
             'default_state' => 'disabled',
             'mode' => 'evidence-preview',
             'requires_founder_activation' => true,
+            'activation_gates' => FutureCapabilities::activationGates(),
+            'activation_ready' => false,
             'result' => $result,
         );
     }
