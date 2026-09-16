@@ -11,8 +11,9 @@ $allPhp = implode("\n", array_map(static fn (string $f): string => (string) file
 
 $t->test('Plugin identity and safe default', function () use ($read): void {
     $main = $read('sabri-localization-translation-operations.php');
-    TestHarness::assertTrue(str_contains($main, 'Version:           1.0.0-rc.3'));
-    TestHarness::assertTrue(str_contains($main, "define('SABRI_SLTO_VERSION', '1.0.0-rc.3')"));
+    TestHarness::assertTrue(str_contains($main, 'Version:           1.0.0-rc.4'));
+    TestHarness::assertTrue(str_contains($main, "define('SABRI_SLTO_VERSION', '1.0.0-rc.4')"));
+    TestHarness::assertTrue(str_contains($main, "define('SABRI_SLTO_CONTRACT_VERSION', '1.2.0')"));
     $activator = $read('src/Infrastructure/Activator.php');
     TestHarness::assertTrue(str_contains($activator, "add_option('slto_runtime_enabled', false"));
 });
@@ -39,6 +40,27 @@ $t->test('Full requirements traceability CF06-FR-001 through 034', function () u
     }
 });
 
+$t->test('Latest CF-06 completion requirements and native journeys are code-bound', function () use ($read): void {
+    $plan = $read('src/Contract/PlanCompliance.php');
+    $rtm = $read('docs/REQUIREMENTS-TRACEABILITY.md');
+    for ($i = 1; $i <= 10; ++$i) {
+        $id = sprintf('CF06-CEN-%02d', $i);
+        TestHarness::assertTrue(str_contains($plan, "sprintf('CF06-CEN-%02d'"));
+        TestHarness::assertTrue(str_contains($rtm, $id), "Missing latest-plan traceability {$id}");
+    }
+    for ($i = 1; $i <= 6; ++$i) {
+        $id = sprintf('CF06-NJ-%02d', $i);
+        TestHarness::assertTrue(str_contains($rtm, $id), "Missing native journey traceability {$id}");
+    }
+});
+
+$t->test('Central governing laws are represented without ownership takeover', function () use ($read): void {
+    $plan = $read('src/Contract/PlanCompliance.php');
+    foreach (array('CEN-GOV-001','CEN-OWN-001','CEN-BIZ-001','CEN-DON-001','CEN-BRAND-001','CEN-SHELL-001','CEN-NUM-001','CEN-SAFE-001','CEN-PRIV-001','CEN-REV-001') as $id) {
+        TestHarness::assertTrue(str_contains($plan, $id), "Missing central governing law {$id}");
+    }
+});
+
 $t->test('REST surface is versioned and write-protected', function () use ($read): void {
     $routes = $read('src/Rest/Routes.php');
     TestHarness::assertTrue(str_contains($routes, "sabri-localization/v1"));
@@ -54,12 +76,35 @@ $t->test('Restricted payloads use authenticated encryption', function () use ($r
     TestHarness::assertTrue(! str_contains($crypto, "'default-key'"));
 });
 
-$t->test('External MT is draft-only and privacy-bound', function () use ($read): void {
+$t->test('External MT is low-risk C1 draft-only and privacy-bound', function () use ($read): void {
     $mt = $read('src/Application/MachineTranslationService.php');
+    $risk = $read('src/Domain/Translation/RiskPolicy.php');
     TestHarness::assertTrue(str_contains($mt, 'human_review_required'));
     TestHarness::assertTrue(str_contains($mt, 'Redactor::redact'));
     TestHarness::assertTrue(str_contains($mt, "'status' => 'validated'"));
     TestHarness::assertTrue(str_contains($mt, 'translations->submit'));
+    TestHarness::assertTrue(str_contains($risk, "'C1' !== strtoupper(\$dataClass)"));
+    TestHarness::assertTrue(str_contains($risk, "'low' !== strtolower(\$riskClass)"));
+});
+
+$t->test('ICU and safe bidi validation are source gates', function () use ($read): void {
+    $placeholder = $read('src/Domain/Translation/PlaceholderValidator.php');
+    $icu = $read('src/Domain/Translation/MessageFormatValidator.php');
+    $bidi = $read('src/Domain/Translation/BidiValidator.php');
+    TestHarness::assertTrue(str_contains($placeholder, 'MessageFormatValidator::assertEquivalent'));
+    TestHarness::assertTrue(str_contains($icu, 'plural'));
+    TestHarness::assertTrue(str_contains($icu, 'selectordinal'));
+    TestHarness::assertTrue(str_contains($bidi, 'Unpaired bidirectional isolation terminator'));
+});
+
+$t->test('Source corrections invalidate translations, publication links and active bundles', function () use ($read): void {
+    $resources = $read('src/Application/ResourceService.php');
+    $invalidator = $read('src/Infrastructure/DependencyInvalidator.php');
+    TestHarness::assertTrue(str_contains($resources, 'markDependentUnitsStale'));
+    TestHarness::assertTrue(str_contains($resources, 'markContentLinksStale'));
+    TestHarness::assertTrue(str_contains($resources, 'invalidateActiveBundles'));
+    TestHarness::assertTrue(str_contains($resources, 'LocalizationCoverageDegraded'));
+    TestHarness::assertTrue(str_contains($invalidator, "status='invalidated'"));
 });
 
 $t->test('Release requires signature, critical coverage and integrations', function () use ($read): void {
