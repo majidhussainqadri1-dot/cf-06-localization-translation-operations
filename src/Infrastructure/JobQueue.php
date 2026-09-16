@@ -55,7 +55,7 @@ final class JobQueue
         $worker = 'wp-' . substr(hash('sha256', php_uname('n') . '|' . getmypid()), 0, 16);
         $now = Database::now();
         $rows = $wpdb->get_results($wpdb->prepare(
-            "SELECT * FROM {$table} WHERE available_at<=%s AND attempts<max_attempts AND ((status IN ('queued','retry') AND (lease_until IS NULL OR lease_until<%s)) OR (status='running' AND lease_until IS NOT NULL AND lease_until<%s)) ORDER BY id ASC LIMIT %d",
+            "SELECT * FROM {$table} WHERE available_at<=%s AND ((status IN ('queued','retry') AND attempts<max_attempts AND (lease_until IS NULL OR lease_until<%s)) OR (status='running' AND lease_until IS NOT NULL AND lease_until<%s)) ORDER BY id ASC LIMIT %d",
             $now, $now, $now, $limit
         ), ARRAY_A);
         if (! is_array($rows)) {
@@ -64,8 +64,23 @@ final class JobQueue
         $summary = array('completed'=>0, 'retried'=>0, 'dead_letter'=>0, 'unsupported'=>0, 'reclaimed'=>0);
         foreach ($rows as $row) {
             $wasRunning = 'running' === (string)$row['status'];
+            if ($wasRunning && ((int)$row['attempts'] + 1) >= (int)$row['max_attempts']) {
+                $dead = $wpdb->update($table, array(
+                    'status'=>'dead_letter',
+                    'attempts'=>(int)$row['attempts'] + 1,
+                    'lease_owner'=>null,
+                    'lease_until'=>null,
+                    'last_error'=>'RuntimeException:' . hash('sha256', 'expired_worker_lease'),
+                    'updated_at'=>Database::now(),
+                ), array('uuid'=>$row['uuid'],'status'=>'running','lease_until'=>$row['lease_until']));
+                if (1 === $dead) {
+                    ++$summary['reclaimed'];
+                    ++$summary['dead_letter'];
+                }
+                continue;
+            }
             $leased = $wpdb->query($wpdb->prepare(
-                "UPDATE {$table} SET status='running',lease_owner=%s,lease_until=%s,attempts=attempts+IF(status='running',1,0),updated_at=%s WHERE uuid=%s AND attempts<max_attempts AND ((status IN ('queued','retry') AND (lease_until IS NULL OR lease_until<%s)) OR (status='running' AND lease_until IS NOT NULL AND lease_until<%s))",
+                "UPDATE {$table} SET status='running',lease_owner=%s,lease_until=%s,attempts=attempts+IF(status='running',1,0),updated_at=%s WHERE uuid=%s AND ((status IN ('queued','retry') AND attempts<max_attempts AND (lease_until IS NULL OR lease_until<%s)) OR (status='running' AND lease_until IS NOT NULL AND lease_until<%s))",
                 $worker, gmdate('Y-m-d H:i:s', time() + 300), Database::now(), $row['uuid'], $now, $now
             ));
             if (1 !== $leased) {
