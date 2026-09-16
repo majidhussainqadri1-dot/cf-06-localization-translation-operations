@@ -32,7 +32,7 @@ wp_set_current_user(1);
 Activator::activate();
 Activator::activate();
 $check('1.0.1' === (string) get_option('slto_schema_version'), 'schema version mismatch');
-$check('1.2.0' === (string) get_option('slto_contract_version'), 'contract version mismatch');
+$check('1.3.0' === (string) get_option('slto_contract_version'), 'contract version mismatch');
 $check(false === (bool) get_option('slto_runtime_enabled', false), 'runtime must remain disabled');
 
 foreach (Database::ENTITIES as $entity => $suffix) {
@@ -109,6 +109,13 @@ $outerCount = (int) $wpdb->get_var($wpdb->prepare('SELECT COUNT(*) FROM ' . Data
 $innerCount = (int) $wpdb->get_var($wpdb->prepare('SELECT COUNT(*) FROM ' . Database::table('rate_limits') . ' WHERE bucket_key=%s', $bucketInner));
 $check(1 === $outerCount && 0 === $innerCount, 'nested savepoint behavior is incorrect');
 $wpdb->query($wpdb->prepare('DELETE FROM ' . Database::table('rate_limits') . ' WHERE bucket_key IN (%s,%s)', $bucketOuter, $bucketInner));
+
+$future = Plugin::instance()->service('future');
+$check($future instanceof \Sabri\Localization\Application\FutureCapabilitiesService, 'Future40 service unavailable');
+$catalogue = $future->catalogue();
+$check(40 === count($catalogue), 'Future40 capability count mismatch');
+$probe = $future->evaluate('CF06-FUT-027', array('scope'=>'resource:test','kill'=>true,'reason'=>'integration-test'));
+$check('disabled' === ($probe['default_state'] ?? ''), 'Future40 must remain disabled by default');
 
 $check(false !== wp_next_scheduled('slto_process_jobs'), 'job schedule missing');
 $check(false !== wp_next_scheduled('slto_daily_reconciliation'), 'reconciliation schedule missing');
