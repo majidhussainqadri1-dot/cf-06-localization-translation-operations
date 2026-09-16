@@ -29,7 +29,6 @@ $check = static function (bool $condition, string $message): void {
 global $wpdb;
 wp_set_current_user(1);
 
-// Fresh activation and a second idempotent activation must both succeed.
 Activator::activate();
 Activator::activate();
 $check('1.0.1' === (string) get_option('slto_schema_version'), 'schema version mismatch');
@@ -70,9 +69,7 @@ try {
             'request_count' => 1,
             'updated_at' => Database::now(),
         ));
-        if (false === $written) {
-            throw new RuntimeException('test insert failed');
-        }
+        if (false === $written) { throw new RuntimeException('test insert failed'); }
         throw new RuntimeException('forced rollback');
     });
     throw new RuntimeException('forced rollback was not surfaced');
@@ -85,26 +82,14 @@ $check(0 === (int) $remaining, 'root transaction did not roll back');
 $bucketOuter = hash('sha256', 'outer-' . wp_generate_uuid4());
 $bucketInner = hash('sha256', 'inner-' . wp_generate_uuid4());
 $transaction->run(static function () use ($transaction, $wpdb, $bucketOuter, $bucketInner): void {
-    $wpdb->insert(Database::table('rate_limits'), array(
-        'bucket_key' => $bucketOuter,
-        'window_start' => time(),
-        'request_count' => 1,
-        'updated_at' => Database::now(),
-    ));
+    $wpdb->insert(Database::table('rate_limits'), array('bucket_key'=>$bucketOuter,'window_start'=>time(),'request_count'=>1,'updated_at'=>Database::now()));
     try {
         $transaction->run(static function () use ($wpdb, $bucketInner): void {
-            $wpdb->insert(Database::table('rate_limits'), array(
-                'bucket_key' => $bucketInner,
-                'window_start' => time(),
-                'request_count' => 1,
-                'updated_at' => Database::now(),
-            ));
+            $wpdb->insert(Database::table('rate_limits'), array('bucket_key'=>$bucketInner,'window_start'=>time(),'request_count'=>1,'updated_at'=>Database::now()));
             throw new RuntimeException('forced savepoint rollback');
         });
     } catch (RuntimeException $exception) {
-        if ('forced savepoint rollback' !== $exception->getMessage()) {
-            throw $exception;
-        }
+        if ('forced savepoint rollback' !== $exception->getMessage()) { throw $exception; }
     }
 });
 $outerCount = (int) $wpdb->get_var($wpdb->prepare('SELECT COUNT(*) FROM ' . Database::table('rate_limits') . ' WHERE bucket_key=%s', $bucketOuter));
@@ -116,8 +101,15 @@ $future = Plugin::instance()->service('future');
 $check($future instanceof FutureCapabilitiesFacade, 'guarded Future40 facade unavailable');
 $catalogue = $future->catalogue();
 $check(40 === count($catalogue), 'Future40 capability count mismatch');
-$probe = $future->evaluate('CF06-FUT-027', array('scope'=>'resource:test','kill'=>true,'reason'=>'integration-test'));
+$probe = $future->evaluate('CF06-FUT-027', array(
+    'scope'=>'resource:test',
+    'kill'=>true,
+    'reason'=>'integration-test',
+    'actor_ref'=>'wp-integration-admin',
+    'evidence_ref'=>'wp-integration-incident',
+));
 $check('disabled' === ($probe['default_state'] ?? ''), 'Future40 must remain disabled by default');
+$check(true === ($probe['result']['containment_only'] ?? false), 'kill-switch probe must remain containment-only');
 try {
     $future->evaluate('CF06-FUT-020', array('canonical_iso_date'=>'2026-99-99','display_mode'=>'dual'));
     throw new RuntimeException('Future40 validation guard did not reject impossible date');
