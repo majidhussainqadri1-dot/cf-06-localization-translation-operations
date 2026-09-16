@@ -6,8 +6,8 @@ Production-oriented **source candidate** for the conditional localization operat
 
 | Evidence class | Current status |
 |---|---|
-| Specified | Complete — CF06-FR-001 through CF06-FR-034 |
-| Coded | `1.0.0-rc.3` source candidate after forty review/fix rounds |
+| Specified | Complete — CF06-FR-001 through CF06-FR-034 plus CF06-CEN-01 through CF06-CEN-10 |
+| Coded | `1.0.0-rc.4` latest-plans-reconciled source candidate |
 | Packaged | Built only after exact-source and WordPress/MySQL quality gates |
 | Automated-QA Green | Determined per exact commit by CI |
 | Staging-Accepted | No |
@@ -23,12 +23,14 @@ The runtime and external machine-translation provider are **disabled by default*
 - Translation projects, frozen source snapshots, units, assignments, qualifications, conflicts, due dates and separation of duties.
 - Unit lifecycle, comments/queries, linguistic review, qualified domain review, version concurrency and immutable audit/outbox evidence.
 - Terminology/glossaries, prohibited terms, domain style guides and approved translation memory with provenance.
-- Draft-only external MT orchestration with allowlisted HTTPS providers, credential references, redaction, C4/C5 blocking, provider/model/version provenance, validation, human review and deletion evidence.
-- Placeholder, markup, bidi, number/unit/potency, terminology and critical-coverage QA.
+- External machine translation limited to **approved low-risk C1 draft material only**; C2–C5 and medical/Sharīʿah/legal/privacy/security/financial/identity/message/secret domains remain provider-denied.
+- ICU MessageFormat plural/select structure, typed placeholders, markup, bidi isolates, number/unit/potency, terminology and critical-coverage QA.
 - Durable integration, extraction, QA and independent dual-release approval evidence.
 - Deterministic signed locale bundles, staged activation, cache invalidation, exact-unit release, relational rollback and integrity re-verification.
+- Source correction/rights-retirement propagation that stales dependent units/content links, invalidates affected active bundles and prevents stale signed bundles from activation, rollback or delivery.
 - Content-translation relationships, feedback, coverage/staleness metrics, privacy export/erasure and migration inventory/dry-run.
 - Versioned REST contracts, WP-CLI operations, accessible administrator surface, jobs/outbox, idempotency, rate limiting, health and diagnostics.
+- Machine-readable reconciliation with the latest central governing laws, CF06-CEN-01…10 and CF06-NJ-01…06.
 
 ## Canonical boundaries
 
