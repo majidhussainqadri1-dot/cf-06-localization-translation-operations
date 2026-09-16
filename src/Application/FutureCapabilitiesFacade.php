@@ -7,6 +7,7 @@ namespace Sabri\Localization\Application;
 use Sabri\Localization\Domain\Future\FutureCapabilityGuard;
 use Sabri\Localization\Domain\Future\LocaleAccessibilityGuard;
 use Sabri\Localization\Domain\Future\ProviderEligibilityGuard;
+use Sabri\Localization\Domain\Future\ReleaseLifecycleGuard;
 use Sabri\Localization\Domain\Future\SemanticIntegrityGuard;
 
 /**
@@ -27,6 +28,7 @@ final class FutureCapabilitiesFacade
         $id = strtoupper(trim($id));
         $input = FutureCapabilityGuard::normalize($id, $input);
         $input = LocaleAccessibilityGuard::normalize($id, $input);
+        $input = ReleaseLifecycleGuard::normalize($id, $input);
         if ('CF06-FUT-033' === $id) {
             $input = ProviderEligibilityGuard::normalize($input);
         }
@@ -38,6 +40,7 @@ final class FutureCapabilitiesFacade
             $out['result']['score_semantics'] = '0-100-normalized-utility-higher-is-better';
         }
         $out = SemanticIntegrityGuard::apply($id, $input, $out);
-        return LocaleAccessibilityGuard::apply($id, $input, $out);
+        $out = LocaleAccessibilityGuard::apply($id, $input, $out);
+        return ReleaseLifecycleGuard::apply($id, $input, $out);
     }
 }
