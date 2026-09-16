@@ -11,9 +11,9 @@ $allPhp = implode("\n", array_map(static fn (string $f): string => (string) file
 
 $t->test('Plugin identity and safe default', function () use ($read): void {
     $main = $read('sabri-localization-translation-operations.php');
-    TestHarness::assertTrue(str_contains($main, 'Version:           1.0.0-rc.4'));
-    TestHarness::assertTrue(str_contains($main, "define('SABRI_SLTO_VERSION', '1.0.0-rc.4')"));
-    TestHarness::assertTrue(str_contains($main, "define('SABRI_SLTO_CONTRACT_VERSION', '1.2.0')"));
+    TestHarness::assertTrue(str_contains($main, 'Version:           1.0.0-rc.5'));
+    TestHarness::assertTrue(str_contains($main, "define('SABRI_SLTO_VERSION', '1.0.0-rc.5')"));
+    TestHarness::assertTrue(str_contains($main, "define('SABRI_SLTO_CONTRACT_VERSION', '1.3.0')"));
     $activator = $read('src/Infrastructure/Activator.php');
     TestHarness::assertTrue(str_contains($activator, "add_option('slto_runtime_enabled', false"));
 });
@@ -27,7 +27,7 @@ $t->test('All canonical data domains have tables', function () use ($read): void
 
 $t->test('No canonical content ownership takeover', function () use ($read): void {
     $manifest = $read('src/Contract/Manifest.php');
-    foreach (array('global_switcher','visual_rtl_components','search_transliteration','original_domain_content') as $boundary) {
+    foreach (array('global_switcher','visual_rtl_components','search_transliteration','original_domain_content','canonical_media_processing') as $boundary) {
         TestHarness::assertTrue(str_contains($manifest, $boundary), "Missing boundary {$boundary}");
     }
 });
@@ -54,6 +54,21 @@ $t->test('Latest CF-06 completion requirements and native journeys are code-boun
     }
 });
 
+$t->test('Founder-approved Future40 is complete, default-disabled and code-bound', function () use ($read): void {
+    $catalogue = $read('src/Contract/FutureCapabilities.php');
+    $service = $read('src/Application/FutureCapabilitiesService.php');
+    $rtm = $read('docs/REQUIREMENTS-TRACEABILITY.md');
+    $futureDoc = $read('docs/FUTURE40.md');
+    TestHarness::assertTrue(str_contains($catalogue, "'default_state' => 'disabled'"));
+    TestHarness::assertTrue(str_contains($service, "'mode' => 'evidence-preview'"));
+    for ($i = 1; $i <= 40; ++$i) {
+        $id = sprintf('CF06-FUT-%03d', $i);
+        TestHarness::assertTrue(str_contains($rtm, $id), "Missing Future40 RTM row {$id}");
+        TestHarness::assertTrue(str_contains($futureDoc, $id), "Missing Future40 specification {$id}");
+        TestHarness::assertTrue(str_contains($service, sprintf('private function f%03d', $i)), "Missing Future40 handler {$id}");
+    }
+});
+
 $t->test('Central governing laws are represented without ownership takeover', function () use ($read): void {
     $plan = $read('src/Contract/PlanCompliance.php');
     foreach (array('CEN-GOV-001','CEN-OWN-001','CEN-BIZ-001','CEN-DON-001','CEN-BRAND-001','CEN-SHELL-001','CEN-NUM-001','CEN-SAFE-001','CEN-PRIV-001','CEN-REV-001') as $id) {
@@ -62,11 +77,13 @@ $t->test('Central governing laws are represented without ownership takeover', fu
 });
 
 $t->test('REST surface is versioned and write-protected', function () use ($read): void {
-    $routes = $read('src/Rest/Routes.php');
+    $routes = $read('src/Rest/Routes.php') . $read('src/Rest/FutureRoutes.php');
     TestHarness::assertTrue(str_contains($routes, "sabri-localization/v1"));
     TestHarness::assertTrue(str_contains($routes, 'permission_callback'));
     TestHarness::assertTrue(str_contains($routes, 'idempotency'));
     TestHarness::assertTrue(str_contains($routes, 'rateLimit'));
+    TestHarness::assertTrue(str_contains($routes, '/future-capabilities'));
+    TestHarness::assertTrue(str_contains($routes, "Authorization::allowed('manage')"));
 });
 
 $t->test('Restricted payloads use authenticated encryption', function () use ($read): void {
