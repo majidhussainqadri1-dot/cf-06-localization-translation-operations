@@ -23,6 +23,7 @@ php tests/future40-semantic-integrity.php
 php tests/future40-locale-accessibility.php
 php tests/review-round-9-traceability.php
 php tests/review-round-10-final.php
+php tests/review-fresh-round-01-environment.php
 
 echo '== Secret-pattern guard =='
 if grep -RInE --exclude-dir=.git --exclude-dir=dist --exclude-dir=tests --exclude='quality-check.sh' '(BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{20,}|sk_live_[A-Za-z0-9]{12,}|xox[baprs]-[A-Za-z0-9-]{10,})' .; then
@@ -60,6 +61,8 @@ grep -Fq 'MessageFormatValidator::assertEquivalent' src/Domain/Translation/Place
 grep -Fq "status='invalidated'" src/Infrastructure/DependencyInvalidator.php
 grep -Fq 'slto_verify_integration_acceptance_evidence' src/Application/IntegrationService.php
 grep -Fq 'deploymentEnvironment' src/Application/IntegrationService.php
+grep -Fq 'Integration evidence must match the explicitly configured deployment environment.' src/Application/IntegrationService.php
+grep -Fq 'evidenceStorageKey' src/Application/IntegrationService.php
 grep -Fq 'slto_verify_production_activation_evidence' src/Application/HealthService.php
 grep -Fq 'expected and actual hashes differ' src/Application/QaEvidenceService.php
 grep -Fq "status='running' AND lease_until IS NOT NULL" src/Infrastructure/JobQueue.php
