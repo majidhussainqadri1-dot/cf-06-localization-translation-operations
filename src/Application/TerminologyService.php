@@ -37,10 +37,13 @@ final class TerminologyService
     public function transition(string $uuid,string $to,int $version,string $reason=''): array
     {
         $row=$this->repo->find('terminology',$uuid)??throw new InvalidArgumentException('Terminology entry not found.');StateMachine::assert('terminology',(string)$row['status'],$to);
-        if(in_array($to,array('approved','active'),true)&&(int)$row['created_by']===get_current_user_id()){throw new InvalidArgumentException('Terminology proposer cannot approve their own entry.');}
+        if('approved'===$to&&(int)$row['created_by']===get_current_user_id()){throw new InvalidArgumentException('Terminology proposer cannot approve their own entry.');}
+        if('active'===$to&&(int)($row['reviewer_id']??0)<=0){throw new InvalidArgumentException('Terminology activation requires preserved approval provenance.');}
         return $this->tx->run(function()use($row,$to,$version,$reason):array{
-            $changes=array('status'=>$to);if(in_array($to,array('approved','active'),true)){$changes['reviewer_id']=get_current_user_id();$changes['effective_at']=Database::now();}
-            $updated=$this->repo->updateVersioned('terminology',(string)$row['uuid'],$version,$changes);$this->audit->record('terminology',(string)$row['uuid'],'terminology_transition','success',array('from'=>$row['status'],'to'=>$to,'reason'=>$reason));
+            $changes=array('status'=>$to);
+            if('approved'===$to){$changes['reviewer_id']=get_current_user_id();}
+            if('active'===$to){$changes['effective_at']=Database::now();}
+            $updated=$this->repo->updateVersioned('terminology',(string)$row['uuid'],$version,$changes);$this->audit->record('terminology',(string)$row['uuid'],'terminology_transition','success',array('from'=>$row['status'],'to'=>$to,'reason'=>$reason,'approval_reviewer_id'=>$row['reviewer_id']??($changes['reviewer_id']??null)));
             if('active'===$to){$this->outbox->enqueue('TerminologyEntryApproved','terminology',(string)$row['uuid'],array('concept_id'=>$row['concept_id'],'locale'=>$row['target_locale'],'domain'=>$row['domain_name']));}
             if('deprecated'===$to){$this->outbox->enqueue('TerminologyEntryDeprecated','terminology',(string)$row['uuid'],array('concept_id'=>$row['concept_id'],'locale'=>$row['target_locale']));}
             return $updated;
@@ -63,8 +66,14 @@ final class TerminologyService
     {
         $row=$this->repo->find('style_guides',$uuid)??throw new InvalidArgumentException('Style guide not found.');$map=['draft'=>['approved','deprecated'],'approved'=>['active','deprecated'],'active'=>['deprecated'],'deprecated'=>[]];
         if(!in_array($to,$map[(string)$row['status']]??[],true)){throw new InvalidArgumentException('Invalid style guide transition.');}
-        if(in_array($to,array('approved','active'),true)&&(int)$row['created_by']===get_current_user_id()){throw new InvalidArgumentException('Style guide author cannot approve their own guide.');}
-        return $this->tx->run(function()use($row,$to,$version,$reason):array{$changes=array('status'=>$to);if(in_array($to,array('approved','active'),true)){$changes['approved_by']=get_current_user_id();$changes['effective_at']=Database::now();}$updated=$this->repo->updateVersioned('style_guides',(string)$row['uuid'],$version,$changes);$this->audit->record('style_guide',(string)$row['uuid'],'style_guide_transition','success',array('from'=>$row['status'],'to'=>$to,'reason'=>$reason));return $updated;});
+        if('approved'===$to&&(int)$row['created_by']===get_current_user_id()){throw new InvalidArgumentException('Style guide author cannot approve their own guide.');}
+        if('active'===$to&&(int)($row['approved_by']??0)<=0){throw new InvalidArgumentException('Style guide activation requires preserved approval provenance.');}
+        return $this->tx->run(function()use($row,$to,$version,$reason):array{
+            $changes=array('status'=>$to);
+            if('approved'===$to){$changes['approved_by']=get_current_user_id();}
+            if('active'===$to){$changes['effective_at']=Database::now();}
+            $updated=$this->repo->updateVersioned('style_guides',(string)$row['uuid'],$version,$changes);$this->audit->record('style_guide',(string)$row['uuid'],'style_guide_transition','success',array('from'=>$row['status'],'to'=>$to,'reason'=>$reason,'approval_actor_id'=>$row['approved_by']??($changes['approved_by']??null)));return $updated;
+        });
     }
 
     public function suggestMemory(string $source,string $sourceLocale,string $targetLocale,string $domain,int $limit=10): array
