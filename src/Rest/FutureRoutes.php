@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Sabri\Localization\Rest;
 
 use InvalidArgumentException;
-use Sabri\Localization\Application\FutureCapabilitiesService;
+use Sabri\Localization\Application\FutureCapabilitiesFacade;
 use Sabri\Localization\Contract\FutureCapabilities;
 use Sabri\Localization\Security\Authorization;
 use Throwable;
@@ -20,7 +20,7 @@ final class FutureRoutes
     private const MAX_EVALUATION_BYTES = 262144;
     private const MAX_EVALUATION_NODES = 5000;
 
-    public function __construct(private readonly FutureCapabilitiesService $future) {}
+    public function __construct(private readonly FutureCapabilitiesFacade $future) {}
 
     public function registerHooks(): void
     {
