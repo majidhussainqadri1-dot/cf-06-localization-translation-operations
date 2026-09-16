@@ -8,11 +8,11 @@ $root=dirname(__DIR__);$t=new TestHarness();$code=(string)file_get_contents($roo
 
 $t->test('Active provider runtime health and residency are fail closed',function()use($code):void{
     TestHarness::assertTrue(str_contains($code,"array('configured','healthy','ready')"));
-    TestHarness::assertTrue(str_contains($code,"''===$healthRegion"));
+    TestHarness::assertTrue(str_contains($code,"''===\$healthRegion"));
     TestHarness::assertTrue(str_contains($code,'runtime health or region cannot be verified'));
 });
 $t->test('Provider response must attest approved region',function()use($code):void{
-    TestHarness::assertTrue(str_contains($code,"''===$responseRegion"));
+    TestHarness::assertTrue(str_contains($code,"''===\$responseRegion"));
     TestHarness::assertTrue(str_contains($code,'response must attest the approved provider region'));
 });
 $t->test('Deletion purge remains possible after runtime provider disablement',function()use($code):void{
