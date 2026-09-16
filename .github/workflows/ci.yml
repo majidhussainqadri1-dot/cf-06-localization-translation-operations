@@ -23,17 +23,12 @@ jobs:
       mysql:
         image: mysql:8.0
         env:
-          MYSQL_ROOT_PASSWORD: root
+          MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
         ports:
           - 3306:3306
         options: >-
-          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot"
           --health-interval=10s --health-timeout=5s --health-retries=12
-    env:
-      SLTO_DATA_ENCRYPTION_KEYS: '{"ci-data":"Y2ktZGF0YS1rZXktMzItYnl0ZXMtbG9uZy0wMDAwMDA="}'
-      SLTO_ACTIVE_DATA_KEY_ID: ci-data
-      SLTO_BUNDLE_SIGNING_KEY: Y2ktc2lnbmluZy1rZXktMzItYnl0ZXMtbG9uZy0wMDAwMA==
-      SLTO_BUNDLE_SIGNING_KEY_ID: ci-sign
     steps:
       - name: Check out exact source
         uses: actions/checkout@v4
@@ -45,6 +40,19 @@ jobs:
           coverage: none
           tools: composer, wp-cli
           extensions: mysqli, sodium
+
+      - name: Generate ephemeral CI crypto material
+        shell: bash
+        run: |
+          php -r '
+          $data = base64_encode(random_bytes(32));
+          $sign = base64_encode(random_bytes(32));
+          $env = getenv("GITHUB_ENV");
+          file_put_contents($env, "SLTO_DATA_ENCRYPTION_KEYS={\"ci-data\":\"{$data}\"}\n", FILE_APPEND);
+          file_put_contents($env, "SLTO_ACTIVE_DATA_KEY_ID=ci-data\n", FILE_APPEND);
+          file_put_contents($env, "SLTO_BUNDLE_SIGNING_KEY={$sign}\n", FILE_APPEND);
+          file_put_contents($env, "SLTO_BUNDLE_SIGNING_KEY_ID=ci-sign\n", FILE_APPEND);
+          '
 
       - name: Validate Composer metadata
         run: composer validate --strict --no-check-publish
@@ -72,12 +80,13 @@ jobs:
         run: |
           set -euo pipefail
           db="cf06_${{ strategy.job-index }}"
-          mysql -h127.0.0.1 -uroot -proot -e "CREATE DATABASE ${db} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+          mysql -h127.0.0.1 -uroot -e "CREATE DATABASE ${db} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
           wpdir="/tmp/wp-${{ matrix.php }}"
           mkdir -p "$wpdir"
           wp core download --path="$wpdir" --force
-          wp config create --path="$wpdir" --dbname="$db" --dbuser=root --dbpass=root --dbhost=127.0.0.1 --skip-check
-          wp core install --path="$wpdir" --url="http://cf06-${{ matrix.php }}.local" --title=CF06 --admin_user=admin --admin_password='Passw0rd!CF06' --admin_email=admin@example.test
+          wp config create --path="$wpdir" --dbname="$db" --dbuser=root --dbpass='' --dbhost=127.0.0.1 --skip-check
+          admin_password="$(php -r 'echo bin2hex(random_bytes(16));')"
+          wp core install --path="$wpdir" --url="http://cf06-${{ matrix.php }}.local" --title=CF06 --admin_user=admin --admin_password="$admin_password" --admin_email=admin@example.test
           ln -s "$GITHUB_WORKSPACE" "$wpdir/wp-content/plugins/sabri-localization-translation-operations"
           wp plugin activate sabri-localization-translation-operations --path="$wpdir"
           wp eval-file "$GITHUB_WORKSPACE/tests/wp-integration.php" --path="$wpdir"
@@ -140,7 +149,7 @@ jobs:
       - name: Upload release evidence
         uses: actions/upload-artifact@v4
         with:
-          name: cf-06-complete-source-candidate-rc4
+          name: cf-06-complete-source-candidate-rc5
           path: |
             dist/*.zip
             dist/MANIFEST.json
