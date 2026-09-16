@@ -70,8 +70,13 @@ final class FutureCapabilityGuard
             throw new InvalidArgumentException('supported_codepoints must be a non-empty audited inventory.');
         }
         foreach ($supported as $codepoint) {
-            if (1 !== preg_match('/^U\+[0-9A-F]{4,6}$/D', strtoupper((string)$codepoint))) {
+            $token = strtoupper((string)$codepoint);
+            if (1 !== preg_match('/^U\+([0-9A-F]{4,6})$/D', $token, $match)) {
                 throw new InvalidArgumentException('supported_codepoints contains an invalid Unicode code point.');
+            }
+            $value = hexdec($match[1]);
+            if ($value > 0x10FFFF || ($value >= 0xD800 && $value <= 0xDFFF)) {
+                throw new InvalidArgumentException('supported_codepoints contains a non-scalar Unicode value.');
             }
         }
         return $input;
@@ -126,8 +131,12 @@ final class FutureCapabilityGuard
                 throw new InvalidArgumentException($field . ' must be between 0 and 100.');
             }
         }
-        if (isset($input['critical_missing']) && (! is_numeric($input['critical_missing']) || (int)$input['critical_missing'] < 0)) {
-            throw new InvalidArgumentException('critical_missing must be a non-negative integer.');
+        if (isset($input['critical_missing'])) {
+            $critical = filter_var($input['critical_missing'], FILTER_VALIDATE_INT, ['options' => ['min_range' => 0]]);
+            if (false === $critical) {
+                throw new InvalidArgumentException('critical_missing must be a non-negative integer.');
+            }
+            $input['critical_missing'] = $critical;
         }
         return $input;
     }
