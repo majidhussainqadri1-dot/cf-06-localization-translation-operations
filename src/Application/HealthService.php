@@ -11,6 +11,15 @@ use Sabri\Localization\Infrastructure\Database;
 
 final class HealthService
 {
+    private const PRODUCTION_EVIDENCE = array(
+        'staging_acceptance',
+        'rollback_restore_rehearsal',
+        'exact_package_parity',
+        'security_privacy_acceptance',
+        'accessibility_acceptance',
+        'performance_acceptance',
+    );
+
     public function __construct(
         private readonly Crypto $crypto,
         private readonly MetricsService $metrics,
@@ -28,7 +37,11 @@ final class HealthService
         }
         $schemaReady=!in_array(false,$tables,true);
         $signing=DeterministicBundle::sign(str_repeat('0',64));
-        $integrations=$schemaReady?$this->integrations->readiness():array_fill_keys(\Sabri\Localization\Contract\IntegrationRegistry::required(),false);
+        $environment=IntegrationService::deploymentEnvironment();
+        $environmentReady=null!==$environment;
+        $integrations=$schemaReady&&$environmentReady
+            ?$this->integrations->readiness($environment)
+            :array_fill_keys(\Sabri\Localization\Contract\IntegrationRegistry::required(),false);
         $localeReady=false;
         if($schemaReady){
             $default=(string)get_option('slto_default_locale','en-US');
@@ -36,14 +49,42 @@ final class HealthService
             if(''!==(string)$wpdb->last_error){throw new RuntimeException('Locale release readiness could not be verified.');}
             $localeReady=0===(int)$missing;
         }
+        $productionEvidenceReady=true;
+        $productionEvidence=array();
+        if('production'===$environment){
+            $context=array(
+                'plugin_version'=>SABRI_SLTO_VERSION,
+                'schema_version'=>SABRI_SLTO_SCHEMA_VERSION,
+                'contract_version'=>SABRI_SLTO_CONTRACT_VERSION,
+                'required'=>self::PRODUCTION_EVIDENCE,
+            );
+            $candidate=apply_filters('slto_verify_production_activation_evidence',array(),$context);
+            $productionEvidence=is_array($candidate)?$candidate:array();
+            foreach(self::PRODUCTION_EVIDENCE as $required){
+                if(true!==($productionEvidence[$required]??false)){$productionEvidenceReady=false;}
+            }
+        }elseif(null===$environment){
+            $productionEvidenceReady=false;
+        }
         $gates=array_merge([
-            'schema'=>$schemaReady,'encryption'=>$this->crypto->available(),'bundle_signing'=>null!==$signing,
+            'deployment_environment_configured'=>$environmentReady,
+            'schema'=>$schemaReady,
+            'encryption'=>$this->crypto->available(),
+            'bundle_signing'=>null!==$signing,
             'staffing_approved'=>defined('SLTO_LOCALIZATION_STAFFING_APPROVED')&&true===SLTO_LOCALIZATION_STAFFING_APPROVED,
             'locale_release_ready'=>$localeReady,
+            'production_release_evidence'=>$productionEvidenceReady,
         ],$integrations);
         return [
-            'status'=>in_array(false,$gates,true)?'degraded':'ready','runtime_enabled'=>(bool)get_option('slto_runtime_enabled',false),
-            'gates'=>$gates,'tables'=>$tables,'integrations'=>$integrations,'metrics'=>$schemaReady?$this->metrics->summary():[],
+            'status'=>in_array(false,$gates,true)?'degraded':'ready',
+            'runtime_enabled'=>(bool)get_option('slto_runtime_enabled',false),
+            'deployment_environment'=>$environment??'unconfigured',
+            'gates'=>$gates,
+            'tables'=>$tables,
+            'integrations'=>$integrations,
+            'production_evidence_required'=>'production'===$environment?self::PRODUCTION_EVIDENCE:array(),
+            'production_evidence'=>$productionEvidence,
+            'metrics'=>$schemaReady?$this->metrics->summary():[],
             'truth_status'=>['specified'=>'complete','coded'=>'complete-source-candidate','packaged'=>'requires-current-workflow-evidence',
                 'automated_qa'=>'requires-current-workflow-evidence','staging_accepted'=>false,'live_deployed'=>false,'operational'=>false],
         ];
@@ -52,6 +93,10 @@ final class HealthService
     public function activationEligible(): array
     {
         $report=$this->report();
-        return ['eligible'=>!in_array(false,$report['gates'],true),'gates'=>$report['gates']];
+        return [
+            'eligible'=>!in_array(false,$report['gates'],true),
+            'environment'=>$report['deployment_environment'],
+            'gates'=>$report['gates'],
+        ];
     }
 }
