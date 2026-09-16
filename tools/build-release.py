@@ -10,14 +10,13 @@ import re
 import shutil
 import sys
 import zipfile
-from datetime import datetime, timezone
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
 PACKAGE_DIR = "sabri-localization-translation-operations"
-VERSION = "1.0.0-rc.3"
+VERSION = "1.0.0-rc.4"
 ZIP_NAME = f"cf-06-sabri-localization-translation-operations-{VERSION}-SOURCE-CANDIDATE.zip"
-FIXED_TIME = (2026, 8, 6, 0, 0, 0)
+FIXED_TIME = (2026, 9, 16, 0, 0, 0)
 SOURCE_COMMIT = os.environ.get("SOURCE_COMMIT", "").strip()
 
 EXCLUDE_PARTS = {
@@ -83,11 +82,21 @@ def build() -> pathlib.Path:
         "module": "CF-06 — Localization and Translation Operations",
         "plugin_version": VERSION,
         "schema_version": "1.0.1",
-        "contract_version": "1.1.0",
+        "contract_version": "1.2.0",
         "runtime_default": "disabled",
-        "build_epoch": "2026-08-06T00:00:00Z",
+        "build_epoch": "2026-09-16T00:00:00Z",
         "source_commit": validated_source_commit(),
-        "requirements": {"first": "CF06-FR-001", "last": "CF06-FR-034", "count": 34},
+        "requirements": {
+            "functional_first": "CF06-FR-001",
+            "functional_last": "CF06-FR-034",
+            "functional_count": 34,
+            "completion_first": "CF06-CEN-01",
+            "completion_last": "CF06-CEN-10",
+            "completion_count": 10,
+            "native_journey_first": "CF06-NJ-01",
+            "native_journey_last": "CF06-NJ-06",
+            "native_journey_count": 6,
+        },
         "files": manifest_files,
     }
     manifest_path = DIST / "MANIFEST.json"
@@ -99,7 +108,7 @@ def build() -> pathlib.Path:
         "serialNumber": "urn:uuid:cf060000-0000-4000-8000-000000000001",
         "version": 1,
         "metadata": {
-            "timestamp": "2026-08-06T00:00:00Z",
+            "timestamp": "2026-09-16T00:00:00Z",
             "component": {
                 "type": "application",
                 "name": "sabri-localization-translation-operations",
@@ -107,7 +116,8 @@ def build() -> pathlib.Path:
                 "licenses": [{"license": {"id": "GPL-2.0-or-later"}}],
                 "properties": [
                     {"name": "sabri:runtime-default", "value": "disabled"},
-                    {"name": "sabri:contract-version", "value": "1.1.0"},
+                    {"name": "sabri:contract-version", "value": "1.2.0"},
+                    {"name": "sabri:plan-reconciliation", "value": "central+cf06-latest"},
                     {"name": "sabri:source-commit", "value": validated_source_commit()},
                 ],
             },
