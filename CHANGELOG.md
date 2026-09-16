@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.0.0-rc.4 — Latest central-plan + CF-06 reconciliation candidate
+
+- Re-audited the source candidate against the newly supplied central governing plan and CF-06 master plan/completion addendum.
+- Bound `CF06-CEN-01` through `CF06-CEN-10`, `CF06-NJ-01` through `CF06-NJ-06`, and the applicable central governing laws into machine-readable `PlanCompliance` and the requirements traceability matrix.
+- Added ICU MessageFormat structural validation for plural/select/selectordinal branches and nested arguments while preserving typed-placeholder contracts.
+- Replaced blanket bidi-control rejection with a stricter safe model: legacy overrides remain forbidden while explicitly allowed LRI/RLI/FSI isolates must be correctly paired and bounded.
+- Tightened external machine translation to approved **low-risk C1 draft material only**. C2–C5 and high-risk medical/Sharīʿah/legal/privacy/security/financial/identity/message/secret domains cannot be sent to the provider, even through an approval flag.
+- Extended source correction/rights-retirement propagation to dependent translation units, translated-publication links, active bundles, cache invalidation and downstream degradation/change events.
+- Added bundle source-freshness verification at build, activation, rollback and public delivery so a cryptographically valid but semantically stale bundle is still rejected.
+- Bumped the public contract to `1.2.0`, the plugin candidate to `1.0.0-rc.4`, and updated deterministic package/SBOM metadata for exact-source rc4 evidence.
+
+### Truthful limitations
+
+This entry records repository/source-candidate work only. Hostinger-equivalent staging, real companion-module contracts, qualified human Urdu/English/Arabic and domain-review staffing, real MT/TMS provider acceptance, browser/WCAG/RTL visual acceptance, load/restore/rollback drills, independent security/privacy acceptance, live deployment and operational monitoring remain separate gates.
+
 ## 1.0.0-rc.3 — Forty-round corrected source candidate
 
 - Completed forty distinct review, correction and fresh-retest rounds across database integrity, authorization, privacy, provider boundaries, release evidence and rollback.
