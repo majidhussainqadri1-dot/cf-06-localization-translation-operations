@@ -9,6 +9,7 @@ use Sabri\Localization\Application\BundleService;
 use Sabri\Localization\Application\ContentLinkService;
 use Sabri\Localization\Application\ExtractionService;
 use Sabri\Localization\Application\FeedbackService;
+use Sabri\Localization\Application\FutureCapabilitiesService;
 use Sabri\Localization\Application\HealthService;
 use Sabri\Localization\Application\IntegrationService;
 use Sabri\Localization\Application\LocaleService;
@@ -35,6 +36,7 @@ use Sabri\Localization\Infrastructure\Repository\LocalizationRepository;
 use Sabri\Localization\Infrastructure\Transaction;
 use Sabri\Localization\Provider\MachineTranslationProvider;
 use Sabri\Localization\Provider\NullProvider;
+use Sabri\Localization\Rest\FutureRoutes;
 use Sabri\Localization\Rest\Routes;
 
 final class Plugin
@@ -81,6 +83,7 @@ final class Plugin
         $migration = new MigrationService($audit);
         $contentLinks = new ContentLinkService($repo,$audit,$tx);
         $providers = new ProviderService($repo,$audit,$tx);
+        $future = new FutureCapabilitiesService();
 
         $provider = apply_filters('slto_machine_translation_provider', new NullProvider(), $repo);
         if (! $provider instanceof MachineTranslationProvider) { $provider = new NullProvider(); }
@@ -97,10 +100,11 @@ final class Plugin
         $this->services = compact(
             'crypto','repo','audit','tx','outbox','jobs','integrations','extraction','qaEvidence','releaseApprovals',
             'locale','resource','qa','translation','project','terminology','bundle','feedback','metrics','health','privacy',
-            'migration','contentLinks','providers','mt'
+            'migration','contentLinks','providers','future','mt'
         );
 
         (new Routes($this->services))->registerHooks();
+        (new FutureRoutes($future))->registerHooks();
         (new AdminPage($this->services))->registerHooks();
         (new Commands($health,$bundle,$migration,$jobs,$outbox))->register();
 
