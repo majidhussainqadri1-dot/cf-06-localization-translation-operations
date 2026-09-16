@@ -26,7 +26,10 @@ final class Authorization
 
     public static function allowed(string $action, array $context = array()): bool
     {
-        $capability = self::MAP[$action] ?? 'manage_sabri_localization';
+        if (! isset(self::MAP[$action])) {
+            return false;
+        }
+        $capability = self::MAP[$action];
         if (! current_user_can($capability)) {
             return false;
         }
@@ -39,6 +42,15 @@ final class Authorization
         $assertions = smc_membership_assertions($userId);
         if (! is_array($assertions)) {
             return false;
+        }
+        if (isset($assertions['user_id']) && (int)$assertions['user_id'] !== $userId) {
+            return false;
+        }
+        if (isset($assertions['expires_at'])) {
+            $expiry = strtotime((string)$assertions['expires_at']);
+            if (false === $expiry || $expiry <= time()) {
+                return false;
+            }
         }
 
         $state = strtolower((string) ($assertions['state'] ?? ''));
