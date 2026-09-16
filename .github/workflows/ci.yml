@@ -50,8 +50,8 @@ jobs:
           $env = getenv("GITHUB_ENV");
           file_put_contents($env, "SLTO_DATA_ENCRYPTION_KEYS={\"ci-data\":\"{$data}\"}\n", FILE_APPEND);
           file_put_contents($env, "SLTO_ACTIVE_DATA_KEY_ID=ci-data\n", FILE_APPEND);
-          file_put_contents($env, "SLTO_BUNDLE_SIGNING_KEY={$sign}\n", FILE_APPEND);
-          file_put_contents($env, "SLTO_BUNDLE_SIGNING_KEY_ID=ci-sign\n", FILE_APPEND);
+          file_put_contents($env, "SLTO_BUNDLE_SIGNING_KEYS={\"ci-sign\":\"{$sign}\"}\n", FILE_APPEND);
+          file_put_contents($env, "SLTO_ACTIVE_BUNDLE_SIGNING_KEY_ID=ci-sign\n", FILE_APPEND);
           '
 
       - name: Validate Composer metadata
@@ -125,10 +125,7 @@ jobs:
           if manifest.get('source_commit') != expected:
               raise SystemExit('Manifest source commit mismatch')
           sbom = json.load(open('dist/SBOM.cdx.json', encoding='utf-8'))
-          properties = {
-              item['name']: item['value']
-              for item in sbom['metadata']['component']['properties']
-          }
+          properties = {item['name']: item['value'] for item in sbom['metadata']['component']['properties']}
           if properties.get('sabri:source-commit') != expected:
               raise SystemExit('SBOM source commit mismatch')
           PY
