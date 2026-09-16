@@ -3,14 +3,22 @@
 declare(strict_types=1);
 
 require __DIR__ . '/TestHarness.php';
+require dirname(__DIR__) . '/src/Domain/Locale/LocaleValidator.php';
+require dirname(__DIR__) . '/src/Domain/Translation/BidiValidator.php';
+require dirname(__DIR__) . '/src/Domain/Translation/RiskPolicy.php';
 require dirname(__DIR__) . '/src/Contract/FutureCapabilities.php';
+require dirname(__DIR__) . '/src/Domain/Future/FutureCapabilityGuard.php';
+require dirname(__DIR__) . '/src/Domain/Future/LocaleAccessibilityGuard.php';
+require dirname(__DIR__) . '/src/Domain/Future/ProviderEligibilityGuard.php';
+require dirname(__DIR__) . '/src/Domain/Future/SemanticIntegrityGuard.php';
 require dirname(__DIR__) . '/src/Application/FutureCapabilitiesService.php';
+require dirname(__DIR__) . '/src/Application/FutureCapabilitiesFacade.php';
 
-use Sabri\Localization\Application\FutureCapabilitiesService;
+use Sabri\Localization\Application\FutureCapabilitiesFacade;
 use Sabri\Localization\Contract\FutureCapabilities;
 
 $t = new TestHarness();
-$s = new FutureCapabilitiesService();
+$s = new FutureCapabilitiesFacade();
 
 $t->test('Future40 registry contains exact 40 capabilities', function (): void {
     TestHarness::assertSame(40, count(FutureCapabilities::all()));
@@ -36,7 +44,7 @@ $t->test('Future40 activation contract exposes every governing gate', function (
 });
 
 $cases = [
-    'CF06-FUT-001' => ['text'=>'Hello {name}','rtl_probe'=>true],
+    'CF06-FUT-001' => ['text'=>'Hello {name} at https://example.test','rtl_probe'=>true],
     'CF06-FUT-002' => ['resource_key'=>'home.title','route'=>'/ur/home','screenshot_ref'=>'shot-1'],
     'CF06-FUT-003' => ['viewports'=>[320,768]],
     'CF06-FUT-004' => ['text'=>'Click here for ABC'],
@@ -52,25 +60,25 @@ $cases = [
     'CF06-FUT-014' => ['entries'=>[['term'=>'Arnica','pronunciation'=>'AR-ni-ka','locale'=>'en-US']]],
     'CF06-FUT-015' => ['structure'=>[['type'=>'heading'],['type'=>'paragraph'],['type'=>'footnote']]],
     'CF06-FUT-016' => ['confidence'=>0.95,'threshold'=>0.93],
-    'CF06-FUT-017' => ['alt_text'=>['a'],'captions'=>['c'],'transcript'=>['t'],'aria_labels'=>['l']],
+    'CF06-FUT-017' => ['target_locale'=>'ur-PK','alt_text'=>['a'],'captions'=>['c'],'transcript'=>['t'],'aria_labels'=>['l']],
     'CF06-FUT-018' => ['locale'=>'ar-SA','base_locale'=>'ar'],
-    'CF06-FUT-019' => ['register'=>'academic','honorific_policy'=>'preserve-approved'],
+    'CF06-FUT-019' => ['target_locale'=>'ur-PK','register'=>'academic','honorific_policy'=>'preserve-approved'],
     'CF06-FUT-020' => ['canonical_iso_date'=>'2026-09-16','display_mode'=>'dual'],
-    'CF06-FUT-021' => ['text'=>'123','system'=>'persian'],
+    'CF06-FUT-021' => ['locale'=>'ur-PK','text'=>'123','system'=>'persian'],
     'CF06-FUT-022' => ['text'=>'A','supported_codepoints'=>['U+0041']],
     'CF06-FUT-023' => ['text'=>'ایک لمبی سطر، دوسری سطر','locale'=>'ur-PK'],
-    'CF06-FUT-024' => ['text'=>'اردو input'],
+    'CF06-FUT-024' => ['locale'=>'ur-PK','text'=>'اردو input'],
     'CF06-FUT-025' => ['links'=>[['hreflang'=>'ur-PK','url'=>'https://example.test/ur','canonical'=>'https://example.test/ur']]],
     'CF06-FUT-026' => ['coverage_percent'=>99,'critical_missing'=>0,'threshold_percent'=>95],
     'CF06-FUT-027' => ['scope'=>'resource:medical.warning','kill'=>true,'reason'=>'critical mistranslation'],
     'CF06-FUT-028' => ['approvals'=>[['role'=>'linguistic'],['role'=>'domain']],'expires_in_minutes'=>60],
     'CF06-FUT-029' => ['old'=>['a'=>'1','b'=>'2'],'new'=>['a'=>'1','b'=>'3','c'=>'4']],
-    'CF06-FUT-030' => ['resources'=>[['key'=>'home.title','text'=>'Home','data_class'=>'C1','public'=>true],['key'=>'secret','text'=>'x','data_class'=>'C4','public'=>false]]],
-    'CF06-FUT-031' => ['bundle'=>['a'=>['text'=>'A'],'b'=>['text'=>'B']]],
-    'CF06-FUT-032' => ['endpoint'=>'http://localhost:8080/v1/translate'],
-    'CF06-FUT-033' => ['locale'=>'ur-PK','data_class'=>'C1','region'=>'PK','providers'=>[['id'=>'p1','healthy'=>true,'quality'=>90,'data_classes'=>['C1'],'locales'=>['ur-PK'],'regions'=>['PK']]]],
+    'CF06-FUT-030' => ['resources'=>[['key'=>'home.title','text'=>'Home','data_class'=>'C1','risk_class'=>'low','domain'=>'platform','public'=>true,'approved'=>true,'current'=>true]]],
+    'CF06-FUT-031' => ['bundle'=>['a'=>['text'=>'A','data_class'=>'C1','risk_class'=>'low','domain'=>'platform','public'=>true,'approved'=>true]]],
+    'CF06-FUT-032' => ['endpoint'=>'http://localhost:8080/v1/translate','approved_hosts'=>['localhost'],'allow_insecure_local'=>true],
+    'CF06-FUT-033' => ['locale'=>'ur-PK','data_class'=>'C1','risk_class'=>'low','domain'=>'platform','region'=>'PK','providers'=>[['id'=>'p1','approved'=>true,'healthy'=>true,'quality'=>90,'data_classes'=>['C1'],'locales'=>['ur-PK'],'regions'=>['PK']]]],
     'CF06-FUT-034' => ['samples'=>[['accuracy'=>90,'terminology'=>90,'privacy'=>100,'latency'=>80,'cost'=>70]]],
-    'CF06-FUT-035' => ['target_region'=>'PK','allowed_regions'=>['PK'],'denied_regions'=>[]],
+    'CF06-FUT-035' => ['target_region'=>'PK','allowed_regions'=>['PK'],'denied_regions'=>[],'residency_known'=>true],
     'CF06-FUT-036' => ['source'=>'Take 30C','target'=>'30C لیں'],
     'CF06-FUT-037' => ['backlog_units'=>100,'daily_new_units'=>10,'daily_review_capacity'=>15,'forecast_days'=>30],
     'CF06-FUT-038' => ['decisions'=>[['reviewer_a'=>'approve','reviewer_b'=>'approve'],['reviewer_a'=>'approve','reviewer_b'=>'reject']]],
