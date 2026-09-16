@@ -21,9 +21,18 @@ final class PlanCompliance
         return array_map(static fn (int $i): string => sprintf('CF06-NJ-%02d', $i), range(1, 6));
     }
 
+    public static function centralLaws(): array
+    {
+        return array(
+            'CEN-GOV-001', 'CEN-OWN-001', 'CEN-BIZ-001', 'CEN-DON-001', 'CEN-BRAND-001',
+            'CEN-SHELL-001', 'CEN-NUM-001', 'CEN-SAFE-001', 'CEN-PRIV-001', 'CEN-REV-001',
+        );
+    }
+
     public static function get(): array
     {
         return array(
+            'central_governing_laws' => self::centralLaws(),
             'central_plan' => array(
                 'shared_localization_capability',
                 'localization_and_internationalization_section_43',
