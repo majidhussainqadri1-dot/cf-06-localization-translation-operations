@@ -9,7 +9,7 @@ use Sabri\Localization\Application\BundleService;
 use Sabri\Localization\Application\ContentLinkService;
 use Sabri\Localization\Application\ExtractionService;
 use Sabri\Localization\Application\FeedbackService;
-use Sabri\Localization\Application\FutureCapabilitiesService;
+use Sabri\Localization\Application\FutureCapabilitiesFacade;
 use Sabri\Localization\Application\HealthService;
 use Sabri\Localization\Application\IntegrationService;
 use Sabri\Localization\Application\LocaleService;
@@ -83,7 +83,7 @@ final class Plugin
         $migration = new MigrationService($audit);
         $contentLinks = new ContentLinkService($repo,$audit,$tx);
         $providers = new ProviderService($repo,$audit,$tx);
-        $future = new FutureCapabilitiesService();
+        $future = new FutureCapabilitiesFacade();
 
         $provider = apply_filters('slto_machine_translation_provider', new NullProvider(), $repo);
         if (! $provider instanceof MachineTranslationProvider) { $provider = new NullProvider(); }
