@@ -9,13 +9,25 @@ namespace Sabri\Localization\Contract;
  *
  * Every capability is code-present but disabled by default. Activation is
  * governed by the normal CF-06 change-control, privacy, security, domain-review,
- * staging, rollback and live-verification gates.
+ * companion-contract parity, staging, rollback/restore and live-verification gates.
  */
 final class FutureCapabilities
 {
     public static function ids(): array
     {
         return array_map(static fn (int $i): string => sprintf('CF06-FUT-%03d', $i), range(1, 40));
+    }
+
+    public static function activationGates(): array
+    {
+        return array(
+            'founder_change_control',
+            'privacy_security_domain_review',
+            'companion_contract_parity',
+            'staging_acceptance',
+            'rollback_restore_rehearsal',
+            'live_deployment_verification',
+        );
     }
 
     public static function all(): array
@@ -72,7 +84,8 @@ final class FutureCapabilities
                 'name' => $name,
                 'group' => $group,
                 'default_state' => 'disabled',
-                'activation' => 'founder-change-control-plus-staging',
+                'activation' => 'all-governing-gates-required',
+                'activation_gates' => self::activationGates(),
                 'public_auto_publish' => false,
                 'high_risk_human_review_required' => true,
             );
