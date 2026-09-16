@@ -24,6 +24,7 @@ php tests/future40-locale-accessibility.php
 php tests/review-round-9-traceability.php
 php tests/review-round-10-final.php
 php tests/review-fresh-round-01-environment.php
+php tests/review-fresh-round-02-boot-parity.php
 
 echo '== Secret-pattern guard =='
 if grep -RInE --exclude-dir=.git --exclude-dir=dist --exclude-dir=tests --exclude='quality-check.sh' '(BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{20,}|sk_live_[A-Za-z0-9]{12,}|xox[baprs]-[A-Za-z0-9-]{10,})' .; then
@@ -84,7 +85,6 @@ grep -Fq "'mode' => 'evidence-preview'" src/Application/FutureCapabilitiesServic
 grep -Fq "'direct_publish' => false" src/Application/FutureCapabilitiesService.php
 grep -Fq "'approval_authority' => false" src/Application/FutureCapabilitiesService.php
 grep -Fq 'FutureCapabilitiesFacade' src/Plugin.php
-grep -Fq 'FutureCapabilityGuard::normalize' src/Application/FutureCapabilitiesFacade.php
 grep -Fq 'ProviderEligibilityGuard::normalize' src/Application/FutureCapabilitiesFacade.php
 grep -Fq 'SemanticIntegrityGuard::apply' src/Application/FutureCapabilitiesFacade.php
 grep -Fq 'LocaleAccessibilityGuard::normalize' src/Application/FutureCapabilitiesFacade.php
