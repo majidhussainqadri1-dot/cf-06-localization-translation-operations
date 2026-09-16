@@ -6,6 +6,7 @@ namespace Sabri\Localization\Application;
 
 use InvalidArgumentException;
 use RuntimeException;
+use Sabri\Localization\Domain\Bundle\BundleFreshnessGuard;
 use Sabri\Localization\Domain\Bundle\DeterministicBundle;
 use Sabri\Localization\Domain\Workflow\StateMachine;
 use Sabri\Localization\Infrastructure\Database;
@@ -51,6 +52,7 @@ final class BundleService
         if (! $qa['passed']) {
             throw new InvalidArgumentException('Locale bundle failed critical coverage or QA gates.');
         }
+        $this->assertSourcesCurrent($sources);
 
         $lockName = $wpdb->prefix . 'slto_bundle_version_' . hash('sha256',$locale);
         $locked = $wpdb->get_var($wpdb->prepare('SELECT GET_LOCK(%s,10)', $lockName));
@@ -134,8 +136,8 @@ final class BundleService
     public function transition(string $uuid,string $to,int $version,string $reason=''): array
     {
         $bundle = $this->repo->find('bundles',$uuid) ?? throw new InvalidArgumentException('Locale bundle not found.');
-        if (in_array($to,array('active','rolled_back','superseded'),true)) {
-            throw new InvalidArgumentException('Bundle activation and rollback require their dedicated commands.');
+        if (in_array($to,array('active','rolled_back','superseded','invalidated'),true)) {
+            throw new InvalidArgumentException('Bundle activation, invalidation and rollback require dedicated controlled paths.');
         }
         StateMachine::assert('bundle',(string)$bundle['status'],$to);
         if (in_array($to,array('staged','canary'),true) && empty($bundle['signature'])) {
@@ -176,6 +178,7 @@ final class BundleService
         $this->integrations->assertReady();
         $this->releaseApprovals->assertDualApproval($uuid);
         $sourceList = $this->decodeSourceList($bundle);
+        $this->assertSourcesCurrent($sourceList);
         $unitUuids = array_column($sourceList,'unit_uuid');
         if (empty($unitUuids)) { throw new InvalidArgumentException('Bundle source list is empty.'); }
 
@@ -218,7 +221,9 @@ final class BundleService
             throw new InvalidArgumentException('Rollback bundle signature failed.');
         }
         $activeUnits = array_column($this->decodeSourceList($active),'unit_uuid');
-        $targetUnits = array_column($this->decodeSourceList($target),'unit_uuid');
+        $targetSources = $this->decodeSourceList($target);
+        $this->assertSourcesCurrent($targetSources);
+        $targetUnits = array_column($targetSources,'unit_uuid');
         if (empty($targetUnits)) { throw new InvalidArgumentException('Rollback bundle source evidence is empty.'); }
 
         $result = $this->tx->run(function() use ($wpdb,$active,$target,$activeVersion,$activeUnits,$targetUnits): array {
@@ -258,6 +263,7 @@ final class BundleService
             || ! DeterministicBundle::verify((string)$bundle['bundle_hash'],(string)$bundle['signature'])) {
             throw new RuntimeException('Active locale bundle integrity verification failed.');
         }
+        $this->assertSourcesCurrent($this->decodeSourceList($bundle));
         $decoded = json_decode($payload,true,128,JSON_THROW_ON_ERROR);
         return array('locale'=>$locale,'version'=>(int)$bundle['bundle_version'],'hash'=>$bundle['bundle_hash'],'signature'=>$bundle['signature'],'payload'=>$decoded);
     }
@@ -267,11 +273,16 @@ final class BundleService
         $sources = json_decode((string)$bundle['source_list_json'],true,128,JSON_THROW_ON_ERROR);
         if (! is_array($sources)) { throw new InvalidArgumentException('Bundle source evidence is invalid.'); }
         foreach ($sources as $source) {
-            if (! is_array($source) || 1!==preg_match('/^[a-f0-9-]{36}$/D',(string)($source['unit_uuid']??''))
+            if (! is_array($source) || ''===(string)($source['key']??'') || 1!==preg_match('/^[a-f0-9-]{36}$/D',(string)($source['unit_uuid']??''))
                 || 1!==preg_match('/^[a-f0-9]{64}$/D',(string)($source['source_hash']??'')) || (int)($source['source_version']??0)<=0) {
                 throw new InvalidArgumentException('Bundle source evidence contains an invalid unit.');
             }
         }
         return $sources;
+    }
+
+    private function assertSourcesCurrent(array $sources): void
+    {
+        BundleFreshnessGuard::assertCurrent($sources, fn(string $key): ?array => $this->repo->findOne('resources','resource_key',$key));
     }
 }
