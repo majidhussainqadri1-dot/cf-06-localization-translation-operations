@@ -51,6 +51,11 @@ final class ProjectService
         $snapshotHash=hash('sha256',$snapshotJson);
         $riskCeiling=sanitize_key((string)($input['risk_ceiling']??'critical'));
         if(!in_array($riskCeiling,['low','medium','high','critical','private'],true)){throw new InvalidArgumentException('Project risk ceiling is invalid.');}
+        foreach($resources as $resource){
+            if(self::riskRank((string)$resource['risk_class'])>self::riskRank($riskCeiling)){
+                throw new InvalidArgumentException('Project resource exceeds the declared risk ceiling: '.(string)$resource['resource_key']);
+            }
+        }
         $targetsJson=wp_json_encode($targets);$scopeJson=wp_json_encode(['resource_count'=>count($resources),'resource_keys'=>array_column($resources,'resource_key')]);
         if(!is_string($targetsJson)||!is_string($scopeJson)){throw new RuntimeException('Project scope could not be encoded.');}
         return $this->tx->run(function()use($input,$name,$sourceLocale,$targets,$targetsJson,$scopeJson,$resources,$snapshotHash,$riskCeiling):array{
@@ -65,7 +70,7 @@ final class ProjectService
                 $this->repo->insert('project_resources',['project_uuid'=>$project['uuid'],'resource_uuid'=>$resource['uuid'],'source_version'=>$resource['source_version'],'source_hash'=>$resource['source_hash']]);
                 foreach($targets as $target){$this->repo->insert('units',['project_uuid'=>$project['uuid'],'resource_uuid'=>$resource['uuid'],'target_locale'=>$target,'source_version'=>$resource['source_version'],'source_hash'=>$resource['source_hash'],'target_text'=>null,'secure_payload_id'=>null,'status'=>'new','machine_draft'=>0,'qa_status'=>'pending','row_version'=>1]);}
             }
-            $this->audit->record('project',(string)$project['uuid'],'translation_project_created','success',['source_locale'=>$sourceLocale,'target_locales'=>$targets,'resources'=>count($resources),'snapshot_hash'=>$snapshotHash]);
+            $this->audit->record('project',(string)$project['uuid'],'translation_project_created','success',['source_locale'=>$sourceLocale,'target_locales'=>$targets,'resources'=>count($resources),'snapshot_hash'=>$snapshotHash,'risk_ceiling'=>$riskCeiling]);
             return $project;
         });
     }
@@ -115,9 +120,15 @@ final class ProjectService
     {
         $assignment=$this->repo->find('assignments',$uuid)??throw new InvalidArgumentException('Assignment not found.');
         $reason=sanitize_textarea_field($reason);if('active'!==$assignment['status']||''===trim($reason)){throw new InvalidArgumentException('Active assignment and revocation reason are required.');}
-        return $this->tx->run(function()use($assignment,$version,$reason):array{
+        $unit=$this->repo->find('units',(string)$assignment['unit_uuid'])??throw new InvalidArgumentException('Assignment unit is unavailable.');
+        $column=match((string)$assignment['assignment_role']){'translator'=>'translator_id','linguistic_reviewer'=>'linguistic_reviewer_id','domain_reviewer'=>'domain_reviewer_id',default=>throw new InvalidArgumentException('Assignment role is invalid.')};
+        return $this->tx->run(function()use($assignment,$unit,$column,$version,$reason):array{
             $updated=$this->repo->updateVersioned('assignments',(string)$assignment['uuid'],$version,['status'=>'revoked']);
-            $this->audit->record('unit',(string)$assignment['unit_uuid'],'assignment_revoked','success',['assignment_uuid'=>$assignment['uuid'],'role'=>$assignment['assignment_role'],'reason'=>$reason]);
+            $unitChanges=[];
+            if((int)($unit[$column]??0)===(int)$assignment['assignee_id']){$unitChanges[$column]=null;}
+            if('translator_id'===$column&&in_array((string)$unit['status'],['assigned','translating'],true)){$unitChanges['status']='new';}
+            if(!empty($unitChanges)){$this->repo->updateVersioned('units',(string)$unit['uuid'],(int)$unit['row_version'],$unitChanges);}
+            $this->audit->record('unit',(string)$assignment['unit_uuid'],'assignment_revoked','success',['assignment_uuid'=>$assignment['uuid'],'role'=>$assignment['assignment_role'],'reason'=>$reason,'unit_role_cleared'=>array_key_exists($column,$unitChanges)]);
             return $updated;
         });
     }
@@ -136,6 +147,11 @@ final class ProjectService
         $rows=$this->repo->list('assignments',['assignee_id'=>$assigneeId,'status'=>'active'],$limit,0,'due_at ASC');
         $now=time();$rows=array_values(array_filter($rows,static fn(array $r):bool=>empty($r['expires_at'])||strtotime((string)$r['expires_at'])>=$now));
         return ''===$role?$rows:array_values(array_filter($rows,static fn(array $r):bool=>$r['assignment_role']===$role));
+    }
+
+    private static function riskRank(string $risk): int
+    {
+        return match(strtolower($risk)){'low'=>1,'medium'=>2,'high'=>3,'critical'=>4,'private'=>5,default=>PHP_INT_MAX};
     }
 
     private function assertEligibleAssignee(int $userId): void
