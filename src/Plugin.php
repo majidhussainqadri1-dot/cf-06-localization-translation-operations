@@ -56,9 +56,6 @@ final class Plugin
         if(version_compare($installedSchema,SABRI_SLTO_SCHEMA_VERSION,'<')||version_compare($installedContract,SABRI_SLTO_CONTRACT_VERSION,'<')){
             throw new \RuntimeException('CF-06 schema or contract upgrade is incomplete; runtime boot is denied.');
         }
-        // Mark booted only after migration parity has been verified. A failed
-        // upgrade must not poison this PHP process by leaving a false booted flag.
-        $this->booted = true;
 
         add_action('init', static function(): void {
             load_plugin_textdomain('sabri-localization-translation-operations', false, dirname(plugin_basename(SABRI_SLTO_FILE)).'/languages');
@@ -148,6 +145,11 @@ final class Plugin
             );
             return $erasers;
         });
+
+        // Mark the process booted only after every service, route, hook, command
+        // and privacy integration has been registered successfully. Any exception
+        // before this point leaves the instance retryable and fail-closed.
+        $this->booted = true;
     }
 
     public static function runtimeEnabled(): bool { return (bool)get_option('slto_runtime_enabled',false); }
