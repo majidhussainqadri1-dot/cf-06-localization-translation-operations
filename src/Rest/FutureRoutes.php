@@ -17,6 +17,8 @@ use WP_REST_Server;
 final class FutureRoutes
 {
     private const NS = 'sabri-localization/v1';
+    private const MAX_EVALUATION_BYTES = 262144;
+    private const MAX_EVALUATION_NODES = 5000;
 
     public function __construct(private readonly FutureCapabilitiesService $future) {}
 
@@ -43,19 +45,46 @@ final class FutureRoutes
             'methods' => WP_REST_Server::CREATABLE,
             'callback' => function (WP_REST_Request $request): WP_REST_Response|WP_Error {
                 try {
+                    $body = (string)$request->get_body();
+                    if (strlen($body) > self::MAX_EVALUATION_BYTES) {
+                        return new WP_Error('slto_future40_payload_too_large', 'Future capability evaluation payload is too large.', ['status' => 413]);
+                    }
                     $payload = $request->get_json_params();
+                    $payload = is_array($payload) ? $payload : [];
+                    if ($this->nodeCount($payload) > self::MAX_EVALUATION_NODES) {
+                        return new WP_Error('slto_future40_payload_too_complex', 'Future capability evaluation payload is too complex.', ['status' => 413]);
+                    }
                     return new WP_REST_Response(
-                        $this->future->evaluate((string)$request['id'], is_array($payload) ? $payload : []),
+                        $this->future->evaluate((string)$request['id'], $payload),
                         200
                     );
                 } catch (InvalidArgumentException $exception) {
                     return new WP_Error('slto_future40_invalid', $exception->getMessage(), ['status' => 422]);
                 } catch (Throwable $exception) {
-                    error_log('SLTO Future40 evaluation error: ' . $exception->getMessage());
+                    error_log('SLTO Future40 evaluation failed: ' . get_class($exception));
                     return new WP_Error('slto_future40_failed', 'Future capability evaluation failed safely.', ['status' => 500]);
                 }
             },
             'permission_callback' => fn (): bool => Authorization::allowed('manage'),
         ]);
+    }
+
+    private function nodeCount(array $value, int $limit = self::MAX_EVALUATION_NODES): int
+    {
+        $count = 0;
+        $stack = [$value];
+        while ([] !== $stack) {
+            $current = array_pop($stack);
+            foreach ($current as $item) {
+                ++$count;
+                if ($count > $limit) {
+                    return $count;
+                }
+                if (is_array($item)) {
+                    $stack[] = $item;
+                }
+            }
+        }
+        return $count;
     }
 }
