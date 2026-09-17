@@ -25,7 +25,7 @@ final class Outbox
             'contract_version'=>SABRI_SLTO_CONTRACT_VERSION,'payload_json'=>$json,'payload_hash'=>hash('sha256',$json),
             'status'=>'pending','lease_owner'=>null,'lease_until'=>null,'attempts'=>0,'available_at'=>Database::now(),'created_at'=>Database::now(),
         ));
-        if (false === $ok) {
+        if (false === $ok || '' !== (string)$wpdb->last_error) {
             throw new RuntimeException('Localization outbox write failed.');
         }
         return $uuid;
@@ -41,7 +41,7 @@ final class Outbox
             "SELECT * FROM {$table} WHERE status IN ('pending','retry','delivering') AND available_at<=%s AND (lease_until IS NULL OR lease_until<%s) ORDER BY id ASC LIMIT %d",
             $now, $now, max(1, min(500, $limit))
         ), ARRAY_A);
-        if (! is_array($rows)) {
+        if ('' !== (string)$wpdb->last_error || ! is_array($rows)) {
             throw new RuntimeException('Localization outbox could not be read.');
         }
         $count = 0;
@@ -50,6 +50,9 @@ final class Outbox
                 "UPDATE {$table} SET status='delivering',lease_owner=%s,lease_until=%s WHERE uuid=%s AND status IN ('pending','retry','delivering') AND (lease_until IS NULL OR lease_until<%s)",
                 $worker, gmdate('Y-m-d H:i:s', time() + 300), $row['uuid'], $now
             ));
+            if (false === $leased || '' !== (string)$wpdb->last_error) {
+                throw new RuntimeException('Localization outbox lease could not be persisted.');
+            }
             if (1 !== $leased) {
                 continue;
             }
@@ -67,7 +70,7 @@ final class Outbox
                     'status'=>'delivered','delivered_at'=>Database::now(),'attempts'=>(int)$row['attempts']+1,
                     'lease_owner'=>null,'lease_until'=>null,'last_error'=>null,
                 ), array('uuid'=>$row['uuid'],'status'=>'delivering','lease_owner'=>$worker));
-                if (1 !== $ok) {
+                if (1 !== $ok || '' !== (string)$wpdb->last_error) {
                     throw new RuntimeException('Outbox delivery acknowledgement failed.');
                 }
                 ++$count;
@@ -80,7 +83,7 @@ final class Outbox
                     'lease_owner'=>null,'lease_until'=>null,
                     'last_error'=>get_class($throwable) . ':' . hash('sha256', $throwable->getMessage()),
                 ), array('uuid'=>$row['uuid'],'lease_owner'=>$worker));
-                if (false === $saved || 0 === $saved) {
+                if (false === $saved || 0 === $saved || '' !== (string)$wpdb->last_error) {
                     throw new RuntimeException('Outbox failure state could not be persisted.', 0, $throwable);
                 }
             }
