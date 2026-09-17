@@ -32,6 +32,7 @@ php tests/review-fresh-round-06-bundle-coverage.php
 php tests/review-fresh-round-07-privacy-retention.php
 php tests/review-fresh-round-08-future40-hotfix.php
 php tests/review-cycle2-round-01-provider-parity.php
+php tests/review-cycle2-round-02-memory-governance.php
 
 echo '== Secret-pattern guard =='
 if grep -RInE --exclude-dir=.git --exclude-dir=dist --exclude-dir=tests --exclude='quality-check.sh' '(BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{20,}|sk_live_[A-Za-z0-9]{12,}|xox[baprs]-[A-Za-z0-9-]{10,})' .; then
@@ -76,6 +77,9 @@ grep -Fq 'expected and actual hashes differ' src/Application/QaEvidenceService.p
 grep -Fq "status='running' AND lease_until IS NOT NULL" src/Infrastructure/JobQueue.php
 grep -Fq 'retained_audit_metadata' src/Application/PrivacyService.php
 grep -Fq 'assignedActorIsCurrent' src/Application/TranslationService.php
+grep -Fq 'translation_memory_reuse_allowed' src/Application/TranslationService.php
+grep -Fq 'context-mismatch-human-review-required' src/Application/TerminologyService.php
+grep -Fq "'auto_accept'=>false" src/Application/TerminologyService.php
 grep -Fq 'Project resource exceeds the declared risk ceiling' src/Application/ProjectService.php
 grep -Fq "unitChanges['status']='new'" src/Application/ProjectService.php
 grep -Fq 'Terminology activation requires preserved approval provenance.' src/Application/TerminologyService.php
