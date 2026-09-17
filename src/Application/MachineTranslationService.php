@@ -58,12 +58,14 @@ final class MachineTranslationService
         if((string)($job['region_code']??'')!==(string)$providerRow['region_code']){throw new InvalidArgumentException('Vendor job provider-region binding no longer matches the active provider.');}
         $sent=$this->tx->run(function()use($jobUuid,$version):array{$sent=$this->repo->updateVersioned('vendor_jobs',$jobUuid,$version,array('status'=>'sent'));$this->audit->record('vendor_job',$jobUuid,'vendor_job_sent','success',array('provider'=>$sent['provider_key'],'outbound_hash'=>$sent['outbound_hash']));return $sent;});
         try{
-            $response=$this->provider->submit($sent,$payload);$results=is_array($response['translations']??null)?$response['translations']:array();$this->assertResponse($payload,$results);$responseRegion=sanitize_text_field((string)($response['region']??''));if(''===$responseRegion||!hash_equals((string)$providerRow['region_code'],$responseRegion)){throw new InvalidArgumentException('Machine translation provider response must attest the approved provider region.');}
-            return $this->tx->run(function()use($sent,$response,$results,$responseRegion):array{
-                StateMachine::assert('vendor_job','sent','received');$received=$this->repo->updateVersioned('vendor_jobs',(string)$sent['uuid'],(int)$sent['row_version'],array('status'=>'received','provider_reference'=>sanitize_text_field((string)($response['reference']??'')),'model_version'=>sanitize_text_field((string)($response['model_version']??'unknown')),'region_code'=>$responseRegion,'inbound_hash'=>hash('sha256',wp_json_encode($results,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES))));
+            $response=$this->provider->submit($sent,$payload);$results=is_array($response['translations']??null)?$response['translations']:array();$this->assertResponse($payload,$results);
+            $responseRegion=sanitize_text_field((string)($response['region']??''));if(''===$responseRegion||!hash_equals((string)$providerRow['region_code'],$responseRegion)){throw new InvalidArgumentException('Machine translation provider response must attest the approved provider region.');}
+            $providerReference=sanitize_text_field((string)($response['reference']??''));$modelVersion=sanitize_text_field((string)($response['model_version']??''));if(''===$providerReference||strlen($providerReference)>191||''===$modelVersion||strlen($modelVersion)>80){throw new InvalidArgumentException('Machine translation provider response must include bounded reference and model-version provenance.');}
+            return $this->tx->run(function()use($sent,$results,$responseRegion,$providerReference,$modelVersion):array{
+                StateMachine::assert('vendor_job','sent','received');$received=$this->repo->updateVersioned('vendor_jobs',(string)$sent['uuid'],(int)$sent['row_version'],array('status'=>'received','provider_reference'=>$providerReference,'model_version'=>$modelVersion,'region_code'=>$responseRegion,'inbound_hash'=>hash('sha256',wp_json_encode($results,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES))));
                 StateMachine::assert('vendor_job','received','validated');$validated=$this->repo->updateVersioned('vendor_jobs',(string)$sent['uuid'],(int)$received['row_version'],array('status'=>'validated'));
                 foreach($results as $item){$unitUuid=(string)$item['unit_uuid'];$target=(string)$item['target_text'];$unit=$this->repo->find('units',$unitUuid)??throw new InvalidArgumentException('Vendor returned an unknown unit.');$this->translations->submit($unitUuid,$target,(int)$unit['row_version'],true,(string)$sent['uuid']);}
-                $this->audit->record('vendor_job',(string)$sent['uuid'],'vendor_job_received','success',array('result_count'=>count($results),'inbound_hash'=>$validated['inbound_hash'],'draft_only'=>true,'human_review_required'=>true));$this->outbox->enqueue('MachineTranslationDraftReceived','vendor_job',(string)$sent['uuid'],array('unit_count'=>count($results),'human_review_required'=>true));return $validated;
+                $this->audit->record('vendor_job',(string)$sent['uuid'],'vendor_job_received','success',array('result_count'=>count($results),'inbound_hash'=>$validated['inbound_hash'],'model_version'=>$modelVersion,'provider_reference_hash'=>hash('sha256',$providerReference),'draft_only'=>true,'human_review_required'=>true));$this->outbox->enqueue('MachineTranslationDraftReceived','vendor_job',(string)$sent['uuid'],array('unit_count'=>count($results),'human_review_required'=>true));return $validated;
             });
         }catch(Throwable $throwable){$current=$this->repo->find('vendor_jobs',$jobUuid);if(is_array($current)&&'sent'===(string)$current['status']){try{StateMachine::assert('vendor_job','sent','failed');$this->repo->updateVersioned('vendor_jobs',$jobUuid,(int)$current['row_version'],array('status'=>'failed'));$this->audit->record('vendor_job',$jobUuid,'vendor_job_failed','failed',array('exception_class'=>get_class($throwable),'message_hash'=>hash('sha256',$throwable->getMessage())));}catch(Throwable){}}throw $throwable;}
     }
@@ -88,16 +90,27 @@ final class MachineTranslationService
     {
         $key=sanitize_key($this->provider->key());if(''===$key||'disabled'===$key){throw new InvalidArgumentException('Machine translation provider is disabled or ungoverned.');}if(null!==$expectedKey&&!hash_equals($expectedKey,$key)){throw new InvalidArgumentException('Vendor job is bound to a different provider.');}
         $row=$this->repo->findOne('providers','provider_key',$key);if(!is_array($row)||'active'!==(string)$row['status']||0!==(int)($row['training_allowed']??0)||empty($row['contract_version'])||empty($row['region_code'])||empty($row['base_url'])||empty($row['credential_reference'])){throw new InvalidArgumentException('Machine translation provider is not currently active under approved governance.');}
-        $health=$this->provider->health();$healthStatus=is_array($health)?strtolower(sanitize_key((string)($health['status']??''))):'';$healthRegion=is_array($health)?sanitize_text_field((string)($health['region']??'')):'';
-        if(!in_array($healthStatus,array('configured','healthy','ready'),true)||''===$healthRegion||!hash_equals((string)$row['region_code'],$healthRegion)){throw new InvalidArgumentException('Machine translation provider runtime health or region cannot be verified against approved governance.');}
-        return $row;
+        $health=$this->provider->health();$this->assertAdapterGovernance($row,is_array($health)?$health:[],true);return $row;
     }
 
     private function assertGovernedProviderForPurge(string $expectedKey): array
     {
         $key=sanitize_key($this->provider->key());if(''===$key||!hash_equals($expectedKey,$key)){throw new InvalidArgumentException('Vendor purge adapter does not match the governed provider.');}
         $row=$this->repo->findOne('providers','provider_key',$key);if(!is_array($row)||!in_array((string)$row['status'],array('active','approved','disabled','deprecated'),true)||0!==(int)($row['training_allowed']??0)||empty($row['contract_version'])||empty($row['credential_reference'])){throw new InvalidArgumentException('Vendor purge provider is no longer governed by an approved deletion contract.');}
-        return $row;
+        $health=$this->provider->health();$this->assertAdapterGovernance($row,is_array($health)?$health:[],false);return $row;
+    }
+
+    private function assertAdapterGovernance(array $row,array $health,bool $requireHealthy): void
+    {
+        $status=strtolower(sanitize_key((string)($health['status']??'')));$region=sanitize_text_field((string)($health['region']??''));
+        if($requireHealthy&&!in_array($status,array('configured','healthy','ready'),true)){throw new InvalidArgumentException('Machine translation provider runtime health is not eligible.');}
+        if(''===$region||!hash_equals((string)$row['region_code'],$region)){throw new InvalidArgumentException('Machine translation provider runtime region differs from the approved provider record.');}
+        if(true===($health['training_allowed']??true)){throw new InvalidArgumentException('Machine translation adapter must attest that provider training reuse is disabled.');}
+        $baseUrl=(string)($health['base_url']??'');$credentialRef=(string)($health['credential_reference']??'');$contractVersion=(string)($health['contract_version']??'');
+        if(''===$baseUrl||!hash_equals((string)$row['base_url'],$baseUrl)||''===$credentialRef||!hash_equals((string)$row['credential_reference'],$credentialRef)||''===$contractVersion||!hash_equals((string)$row['contract_version'],$contractVersion)){throw new InvalidArgumentException('Machine translation adapter configuration does not match the approved provider registry.');}
+        $approvedHosts=json_decode((string)($row['allowed_hosts']??'[]'),true);$runtimeHosts=$health['allowed_hosts']??null;if(!is_array($approvedHosts)||!is_array($runtimeHosts)){throw new InvalidArgumentException('Machine translation adapter host governance cannot be verified.');}
+        $normalize=static function(array $hosts):array{$out=[];foreach($hosts as $host){$host=strtolower(rtrim(trim((string)$host),'.'));if(''!==$host){$out[]=$host;}}$out=array_values(array_unique($out));sort($out,SORT_STRING);return $out;};
+        if($normalize($approvedHosts)!==$normalize($runtimeHosts)){throw new InvalidArgumentException('Machine translation adapter hosts do not match the approved provider registry.');}
     }
 
     private function assertResponse(array $payload,array $results): void
