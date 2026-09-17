@@ -76,12 +76,22 @@ final class TerminologyService
         });
     }
 
-    public function suggestMemory(string $source,string $sourceLocale,string $targetLocale,string $domain,int $limit=10): array
+    public function suggestMemory(string $source,string $sourceLocale,string $targetLocale,string $domain,string $context,int $limit=10): array
     {
-        $sourceLocale=LocaleValidator::canonicalize($sourceLocale)??'';$targetLocale=LocaleValidator::canonicalize($targetLocale)??'';$domain=sanitize_key($domain);
-        if(''===$sourceLocale||''===$targetLocale||''===$domain||''===trim($source)){throw new InvalidArgumentException('Translation memory query is incomplete.');}
+        $sourceLocale=LocaleValidator::canonicalize($sourceLocale)??'';$targetLocale=LocaleValidator::canonicalize($targetLocale)??'';$domain=sanitize_key($domain);$context=trim($context);
+        if(''===$sourceLocale||''===$targetLocale||''===$domain||''===trim($source)||''===$context){throw new InvalidArgumentException('Translation memory query requires source, locale pair, domain and context.');}
+        if(strlen($source)>500000||strlen($context)>262144){throw new InvalidArgumentException('Translation memory query exceeds the bounded limit.');}
+        $contextHash=hash('sha256',$context);
         $rows=$this->repo->list('memory',array('source_locale'=>$sourceLocale,'target_locale'=>$targetLocale,'domain_name'=>$domain,'status'=>'approved'),500);$lower=static fn(string $value):string=>function_exists('mb_strtolower')?mb_strtolower($value,'UTF-8'):strtolower($value);$suggestions=[];
-        foreach($rows as $row){similar_text($lower($source),$lower((string)$row['source_segment']),$score);if($score>=55.0){$suggestions[]=array('uuid'=>$row['uuid'],'source'=>$row['source_segment'],'target'=>$row['target_segment'],'score'=>round($score,2),'risk'=>$row['risk_class'],'provenance'=>json_decode((string)$row['provenance_json'],true));}}
-        usort($suggestions,static fn(array $a,array $b):int=>$b['score']<=>$a['score']);return array_slice($suggestions,0,max(1,min(50,$limit)));
+        foreach($rows as $row){
+            similar_text($lower($source),$lower((string)$row['source_segment']),$score);if($score<55.0){continue;}
+            $contextMatch=hash_equals((string)$row['context_hash'],$contextHash);$provenance=json_decode((string)$row['provenance_json'],true);if(!is_array($provenance)){$provenance=[];}
+            $suggestions[]=array(
+                'uuid'=>$row['uuid'],'source'=>$row['source_segment'],'target'=>$row['target_segment'],'score'=>round($score,2),'risk'=>$row['risk_class'],
+                'license_code'=>$row['license_code'],'context_match'=>$contextMatch,'warning'=>$contextMatch?'fuzzy-suggestion-human-review-required':'context-mismatch-human-review-required',
+                'auto_accept'=>false,'provenance'=>$provenance,
+            );
+        }
+        usort($suggestions,static function(array $a,array $b):int{$context=((int)$b['context_match'])<=>((int)$a['context_match']);return 0!==$context?$context:$b['score']<=>$a['score'];});return array_slice($suggestions,0,max(1,min(50,$limit)));
     }
 }
