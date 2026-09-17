@@ -75,9 +75,13 @@ final class HealthService
             'locale_release_ready'=>$localeReady,
             'production_release_evidence'=>$productionEvidenceReady,
         ],$integrations);
+        $runtimeEnabled=(bool)get_option('slto_runtime_enabled',false);
+        $stagingAccepted='production'===$environment&&true===($productionEvidence['staging_acceptance']??false);
+        $liveDeployed='production'===$environment&&$productionEvidenceReady;
+        $operational=$liveDeployed&&$runtimeEnabled&&!in_array(false,$gates,true);
         return [
             'status'=>in_array(false,$gates,true)?'degraded':'ready',
-            'runtime_enabled'=>(bool)get_option('slto_runtime_enabled',false),
+            'runtime_enabled'=>$runtimeEnabled,
             'deployment_environment'=>$environment??'unconfigured',
             'gates'=>$gates,
             'tables'=>$tables,
@@ -85,8 +89,15 @@ final class HealthService
             'production_evidence_required'=>'production'===$environment?self::PRODUCTION_EVIDENCE:array(),
             'production_evidence'=>$productionEvidence,
             'metrics'=>$schemaReady?$this->metrics->summary():[],
-            'truth_status'=>['specified'=>'complete','coded'=>'complete-source-candidate','packaged'=>'requires-current-workflow-evidence',
-                'automated_qa'=>'requires-current-workflow-evidence','staging_accepted'=>false,'live_deployed'=>false,'operational'=>false],
+            'truth_status'=>[
+                'specified'=>'complete',
+                'coded'=>'source-candidate-under-current-verification',
+                'packaged'=>'requires-current-workflow-evidence',
+                'automated_qa'=>'requires-current-workflow-evidence',
+                'staging_accepted'=>$stagingAccepted,
+                'live_deployed'=>$liveDeployed,
+                'operational'=>$operational,
+            ],
         ];
     }
 
