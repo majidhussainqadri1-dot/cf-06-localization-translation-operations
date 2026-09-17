@@ -12,6 +12,7 @@ require dirname(__DIR__) . '/src/Domain/Future/LocaleAccessibilityGuard.php';
 require dirname(__DIR__) . '/src/Domain/Future/ProviderEligibilityGuard.php';
 require dirname(__DIR__) . '/src/Domain/Future/SemanticIntegrityGuard.php';
 require dirname(__DIR__) . '/src/Domain/Future/ReleaseLifecycleGuard.php';
+require dirname(__DIR__) . '/src/Domain/Future/HotfixApprovalGuard.php';
 require dirname(__DIR__) . '/src/Application/FutureCapabilitiesService.php';
 require dirname(__DIR__) . '/src/Application/FutureCapabilitiesFacade.php';
 
@@ -44,6 +45,8 @@ $t->test('Future40 activation contract exposes every governing gate', function (
     }
 });
 
+$freshApprovalAt = gmdate('c');
+
 $cases = [
     'CF06-FUT-001' => ['text'=>'Hello {name} at https://example.test','rtl_probe'=>true],
     'CF06-FUT-002' => ['resource_key'=>'home.title','route'=>'/ur/home','screenshot_ref'=>'shot-1'],
@@ -72,7 +75,7 @@ $cases = [
     'CF06-FUT-025' => ['links'=>[['hreflang'=>'ur-PK','url'=>'https://example.test/ur','canonical'=>'https://example.test/ur']]],
     'CF06-FUT-026' => ['locale'=>'ur-PK','feature_id'=>'home.title','domain'=>'platform','coverage_percent'=>99,'critical_missing'=>0,'threshold_percent'=>95],
     'CF06-FUT-027' => ['scope'=>'resource:medical.warning','kill'=>true,'reason'=>'critical mistranslation','actor_ref'=>'reviewer-1','evidence_ref'=>'incident-1'],
-    'CF06-FUT-028' => ['approvals'=>[['role'=>'linguistic','actor_id'=>'ling-1','approved'=>true,'approved_at'=>'2026-09-16T10:00:00+05:00'],['role'=>'domain','actor_id'=>'domain-1','approved'=>true,'approved_at'=>'2026-09-16T10:01:00+05:00']],'expires_in_minutes'=>60,'evidence_ref'=>'hotfix-1'],
+    'CF06-FUT-028' => ['approvals'=>[['role'=>'linguistic','actor_id'=>'ling-1','approved'=>true,'approved_at'=>$freshApprovalAt],['role'=>'domain','actor_id'=>'domain-1','approved'=>true,'approved_at'=>$freshApprovalAt]],'expires_in_minutes'=>60,'evidence_ref'=>'hotfix-1'],
     'CF06-FUT-029' => ['old'=>['a'=>'1','b'=>'2'],'new'=>['a'=>'1','b'=>'3','c'=>'4'],'old_locale'=>'ur-PK','new_locale'=>'ur-PK','old_version'=>'1.0.0','new_version'=>'1.0.1'],
     'CF06-FUT-030' => ['resources'=>[['key'=>'home.title','text'=>'Home','data_class'=>'C1','risk_class'=>'low','domain'=>'platform','public'=>true,'approved'=>true,'current'=>true,'stale'=>false]]],
     'CF06-FUT-031' => ['bundle'=>['a'=>['text'=>'A','data_class'=>'C1','risk_class'=>'low','domain'=>'platform','public'=>true,'approved'=>true,'current'=>true,'stale'=>false]]],
