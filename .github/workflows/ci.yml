@@ -21,7 +21,7 @@ jobs:
         php: ['8.1', '8.3']
     services:
       mysql:
-        image: mysql:8.0
+        image: mysql:8.0@sha256:7dcddc01f13bab2f15cde676d44d01f61fc9f99fe7785e86196dfc07d358ae2b
         env:
           MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
         ports:
@@ -31,10 +31,16 @@ jobs:
           --health-interval=10s --health-timeout=5s --health-retries=12
     steps:
       - name: Check out exact source
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - name: Verify checkout identity
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
 
       - name: Set up PHP
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240
         with:
           php-version: ${{ matrix.php }}
           coverage: none
@@ -69,7 +75,7 @@ jobs:
 
       - name: Upload source-quality diagnostic
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: quality-log-${{ matrix.php }}
           path: quality-${{ matrix.php }}.log
@@ -87,6 +93,7 @@ jobs:
           wp config create --path="$wpdir" --dbname="$db" --dbuser=root --dbpass='' --dbhost=127.0.0.1 --skip-check
           admin_password="$(php -r 'echo bin2hex(random_bytes(16));')"
           wp core install --path="$wpdir" --url="http://cf06-${{ matrix.php }}.local" --title=CF06 --admin_user=admin --admin_password="$admin_password" --admin_email=admin@example.test
+          wp core version --path="$wpdir"
           ln -s "$GITHUB_WORKSPACE" "$wpdir/wp-content/plugins/sabri-localization-translation-operations"
           wp plugin activate sabri-localization-translation-operations --path="$wpdir"
           wp eval-file "$GITHUB_WORKSPACE/tests/wp-integration.php" --path="$wpdir"
@@ -97,10 +104,16 @@ jobs:
     needs: quality
     steps:
       - name: Check out exact source
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - name: Verify checkout identity
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
 
       - name: Set up PHP
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240
         with:
           php-version: '8.3'
           coverage: none
@@ -144,7 +157,7 @@ jobs:
           test "$first" = "$second"
 
       - name: Upload release evidence
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: cf-06-complete-source-candidate-rc5
           path: |
