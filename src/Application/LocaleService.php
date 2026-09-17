@@ -64,6 +64,8 @@ final class LocaleService
         StateMachine::assert('locale', (string) $row['status'], $to);
         $tag = (string) $row['locale_tag'];
         $default = (string) get_option('slto_default_locale', 'en-US');
+        $reason=sanitize_textarea_field($reason);
+        if(''===trim($reason)||strlen($reason)>1000){throw new InvalidArgumentException('Locale transition requires a bounded reason.');}
 
         if ('enabled' === $to) {
             $fallback = (string) ($row['fallback_tag'] ?? '');
@@ -74,14 +76,18 @@ final class LocaleService
                 throw new InvalidArgumentException('A signed active locale bundle is required before enabling this locale.');
             }
         }
-        if ('disabled' === $to) {
+        if (in_array($to,array('deprecated','disabled'),true)) {
             if ($tag === $default) {
-                throw new InvalidArgumentException('The default locale cannot be disabled.');
+                throw new InvalidArgumentException('The default locale cannot be deprecated or disabled.');
             }
             foreach ($this->repo->list('locales', array(), 500, 0, 'id ASC') as $candidate) {
                 if ((string) ($candidate['fallback_tag'] ?? '') === $tag && in_array($candidate['status'], array('enabled', 'content_ready', 'degraded'), true)) {
                     throw new InvalidArgumentException('Locale is still required by an active fallback chain.');
                 }
+            }
+            $evidence=array('locale'=>$tag,'from'=>$row['status'],'to'=>$to,'reason'=>$reason,'active_bundle'=>$this->repo->activeBundle($tag));
+            if(true!==apply_filters('slto_verify_locale_deprecation_evidence',false,$evidence)){
+                throw new InvalidArgumentException('Locale deprecation/disable requires verified migration, fallback, URL/SEO, notice, bundle-retention and rollback-window evidence.');
             }
         }
         $event = match ($to) {
