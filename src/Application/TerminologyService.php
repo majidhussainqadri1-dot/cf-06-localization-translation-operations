@@ -26,9 +26,11 @@ final class TerminologyService
         $prohibited=[];foreach(is_array($input['prohibited_terms']??null)?$input['prohibited_terms']:[] as $term){$term=trim((string)$term);if(''!==$term){if(strlen($term)>191){throw new InvalidArgumentException('A prohibited terminology variant exceeds the bounded term length.');}$prohibited[]=$term;}}
         $prohibited=array_values(array_unique($prohibited));if(count($prohibited)>500){throw new InvalidArgumentException('Too many prohibited terminology variants.');}
         $prohibitedJson=wp_json_encode($prohibited,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);if(!is_string($prohibitedJson)||strlen($prohibitedJson)>131072){throw new InvalidArgumentException('Prohibited terminology evidence is invalid or oversized.');}
+        $definition=sanitize_textarea_field((string)($input['definition']??''));$context=sanitize_textarea_field((string)($input['context']??''));$grammar=sanitize_textarea_field((string)($input['grammar_notes']??''));
+        if(strlen($definition)>20000||strlen($context)>20000||strlen($grammar)>20000){throw new InvalidArgumentException('Terminology descriptive evidence exceeds the bounded limit.');}
         $row=$this->repo->insert('terminology',array(
             'concept_id'=>$concept,'domain_name'=>$domain,'source_locale'=>$sourceLocale,'source_term'=>$source,'target_locale'=>$targetLocale,'approved_term'=>$approved,
-            'prohibited_terms'=>$prohibitedJson,'definition_text'=>sanitize_textarea_field((string)($input['definition']??'')),'context_text'=>sanitize_textarea_field((string)($input['context']??'')),'grammar_notes'=>sanitize_textarea_field((string)($input['grammar_notes']??'')),
+            'prohibited_terms'=>$prohibitedJson,'definition_text'=>$definition,'context_text'=>$context,'grammar_notes'=>$grammar,
             'created_by'=>get_current_user_id(),'status'=>'proposed','term_version'=>1,'row_version'=>1,
         ));
         $this->audit->record('terminology',(string)$row['uuid'],'terminology_proposed','success',array('concept_id'=>$concept,'locale'=>$targetLocale,'domain'=>$domain));return $row;
@@ -37,6 +39,7 @@ final class TerminologyService
     public function transition(string $uuid,string $to,int $version,string $reason=''): array
     {
         $row=$this->repo->find('terminology',$uuid)??throw new InvalidArgumentException('Terminology entry not found.');StateMachine::assert('terminology',(string)$row['status'],$to);
+        $reason=sanitize_textarea_field($reason);if(strlen($reason)>2000){throw new InvalidArgumentException('Terminology transition reason exceeds the bounded limit.');}
         if('approved'===$to&&(int)$row['created_by']===get_current_user_id()){throw new InvalidArgumentException('Terminology proposer cannot approve their own entry.');}
         if('active'===$to&&(int)($row['reviewer_id']??0)<=0){throw new InvalidArgumentException('Terminology activation requires preserved approval provenance.');}
         return $this->tx->run(function()use($row,$to,$version,$reason):array{
@@ -66,6 +69,7 @@ final class TerminologyService
     {
         $row=$this->repo->find('style_guides',$uuid)??throw new InvalidArgumentException('Style guide not found.');$map=['draft'=>['approved','deprecated'],'approved'=>['active','deprecated'],'active'=>['deprecated'],'deprecated'=>[]];
         if(!in_array($to,$map[(string)$row['status']]??[],true)){throw new InvalidArgumentException('Invalid style guide transition.');}
+        $reason=sanitize_textarea_field($reason);if(strlen($reason)>2000){throw new InvalidArgumentException('Style guide transition reason exceeds the bounded limit.');}
         if('approved'===$to&&(int)$row['created_by']===get_current_user_id()){throw new InvalidArgumentException('Style guide author cannot approve their own guide.');}
         if('active'===$to&&(int)($row['approved_by']??0)<=0){throw new InvalidArgumentException('Style guide activation requires preserved approval provenance.');}
         return $this->tx->run(function()use($row,$to,$version,$reason):array{
@@ -78,13 +82,14 @@ final class TerminologyService
 
     public function suggestMemory(string $source,string $sourceLocale,string $targetLocale,string $domain,string $context,int $limit=10): array
     {
-        $sourceLocale=LocaleValidator::canonicalize($sourceLocale)??'';$targetLocale=LocaleValidator::canonicalize($targetLocale)??'';$domain=sanitize_key($domain);$context=trim($context);
-        if(''===$sourceLocale||''===$targetLocale||''===$domain||''===trim($source)||''===$context){throw new InvalidArgumentException('Translation memory query requires source, locale pair, domain and context.');}
-        if(strlen($source)>500000||strlen($context)>262144){throw new InvalidArgumentException('Translation memory query exceeds the bounded limit.');}
+        $sourceLocale=LocaleValidator::canonicalize($sourceLocale)??'';$targetLocale=LocaleValidator::canonicalize($targetLocale)??'';$domain=sanitize_key($domain);$context=trim($context);$source=trim($source);
+        if(''===$sourceLocale||''===$targetLocale||''===$domain||''===$source||''===$context){throw new InvalidArgumentException('Translation memory query requires source, locale pair, domain and context.');}
+        if(strlen($source)>4000||strlen($context)>16000){throw new InvalidArgumentException('Translation memory similarity query exceeds the bounded computational limit.');}
         $contextHash=hash('sha256',$context);
-        $rows=$this->repo->list('memory',array('source_locale'=>$sourceLocale,'target_locale'=>$targetLocale,'domain_name'=>$domain,'status'=>'approved'),500);$lower=static fn(string $value):string=>function_exists('mb_strtolower')?mb_strtolower($value,'UTF-8'):strtolower($value);$suggestions=[];
+        $rows=$this->repo->list('memory',array('source_locale'=>$sourceLocale,'target_locale'=>$targetLocale,'domain_name'=>$domain,'status'=>'approved'),200);$lower=static fn(string $value):string=>function_exists('mb_strtolower')?mb_strtolower($value,'UTF-8'):strtolower($value);$suggestions=[];$sourceLength=max(1,strlen($source));
         foreach($rows as $row){
-            similar_text($lower($source),$lower((string)$row['source_segment']),$score);if($score<55.0){continue;}
+            $candidate=(string)$row['source_segment'];$candidateLength=max(1,strlen($candidate));$ratio=min($sourceLength,$candidateLength)/max($sourceLength,$candidateLength);if($ratio<0.35||$candidateLength>8000){continue;}
+            similar_text($lower($source),$lower($candidate),$score);if($score<55.0){continue;}
             $contextMatch=hash_equals((string)$row['context_hash'],$contextHash);$provenance=json_decode((string)$row['provenance_json'],true);if(!is_array($provenance)){$provenance=[];}
             $suggestions[]=array(
                 'uuid'=>$row['uuid'],'source'=>$row['source_segment'],'target'=>$row['target_segment'],'score'=>round($score,2),'risk'=>$row['risk_class'],
