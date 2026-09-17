@@ -33,6 +33,7 @@ php tests/review-fresh-round-07-privacy-retention.php
 php tests/review-fresh-round-08-future40-hotfix.php
 php tests/review-cycle2-round-01-provider-parity.php
 php tests/review-cycle2-round-02-memory-governance.php
+php tests/review-cycle3-round-02-release-rollback.php
 
 echo '== Secret-pattern guard =='
 if grep -RInE --exclude-dir=.git --exclude-dir=dist --exclude-dir=tests --exclude='quality-check.sh' '(BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{20,}|sk_live_[A-Za-z0-9]{12,}|xox[baprs]-[A-Za-z0-9-]{10,})' .; then
@@ -92,6 +93,8 @@ grep -Fq 'response must attest the approved provider region' src/Application/Mac
 grep -Fq 'response must include bounded reference and model-version provenance' src/Application/MachineTranslationService.php
 grep -Fq 'An active provider must be disabled before governance-relevant configuration is changed' src/Application/ProviderService.php
 grep -Fq 'strictUtcTimestamp' src/Application/ReleaseApprovalService.php
+grep -Fq 'APPROVAL_TTL_SECONDS' src/Application/ReleaseApprovalService.php
+grep -Fq 'Rollback target must be the exact prior signed bundle.' src/Application/BundleService.php
 grep -Fq 'Expired idempotency state could not be retired' src/Infrastructure/Repository/LocalizationRepository.php
 grep -Fq "'status'=>'runtime_disabled'" src/functions.php
 grep -Fq 'slto_verify_extraction_evidence' src/Application/ExtractionService.php
