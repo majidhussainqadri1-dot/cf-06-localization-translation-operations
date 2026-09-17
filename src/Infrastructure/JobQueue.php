@@ -37,11 +37,11 @@ final class JobQueue
             "INSERT INTO {$table} (uuid,job_type,dedupe_key,payload_json,status,attempts,max_attempts,available_at,created_at,updated_at) VALUES (%s,%s,%s,%s,'queued',0,%d,%s,%s,%s) ON DUPLICATE KEY UPDATE payload_json=VALUES(payload_json),available_at=LEAST(available_at,VALUES(available_at)),updated_at=VALUES(updated_at)",
             $uuid, $type, $dedupeKey, $json, max(1, min(20, $maxAttempts)), $availableAt ?: Database::now(), Database::now(), Database::now()
         ));
-        if (false === $ok) {
+        if (false === $ok || '' !== (string)$wpdb->last_error) {
             throw new RuntimeException('Localization job could not be queued.');
         }
         $stored = $wpdb->get_var($wpdb->prepare("SELECT uuid FROM {$table} WHERE job_type=%s AND dedupe_key=%s LIMIT 1", $type, $dedupeKey));
-        if (! is_string($stored) || '' === $stored) {
+        if ('' !== (string)$wpdb->last_error || ! is_string($stored) || '' === $stored) {
             throw new RuntimeException('Localization job identity could not be verified.');
         }
         return $stored;
@@ -58,7 +58,7 @@ final class JobQueue
             "SELECT * FROM {$table} WHERE available_at<=%s AND ((status IN ('queued','retry') AND attempts<max_attempts AND (lease_until IS NULL OR lease_until<%s)) OR (status='running' AND lease_until IS NOT NULL AND lease_until<%s)) ORDER BY id ASC LIMIT %d",
             $now, $now, $now, $limit
         ), ARRAY_A);
-        if (! is_array($rows)) {
+        if ('' !== (string)$wpdb->last_error || ! is_array($rows)) {
             throw new RuntimeException('Localization job queue could not be read.');
         }
         $summary = array('completed'=>0, 'retried'=>0, 'dead_letter'=>0, 'unsupported'=>0, 'reclaimed'=>0);
@@ -73,6 +73,9 @@ final class JobQueue
                     'last_error'=>'RuntimeException:' . hash('sha256', 'expired_worker_lease'),
                     'updated_at'=>Database::now(),
                 ), array('uuid'=>$row['uuid'],'status'=>'running','lease_until'=>$row['lease_until']));
+                if (false === $dead || '' !== (string)$wpdb->last_error) {
+                    throw new RuntimeException('Expired localization job could not be moved to dead letter.');
+                }
                 if (1 === $dead) {
                     ++$summary['reclaimed'];
                     ++$summary['dead_letter'];
@@ -83,6 +86,9 @@ final class JobQueue
                 "UPDATE {$table} SET status='running',lease_owner=%s,lease_until=%s,attempts=attempts+IF(status='running',1,0),updated_at=%s WHERE uuid=%s AND ((status IN ('queued','retry') AND attempts<max_attempts AND (lease_until IS NULL OR lease_until<%s)) OR (status='running' AND lease_until IS NOT NULL AND lease_until<%s))",
                 $worker, gmdate('Y-m-d H:i:s', time() + 300), Database::now(), $row['uuid'], $now, $now
             ));
+            if (false === $leased || '' !== (string)$wpdb->last_error) {
+                throw new RuntimeException('Localization job lease could not be persisted.');
+            }
             if (1 !== $leased) {
                 continue;
             }
@@ -100,15 +106,16 @@ final class JobQueue
                 }
                 ($this->handlers[$row['job_type']])($decoded, $row);
                 $saved = $wpdb->update($table, array('status'=>'completed','lease_owner'=>null,'lease_until'=>null,'updated_at'=>Database::now()), array('uuid'=>$row['uuid'],'status'=>'running','lease_owner'=>$worker));
-                if (1 !== $saved) {
+                if (1 !== $saved || '' !== (string)$wpdb->last_error) {
                     throw new RuntimeException('Localization job completion could not be acknowledged.');
                 }
                 ++$summary['completed'];
             } catch (\Throwable $e) {
-                $currentAttempts = (int)$wpdb->get_var($wpdb->prepare("SELECT attempts FROM {$table} WHERE uuid=%s", $row['uuid']));
-                if ('' !== (string)$wpdb->last_error) {
+                $currentAttemptsValue = $wpdb->get_var($wpdb->prepare("SELECT attempts FROM {$table} WHERE uuid=%s", $row['uuid']));
+                if ('' !== (string)$wpdb->last_error || null === $currentAttemptsValue) {
                     throw new RuntimeException('Localization job attempt state could not be read.', 0, $e);
                 }
+                $currentAttempts = (int)$currentAttemptsValue;
                 $attempts = $wasRunning ? max($currentAttempts, (int)$row['attempts'] + 1) : (int)$row['attempts'] + 1;
                 $dead = $attempts >= (int) $row['max_attempts'];
                 $saved = $wpdb->update($table, array(
@@ -120,7 +127,7 @@ final class JobQueue
                     'last_error'=>get_class($e) . ':' . hash('sha256', $e->getMessage()),
                     'updated_at'=>Database::now(),
                 ), array('uuid'=>$row['uuid'],'status'=>'running','lease_owner'=>$worker));
-                if (false === $saved || 0 === $saved) {
+                if (false === $saved || 0 === $saved || '' !== (string)$wpdb->last_error) {
                     throw new RuntimeException('Localization job failure state could not be persisted.', 0, $e);
                 }
                 ++$summary[$dead?'dead_letter':'retried'];
