@@ -23,7 +23,7 @@ final class MetricsService
         }
         if(null===$metrics['units']){$metrics['stale_units']=$metrics['critical_feedback']=$metrics['dead_letter_jobs']=$metrics['dead_letter_events']=null;$metrics['coverage']=[];return $metrics;}
         $metrics['stale_units']=$this->scalar("SELECT COUNT(*) FROM ".Database::table('units')." WHERE status='stale'");
-        $metrics['critical_feedback']=$this->scalar("SELECT COUNT(*) FROM ".Database::table('feedback')." WHERE severity='critical' AND status<>'closed'");
+        $metrics['critical_feedback']=$this->scalar("SELECT COUNT(*) FROM ".Database::table('feedback')." WHERE severity='critical' AND status IN ('triaged','investigating','fixed','released')");
         $metrics['dead_letter_jobs']=$this->scalar("SELECT COUNT(*) FROM ".Database::table('jobs')." WHERE status='dead_letter'");
         $metrics['dead_letter_events']=$this->scalar("SELECT COUNT(*) FROM ".Database::table('outbox')." WHERE status='dead_letter'");
         $coverage=[];foreach($this->repo->list('locales',[],200,0,'id ASC') as $locale){$coverage[$locale['locale_tag']]=$this->repo->coverage((string)$locale['locale_tag']);}$metrics['coverage']=$coverage;
