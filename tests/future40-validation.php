@@ -55,7 +55,7 @@ $t->test('Accessibility groups reject non-scalar and unsafe bidi values', functi
 });
 $t->test('Locale registration cannot skip governed initial state', function (): void {
     $code=file_get_contents(dirname(__DIR__).'/src/Application/LocaleService.php');
-    TestHarness::assertTrue(str_contains($code,"'proposed' !== $status"));
+    TestHarness::assertTrue(str_contains($code, "'proposed' !== \$status"));
     TestHarness::assertTrue(str_contains($code,'advance through governed transitions'));
 });
 
