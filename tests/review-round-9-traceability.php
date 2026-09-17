@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 require __DIR__ . '/bootstrap.php';
 require __DIR__ . '/TestHarness.php';
+require dirname(__DIR__) . '/src/Contract/FutureCapabilities.php';
+require dirname(__DIR__) . '/src/Contract/PlanCompliance.php';
 
 use Sabri\Localization\Contract\PlanCompliance;
 
