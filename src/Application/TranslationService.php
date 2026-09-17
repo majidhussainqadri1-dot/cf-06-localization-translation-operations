@@ -108,8 +108,23 @@ final class TranslationService
     private function addMemory(array $unit,array $resource):void
     {
         if(!in_array((string)$resource['data_class'],array('C1','C2'),true)||in_array((string)$resource['risk_class'],array('high','critical','private'),true)||RiskPolicy::requiresDomainReview((string)$resource['risk_class'],(string)$resource['domain_name'])){return;}
+        $reuse=json_decode((string)($resource['translatability_json']??''),true);
+        $license=is_array($reuse)?sanitize_key((string)($reuse['license_code']??'')):'';
+        if(!is_array($reuse)||true!==($reuse['translation_memory_reuse_allowed']??false)||''===$license||strlen($license)>80){return;}
         $source=$this->resources->text($resource);$target=$this->targetText($unit);
-        $this->repo->insert('memory',array('source_locale'=>$resource['source_locale'],'target_locale'=>$unit['target_locale'],'source_segment'=>$source,'target_segment'=>$target,'source_hash'=>hash('sha256',$source),'context_hash'=>hash('sha256',(string)$resource['context']),'domain_name'=>$resource['domain_name'],'risk_class'=>$resource['risk_class'],'provenance_json'=>wp_json_encode(array('resource_uuid'=>$resource['uuid'],'unit_uuid'=>$unit['uuid'],'source_version'=>$resource['source_version'])),'license_code'=>'platform-approved','status'=>'approved','created_from_unit_uuid'=>$unit['uuid']));
+        $provider=null;
+        if(!empty($unit['provider_job_uuid'])){
+            $job=$this->repo->find('vendor_jobs',(string)$unit['provider_job_uuid']);
+            if(is_array($job)){$provider=array('job_uuid'=>$job['uuid'],'provider_key'=>$job['provider_key'],'model_version'=>$job['model_version'],'region_code'=>$job['region_code'],'status'=>$job['status']);}
+        }
+        $provenance=array(
+            'resource_uuid'=>$resource['uuid'],'unit_uuid'=>$unit['uuid'],'project_uuid'=>$unit['project_uuid'],
+            'source_version'=>(int)$resource['source_version'],'source_hash'=>$resource['source_hash'],
+            'translator_id'=>(int)($unit['translator_id']??0),'linguistic_reviewer_id'=>(int)($unit['linguistic_reviewer_id']??0),'domain_reviewer_id'=>(int)($unit['domain_reviewer_id']??0),
+            'provider'=>$provider,'license_code'=>$license,'translation_memory_reuse_allowed'=>true,
+        );
+        $encoded=wp_json_encode($provenance,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);if(!is_string($encoded)||strlen($encoded)>262144){return;}
+        $this->repo->insert('memory',array('source_locale'=>$resource['source_locale'],'target_locale'=>$unit['target_locale'],'source_segment'=>$source,'target_segment'=>$target,'source_hash'=>hash('sha256',$source),'context_hash'=>hash('sha256',(string)$resource['context']),'domain_name'=>$resource['domain_name'],'risk_class'=>$resource['risk_class'],'provenance_json'=>$encoded,'license_code'=>$license,'status'=>'approved','created_from_unit_uuid'=>$unit['uuid']));
     }
 
     private function assertAssignedActor(array $unit,string $column,string $message):void
