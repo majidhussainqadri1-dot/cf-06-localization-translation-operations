@@ -14,7 +14,7 @@ final class HttpJsonProvider implements MachineTranslationProvider
 
     public function submit(array $job,array $units): array
     {
-        $url=(string)($this->config['url']??'');$hosts=is_array($this->config['allowed_hosts']??null)?$this->config['allowed_hosts']:[];UrlGuard::assertPublicHttps($url,$hosts);
+        $url=(string)($this->config['url']??'');$hosts=$this->allowedHosts();UrlGuard::assertPublicHttps($url,$hosts);
         $body=wp_json_encode(['job'=>$job,'units'=>$units],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);if(!is_string($body)||strlen($body)>5_000_000){throw new RuntimeException('Machine translation request is invalid or oversized.');}
         $response=wp_remote_post($url,['timeout'=>20,'redirection'=>0,'sslverify'=>true,'reject_unsafe_urls'=>true,
             'headers'=>['Authorization'=>'Bearer '.$this->credential(),'Content-Type'=>'application/json','Idempotency-Key'=>(string)$job['uuid']],
@@ -29,7 +29,7 @@ final class HttpJsonProvider implements MachineTranslationProvider
     {
         $providerReference=trim($providerReference);if(''===$providerReference||strlen($providerReference)>191){throw new RuntimeException('Provider purge reference is invalid.');}
         $purge=(string)($this->config['purge_url']??'');if(''===$purge){return ['status'=>'manual_evidence_required','reference_hash'=>hash('sha256',$providerReference)];}
-        $hosts=is_array($this->config['allowed_hosts']??null)?$this->config['allowed_hosts']:[];UrlGuard::assertPublicHttps($purge,$hosts);
+        $hosts=$this->allowedHosts();UrlGuard::assertPublicHttps($purge,$hosts);
         $response=wp_remote_request($purge,['method'=>'DELETE','timeout'=>20,'redirection'=>0,'sslverify'=>true,'reject_unsafe_urls'=>true,
             'headers'=>['Authorization'=>'Bearer '.$this->credential(),'Content-Type'=>'application/json'],'body'=>wp_json_encode(['reference'=>$providerReference])]);
         $code=is_wp_error($response)?0:(int)wp_remote_retrieve_response_code($response);$raw=is_wp_error($response)?'':(string)wp_remote_retrieve_body($response);
@@ -37,6 +37,28 @@ final class HttpJsonProvider implements MachineTranslationProvider
         return ['status'=>'purged','verified_at'=>gmdate(DATE_ATOM),'response_hash'=>hash('sha256',$raw)];
     }
 
-    public function health():array{return ['status'=>''!==($this->config['url']??'')?'configured':'unknown','region'=>(string)($this->config['region']??''),'training_allowed'=>false];}
+    public function health():array
+    {
+        $url=(string)($this->config['url']??'');
+        $credentialEnv=(string)($this->config['credential_env']??'');
+        return [
+            'status'=>''!==$url?'configured':'unknown',
+            'region'=>(string)($this->config['region']??''),
+            'training_allowed'=>false,
+            'base_url'=>$url,
+            'allowed_hosts'=>$this->allowedHosts(),
+            'credential_reference'=>''!==$credentialEnv?'env:'.$credentialEnv:'',
+            'contract_version'=>(string)($this->config['contract_version']??''),
+        ];
+    }
+
+    private function allowedHosts():array
+    {
+        $hosts=is_array($this->config['allowed_hosts']??null)?$this->config['allowed_hosts']:[];
+        $normalized=[];
+        foreach($hosts as $host){$host=strtolower(rtrim(trim((string)$host),'.'));if(''!==$host){$normalized[]=$host;}}
+        $normalized=array_values(array_unique($normalized));sort($normalized,SORT_STRING);return $normalized;
+    }
+
     private function credential():string{$env=(string)($this->config['credential_env']??'');if(1!==preg_match('/^[A-Z][A-Z0-9_]{2,127}$/D',$env)){throw new RuntimeException('Provider credential reference is invalid.');}$value=(string)getenv($env);if(''===$value){throw new RuntimeException('Provider credential is unavailable.');}return $value;}
 }
