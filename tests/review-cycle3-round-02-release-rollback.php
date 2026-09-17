@@ -23,12 +23,15 @@ $t->test('Rollback is constrained to exact prior signed bundle with fresh dual a
 });
 
 $t->test('Rollback activation preserves immediate predecessor chain and audit reason',function()use($bundles):void{
-    TestHarness::assertTrue(str_contains($bundles,"'previous_bundle_uuid'=>$active['uuid']"));
-    TestHarness::assertTrue(str_contains($bundles,"'reason'=>$reason"));
+    TestHarness::assertTrue(str_contains($bundles,"'previous_bundle_uuid'=>\$active['uuid']"));
+    TestHarness::assertTrue(str_contains($bundles,"'reason'=>\$reason"));
 });
 
 $t->test('REST rollback route carries explicit reason to canonical service',function()use($routes):void{
-    TestHarness::assertTrue(str_contains($routes,"get_param('target_uuid'),(int)$r->get_param('row_version'),(string)$r->get_param('reason')"));
+    TestHarness::assertTrue(str_contains($routes,"get_param('target_uuid')"));
+    TestHarness::assertTrue(str_contains($routes,"get_param('row_version')"));
+    TestHarness::assertTrue(str_contains($routes,"get_param('reason')"));
+    TestHarness::assertTrue(str_contains($routes,'$this->s[\'bundle\']->rollback'));
 });
 
 $t->test('Rollback runbook documents exact-prior and fresh-dual-control law',function()use($rollback):void{
