@@ -55,8 +55,9 @@ final class PrivacyService
     public function requestErasure(int $userId,string $reason='user_request'): string
     {
         if($userId<=0){throw new RuntimeException('Localization privacy erasure user is invalid.');}
+        $reason=sanitize_key($reason);if(''===$reason||strlen($reason)>80){throw new RuntimeException('Localization privacy erasure reason is invalid or oversized.');}
         $requestId=Database::uuid();
-        $uuid=$this->jobs->enqueue('privacy_erasure','privacy-erasure-'.$userId.'-'.$requestId,['user_id'=>$userId,'reason'=>sanitize_key($reason),'request_id'=>$requestId]);
+        $uuid=$this->jobs->enqueue('privacy_erasure','privacy-erasure-'.$userId.'-'.$requestId,['user_id'=>$userId,'reason'=>$reason,'request_id'=>$requestId]);
         $this->audit->record('privacy',(string)$userId,'privacy_erasure_queued','success',['reason'=>$reason,'job_uuid'=>$uuid,'request_id'=>$requestId],'privacy');return $uuid;
     }
 
@@ -65,7 +66,8 @@ final class PrivacyService
         global $wpdb;$userId=(int)($payload['user_id']??0);if($userId<=0){return;}
         $hold=apply_filters('slto_privacy_erasure_hold',null,$userId,$payload);
         if(true===$hold){$this->audit->record('privacy',(string)$userId,'privacy_erasure_retained','success',['hold'=>true],'privacy');return;}
-        $pseudonym=(int)hexdec(substr(hash('sha256','slto|'.$userId),0,15));
+        $salt=wp_salt('auth');if(''===$salt){throw new RuntimeException('Privacy pseudonymization secret is unavailable.');}
+        $pseudonym=(int)hexdec(substr(hash_hmac('sha256',(string)$userId,$salt),0,15));
         $this->tx->run(function()use($wpdb,$userId,$pseudonym):void{
             $ops=[
                 $wpdb->update(Database::table('comments'),['comment_text'=>'[ERASED]','author_id'=>0],['author_id'=>$userId]),
