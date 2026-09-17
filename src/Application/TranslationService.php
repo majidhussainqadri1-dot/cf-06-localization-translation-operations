@@ -52,7 +52,9 @@ final class TranslationService
         $unit=$this->repo->find('units',$uuid)??throw new InvalidArgumentException('Translation unit not found.');
         $resource=$this->repo->find('resources',(string)$unit['resource_uuid'])??throw new InvalidArgumentException('Translation source is unavailable.');
         if(!in_array($decision,array('approve','request_changes','reject'),true)){throw new InvalidArgumentException('Review decision is invalid.');}
+        $reason=sanitize_textarea_field($reason);if(strlen($reason)>2000){throw new InvalidArgumentException('Review reason exceeds the bounded limit.');}
         if('approve'!==$decision&&''===trim($reason)){throw new InvalidArgumentException('A review reason is required when changes are requested or rejected.');}
+        if((int)$unit['source_version']!==(int)$resource['source_version']||!hash_equals((string)$unit['source_hash'],(string)$resource['source_hash'])||'active'!==(string)$resource['status']){throw new InvalidArgumentException('Translation source changed or retired before review; the unit must be refreshed.');}
         $actor=get_current_user_id();$from=(string)$unit['status'];
         if('linguistic'===$reviewType){
             if('linguistic_review'!==$from){throw new InvalidArgumentException('Unit is not awaiting linguistic review.');}
@@ -69,10 +71,14 @@ final class TranslationService
         return $this->tx->run(function()use($unit,$resource,$version,$from,$to,$decision,$reviewType,$reason,$actor):array{
             $changes=array('status'=>$to,'machine_draft'=>0);$changes['linguistic'===$reviewType?'linguistic_reviewer_id':'domain_reviewer_id']=$actor;
             $updated=$this->repo->updateVersioned('units',(string)$unit['uuid'],$version,$changes);
-            $event='approved'===$to?'TranslationApproved':'TranslationRejected';
             $this->audit->record('unit',(string)$unit['uuid'],'translation_'.$reviewType.'_review','success',array('decision'=>$decision,'from'=>$from,'to'=>$to,'reason'=>$reason));
-            $this->outbox->enqueue($event,'translation_unit',(string)$unit['uuid'],array('unit_uuid'=>$unit['uuid'],'locale'=>$unit['target_locale'],'decision'=>$decision,'review_type'=>$reviewType));
-            if('approved'===$to){$this->addMemory($updated,$resource);}return $updated;
+            if('approved'===$to){
+                $this->outbox->enqueue('TranslationApproved','translation_unit',(string)$unit['uuid'],array('unit_uuid'=>$unit['uuid'],'locale'=>$unit['target_locale'],'decision'=>$decision,'review_type'=>$reviewType));
+                $this->addMemory($updated,$resource);
+            }elseif('approve'!==$decision){
+                $this->outbox->enqueue('TranslationRejected','translation_unit',(string)$unit['uuid'],array('unit_uuid'=>$unit['uuid'],'locale'=>$unit['target_locale'],'decision'=>$decision,'review_type'=>$reviewType));
+            }
+            return $updated;
         });
     }
 
