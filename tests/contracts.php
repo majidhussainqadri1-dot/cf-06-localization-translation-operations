@@ -98,7 +98,7 @@ $t->test('External MT is low-risk C1 draft-only and privacy-bound', function () 
     $risk = $read('src/Domain/Translation/RiskPolicy.php');
     TestHarness::assertTrue(str_contains($mt, 'human_review_required'));
     TestHarness::assertTrue(str_contains($mt, 'Redactor::redact'));
-    TestHarness::assertTrue(str_contains($mt, "'status' => 'validated'"));
+    TestHarness::assertTrue(str_contains($mt, "'status'=>'validated'") || str_contains($mt, "'status' => 'validated'"));
     TestHarness::assertTrue(str_contains($mt, 'translations->submit'));
     TestHarness::assertTrue(str_contains($risk, "'C1' !== strtoupper(\$dataClass)"));
     TestHarness::assertTrue(str_contains($risk, "'low' !== strtolower(\$riskClass)"));
