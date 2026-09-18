@@ -49,10 +49,11 @@ final class FeedbackService
     public function transition(string $uuid,string $to,int $version,string $outcome=''): array
     {
         $row=$this->repo->find('feedback',$uuid)??throw new InvalidArgumentException('Translation feedback not found.');
+        $outcome=sanitize_textarea_field($outcome);if(strlen($outcome)>10000){throw new InvalidArgumentException('Feedback outcome exceeds the bounded limit.');}
         StateMachine::assert('defect',(string)$row['status'],$to);
         if(in_array($to,array('closed','released'),true)&&''===trim($outcome)){throw new InvalidArgumentException('A recorded outcome is required.');}
         return $this->tx->run(function() use ($row,$uuid,$to,$version,$outcome): array {
-            $updated=$this->repo->updateVersioned('feedback',$uuid,$version,array('status'=>$to,'assigned_to'=>get_current_user_id(),'outcome_text'=>sanitize_textarea_field($outcome)));
+            $updated=$this->repo->updateVersioned('feedback',$uuid,$version,array('status'=>$to,'assigned_to'=>get_current_user_id(),'outcome_text'=>$outcome));
             $this->audit->record('feedback',$uuid,'translation_feedback_transition','success',array('from'=>$row['status'],'to'=>$to,'reported_severity'=>$row['severity']));
             if('triaged'===$to&&'critical'===(string)$row['severity']){$this->outbox->enqueue('CriticalTranslationDefectDetected','feedback',$uuid,array('locale'=>$row['locale_tag'],'resource_key'=>$row['resource_key'],'category'=>$row['category'],'triaged_by'=>get_current_user_id()));}
             if('released'===$to){$this->outbox->enqueue('TranslationCorrectionReleased','feedback',$uuid,array('locale'=>$row['locale_tag'],'resource_key'=>$row['resource_key']));}
