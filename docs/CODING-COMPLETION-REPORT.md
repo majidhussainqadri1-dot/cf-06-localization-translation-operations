@@ -31,10 +31,11 @@ An accepted exact commit must pass:
 - Composer validation and all PHP syntax checks;
 - secret-pattern and expanded requirements-traceability guards including `CF06-FUT-001`…`040`;
 - WordPress/MySQL integration on PHP 8.1 and PHP 8.3;
-- deterministic package rebuild parity, ZIP CRC, manifest/SBOM and source/package parity.
+- deterministic package rebuild parity, ZIP CRC, manifest/SBOM and source/package parity;
+- clean-working-tree verification with the claimed source commit equal to the checked-out Git HEAD.
 
 Exact commit, workflow-run, artifact digest and final SHA-256 evidence must be recorded only after the final successful GitHub Actions run so mutable documentation cannot masquerade as exact-head evidence.
 
 ## Truthful lifecycle boundary
 
-This report asserts **repository/source coding completion for the approved conditional + Future40 scope only after the exact rc5 quality gate is green**. It does not assert Hostinger staging, live deployment or operational completion. Future40 remains disabled by default until separate activation and staging evidence exist.
+This report asserts **repository/source coding completion for the approved conditional + Future40 scope only after the exact rc5 quality gate is green**. It does not infer `Live-Deployed`; that status separately requires exact deployed-source identity and independent deployed-code/DB/migration/runtime parity evidence. It does not assert Hostinger staging, live deployment or operational completion. Future40 remains disabled by default until separate activation and staging evidence exist.
