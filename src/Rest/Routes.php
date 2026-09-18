@@ -80,7 +80,14 @@ final class Routes
     private function mutate(WP_REST_Request $request,string $route,callable $operation,int $status=200,bool $requireKey=true):WP_REST_Response|WP_Error
     {
         $key=trim((string)$request->get_header('Idempotency-Key'));if($requireKey&&(''===$key||strlen($key)>191)){return new WP_Error('slto_idempotency_required','A valid Idempotency-Key header is required.',['status'=>400]);}if(''===$key){$key=hash('sha256',$route.'|'.wp_json_encode($request->get_json_params()).'|'.microtime(true));}
-        $actor=get_current_user_id();$hash=hash('sha256',wp_json_encode($request->get_json_params(),JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES));$state=$this->s['repo']->storeIdempotency($actor,$route,$key,$hash);if(!$state['new']&&'completed'===$state['record']['status']){$body=json_decode((string)$state['record']['response_json'],true)?:[];return new WP_REST_Response($body,(int)$state['record']['response_code']);}if(!$state['new']){return new WP_Error('slto_request_in_progress','An identical operation is already processing.',['status'=>409]);}
+        $requestMaterial=wp_json_encode($this->canonicalize([
+            'logical_route'=>$route,
+            'method'=>$request->get_method(),
+            'route'=>$request->get_route(),
+            'params'=>$request->get_params(),
+        ]),JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+        if(!is_string($requestMaterial)){throw new InvalidArgumentException('Mutation request identity could not be encoded safely.');}
+        $actor=get_current_user_id();$hash=hash('sha256',$requestMaterial);$state=$this->s['repo']->storeIdempotency($actor,$route,$key,$hash);if(!$state['new']&&'completed'===$state['record']['status']){$body=json_decode((string)$state['record']['response_json'],true)?:[];return new WP_REST_Response($body,(int)$state['record']['response_code']);}if(!$state['new']){return new WP_Error('slto_request_in_progress','An identical operation is already processing.',['status'=>409]);}
         try{
             $result=$operation();
         }catch(Throwable $e){
@@ -95,6 +102,12 @@ final class Routes
         $this->s['repo']->completeIdempotency($actor,$route,$key,$status,$body);
         return new WP_REST_Response($body,$status);
     }
+    private function canonicalize(mixed $value): mixed
+    {
+        if(!is_array($value)){return $value;}
+        if(array_is_list($value)){return array_map(fn(mixed $item):mixed=>$this->canonicalize($item),$value);}
+        ksort($value,SORT_STRING);foreach($value as $key=>$item){$value[$key]=$this->canonicalize($item);}return $value;
+    }
     private function ok(mixed $data,int $status=200):WP_REST_Response{return new WP_REST_Response(['data'=>$data],$status);}
-    private function error(Throwable $e):WP_Error{$trace=\Sabri\Localization\Infrastructure\Database::uuid();$code='slto_internal_error';$status=500;$message='Localization operation failed.';if($e instanceof InvalidArgumentException){$code='slto_invalid_request';$status=422;$message=$e->getMessage();}elseif($e instanceof DomainException&&'stale_version'===$e->getMessage()){$code='slto_stale_version';$status=409;$message='The record changed; reload before retrying.';}elseif($e instanceof DomainException&&'idempotency_conflict'===$e->getMessage()){$code='slto_idempotency_conflict';$status=409;$message='The idempotency key was reused with a different request.';}do_action('slto_safe_error',$code,$trace,$e);return new WP_Error($code,$message,['status'=>$status,'trace_id'=>$trace]);}
+    private function error(Throwable $e):WP_Error{$trace=\Sabri\Localization\Infrastructure\Database::uuid();$code='slto_internal_error';$status=500;$message='Localization operation failed.';if($e instanceof InvalidArgumentException){$code='slto_invalid_request';$status=422;$message=$e->getMessage();}elseif($e instanceof DomainException&&'stale_version'===$e->getMessage()){$code='slto_stale_version';$status=409;$message='The record changed; reload before retrying.';}elseif($e instanceof DomainException&&'idempotency_conflict'===$e->getMessage()){$code='slto_idempotency_conflict';$status=409;$message='The idempotency key was reused with a different request.';}elseif($e instanceof DomainException&&'idempotency_indeterminate'===$e->getMessage()){$code='slto_idempotency_indeterminate';$status=409;$message='A previous mutation may have completed but replay state is indeterminate; operator reconciliation is required.';}do_action('slto_safe_error',$code,$trace,$e);return new WP_Error($code,$message,['status'=>$status,'trace_id'=>$trace]);}
 }
