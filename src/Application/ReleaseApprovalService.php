@@ -24,8 +24,8 @@ final class ReleaseApprovalService
         $bundle=$this->repo->find('bundles',$bundleUuid)??throw new InvalidArgumentException('Locale bundle not found.');
         if(!in_array((string)$bundle['status'],array('approved','staged','canary','superseded','rolled_back'),true)){throw new InvalidArgumentException('Release approval requires an approved/staged bundle or an eligible prior rollback bundle.');}
         $role=sanitize_key((string)($input['approval_role']??''));$evidenceRef=sanitize_text_field((string)($input['evidence_ref']??''));$evidenceHash=strtolower(trim((string)($input['evidence_hash']??'')));$stepUpAt=trim((string)($input['step_up_at']??''));
-        $stepUp=$this->strictUtcTimestamp($stepUpAt);$stepUpTimestamp=null===$stepUp?false:$stepUp->getTimestamp();
-        if(!in_array($role,self::ROLES,true)||''===$evidenceRef||strlen($evidenceRef)>191||1!==preg_match('/^[a-f0-9]{64}$/D',$evidenceHash)||false===$stepUpTimestamp||abs(time()-$stepUpTimestamp)>self::APPROVAL_TTL_SECONDS){throw new InvalidArgumentException('Release approval evidence or recent strict UTC step-up proof is invalid.');}
+        $stepUp=$this->strictUtcTimestamp($stepUpAt);$stepUpTimestamp=null===$stepUp?false:$stepUp->getTimestamp();$stepAge=false===$stepUpTimestamp?PHP_INT_MAX:time()-$stepUpTimestamp;
+        if(!in_array($role,self::ROLES,true)||''===$evidenceRef||strlen($evidenceRef)>191||1!==preg_match('/^[a-f0-9]{64}$/D',$evidenceHash)||false===$stepUpTimestamp||$stepAge < -60||$stepAge>self::APPROVAL_TTL_SECONDS){throw new InvalidArgumentException('Release approval evidence or recent strict UTC step-up proof is invalid.');}
         $actor=get_current_user_id();if($actor<=0){throw new InvalidArgumentException('Release approver identity is unavailable.');}
         $existing=$this->repo->list('release_approvals',array('bundle_uuid'=>$bundleUuid,'status'=>'valid'),20,0,'approved_at DESC');$reusable=null;
         foreach($existing as $approval){
