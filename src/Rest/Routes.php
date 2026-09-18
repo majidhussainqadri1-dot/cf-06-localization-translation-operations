@@ -18,6 +18,8 @@ use WP_REST_Server;
 final class Routes
 {
     private const NS='sabri-localization/v1';
+    private const MAX_MUTATION_BYTES=8_388_608;
+    private const MAX_MUTATION_NODES=250_000;
     public function __construct(private readonly array $s){}
     public function registerHooks():void{add_action('rest_api_init',[$this,'registerRoutes']);}
     public function registerRoutes():void
@@ -79,6 +81,10 @@ final class Routes
 
     private function mutate(WP_REST_Request $request,string $route,callable $operation,int $status=200,bool $requireKey=true):WP_REST_Response|WP_Error
     {
+        $body=(string)$request->get_body();
+        if(strlen($body)>self::MAX_MUTATION_BYTES||$this->nodeCount($request->get_params())>self::MAX_MUTATION_NODES){
+            return new WP_Error('slto_payload_too_large','Localization mutation payload exceeds the governed request limit.',['status'=>413]);
+        }
         $key=trim((string)$request->get_header('Idempotency-Key'));if($requireKey&&(''===$key||strlen($key)>191)){return new WP_Error('slto_idempotency_required','A valid Idempotency-Key header is required.',['status'=>400]);}if(''===$key){$key=hash('sha256',$route.'|'.wp_json_encode($request->get_json_params()).'|'.microtime(true));}
         $requestMaterial=wp_json_encode($this->canonicalize([
             'logical_route'=>$route,
@@ -107,6 +113,19 @@ final class Routes
         if(!is_array($value)){return $value;}
         if(array_is_list($value)){return array_map(fn(mixed $item):mixed=>$this->canonicalize($item),$value);}
         ksort($value,SORT_STRING);foreach($value as $key=>$item){$value[$key]=$this->canonicalize($item);}return $value;
+    }
+    private function nodeCount(mixed $value,int $limit=self::MAX_MUTATION_NODES): int
+    {
+        if(!is_array($value)){return 1;}
+        $count=0;$stack=[$value];
+        while([]!==$stack){
+            $current=array_pop($stack);
+            foreach($current as $item){
+                ++$count;if($count>$limit){return $count;}
+                if(is_array($item)){$stack[]=$item;}
+            }
+        }
+        return $count;
     }
     private function ok(mixed $data,int $status=200):WP_REST_Response{return new WP_REST_Response(['data'=>$data],$status);}
     private function error(Throwable $e):WP_Error{$trace=\Sabri\Localization\Infrastructure\Database::uuid();$code='slto_internal_error';$status=500;$message='Localization operation failed.';if($e instanceof InvalidArgumentException){$code='slto_invalid_request';$status=422;$message=$e->getMessage();}elseif($e instanceof DomainException&&'stale_version'===$e->getMessage()){$code='slto_stale_version';$status=409;$message='The record changed; reload before retrying.';}elseif($e instanceof DomainException&&'idempotency_conflict'===$e->getMessage()){$code='slto_idempotency_conflict';$status=409;$message='The idempotency key was reused with a different request.';}elseif($e instanceof DomainException&&'idempotency_indeterminate'===$e->getMessage()){$code='slto_idempotency_indeterminate';$status=409;$message='A previous mutation may have completed but replay state is indeterminate; operator reconciliation is required.';}do_action('slto_safe_error',$code,$trace,$e);return new WP_Error($code,$message,['status'=>$status,'trace_id'=>$trace]);}
