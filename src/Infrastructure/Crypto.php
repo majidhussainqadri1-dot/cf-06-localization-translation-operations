@@ -39,6 +39,9 @@ final class Crypto
 
     public function decrypt(array $envelope, string $purpose): string
     {
+        if ('AES-256-GCM' !== (string)($envelope['algorithm'] ?? '')) {
+            throw new RuntimeException('Localization payload encryption algorithm is unsupported or tampered.');
+        }
         $keyId = (string) ($envelope['key_id'] ?? '');
         $keys = $this->keys();
         if (! isset($keys[$keyId])) {
