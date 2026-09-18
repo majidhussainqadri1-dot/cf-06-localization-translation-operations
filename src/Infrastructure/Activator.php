@@ -670,6 +670,11 @@ final class Activator
         }
     }
 
+    public static function assertRuntimeSchemaParity(): void
+    {
+        self::verifySchema();
+    }
+
     private static function verifySchema(): void
     {
         global $wpdb;
