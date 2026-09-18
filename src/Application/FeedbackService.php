@@ -27,6 +27,10 @@ final class FeedbackService
         $locale=LocaleValidator::canonicalize((string)($input['locale']??''));
         $category=sanitize_key((string)($input['category']??''));
         if(null===$locale||''===$category||strlen($category)>40){throw new InvalidArgumentException('Feedback locale and bounded category are required.');}
+        $localeRow=$this->repo->findOne('locales','locale_tag',$locale);
+        if(!is_array($localeRow)||!in_array((string)$localeRow['status'],array('enabled','degraded'),true)){
+            throw new InvalidArgumentException('Feedback locale is not currently available on a public localization surface.');
+        }
         $reportedSeverity=in_array((string)($input['severity']??'normal'),array('low','normal','high','critical'),true)?(string)$input['severity']:'normal';
         $suggestion=Redactor::redact(sanitize_textarea_field((string)($input['suggestion']??'')))['text'];
         if(''===trim($suggestion)||strlen($suggestion)>10000){throw new InvalidArgumentException('Feedback is empty or exceeds the bounded limit.');}
