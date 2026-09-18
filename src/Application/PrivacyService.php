@@ -57,8 +57,11 @@ final class PrivacyService
         if($userId<=0){throw new RuntimeException('Localization privacy erasure user is invalid.');}
         $reason=sanitize_key($reason);if(''===$reason||strlen($reason)>80){throw new RuntimeException('Localization privacy erasure reason is invalid or oversized.');}
         $requestId=Database::uuid();
-        $uuid=$this->jobs->enqueue('privacy_erasure','privacy-erasure-'.$userId.'-'.$requestId,['user_id'=>$userId,'reason'=>$reason,'request_id'=>$requestId]);
-        $this->audit->record('privacy',(string)$userId,'privacy_erasure_queued','success',['reason'=>$reason,'job_uuid'=>$uuid,'request_id'=>$requestId],'privacy');return $uuid;
+        return $this->tx->run(function()use($userId,$reason,$requestId):string{
+            $uuid=$this->jobs->enqueue('privacy_erasure','privacy-erasure-'.$userId.'-'.$requestId,['user_id'=>$userId,'reason'=>$reason,'request_id'=>$requestId]);
+            $this->audit->record('privacy',(string)$userId,'privacy_erasure_queued','success',['reason'=>$reason,'job_uuid'=>$uuid,'request_id'=>$requestId],'privacy');
+            return $uuid;
+        });
     }
 
     public function processErasure(array $payload,array $job=[]): void
