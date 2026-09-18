@@ -29,7 +29,11 @@ final class TranslationService
         $unit=$this->repo->find('units',$uuid)??throw new InvalidArgumentException('Translation unit not found.');
         $resource=$this->repo->find('resources',(string)$unit['resource_uuid'])??throw new InvalidArgumentException('Translation source is unavailable.');
         if(!in_array($unit['status'],array('assigned','translating','stale'),true)){throw new InvalidArgumentException('Translation unit is not open for submission.');}
-        if(!$machineDraft){$this->assertAssignedActor($unit,'translator_id','Only the assigned translator may submit this unit.');}
+        if($machineDraft){
+            $this->assertMachineDraftProvenance($unit,$resource,$providerJob);
+        }else{
+            $this->assertAssignedActor($unit,'translator_id','Only the assigned translator may submit this unit.');
+        }
         if((int)$unit['source_version']!==(int)$resource['source_version']||!hash_equals((string)$unit['source_hash'],(string)$resource['source_hash'])){throw new InvalidArgumentException('Translation source is stale and must be reassigned.');}
         if(''===trim($target)||strlen($target)>500000){throw new InvalidArgumentException('Translation target is empty or exceeds the bounded limit.');}
         $result=$this->qa->unit($unit,$resource,$target);if(!$result['passed']){throw new InvalidArgumentException('Translation failed automated linguistic QA.');}
@@ -131,6 +135,20 @@ final class TranslationService
         );
         $encoded=wp_json_encode($provenance,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);if(!is_string($encoded)||strlen($encoded)>262144){return;}
         $this->repo->insert('memory',array('source_locale'=>$resource['source_locale'],'target_locale'=>$unit['target_locale'],'source_segment'=>$source,'target_segment'=>$target,'source_hash'=>hash('sha256',$source),'context_hash'=>hash('sha256',(string)$resource['context']),'domain_name'=>$resource['domain_name'],'risk_class'=>$resource['risk_class'],'provenance_json'=>$encoded,'license_code'=>$license,'status'=>'approved','created_from_unit_uuid'=>$unit['uuid']));
+    }
+
+    private function assertMachineDraftProvenance(array $unit,array $resource,?string $providerJob): void
+    {
+        if(null===$providerJob||1!==preg_match('/^[a-f0-9-]{36}$/D',$providerJob)
+            ||!RiskPolicy::machineTranslationAllowed((string)$resource['risk_class'],(string)$resource['data_class'],(string)$resource['domain_name'])){
+            throw new InvalidArgumentException('Machine draft provenance is not eligible for this translation unit.');
+        }
+        $job=$this->repo->find('vendor_jobs',$providerJob);
+        $units=is_array($job)?json_decode((string)($job['unit_uuids']??''),true):null;
+        if(!is_array($job)||'validated'!==(string)$job['status']||!is_array($units)
+            ||!in_array((string)$unit['uuid'],array_map('strval',$units),true)){
+            throw new InvalidArgumentException('Machine draft must be bound to a validated vendor job containing this unit.');
+        }
     }
 
     private function assertAssignedActor(array $unit,string $column,string $message):void
