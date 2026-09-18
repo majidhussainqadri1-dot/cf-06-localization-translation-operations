@@ -133,6 +133,8 @@ grep -Fq "'file23'" src/Contract/PlanCompliance.php
 grep -Fq "'file24'" src/Contract/PlanCompliance.php
 grep -Fq 'slto_verify_assignment_qualification' docs/CONTRACTS.md
 grep -Fq 'slto_verify_provider_purge_evidence' docs/CONTRACTS.md
+grep -Fq 'slto_verify_bundle_qa_evidence' docs/CONTRACTS.md
+grep -Fq 'slto_verify_qa_evidence' docs/CONTRACTS.md
 grep -Fq 'slto_verify_staging_acceptance_evidence' docs/CONTRACTS.md
 grep -Fq 'slto_verify_live_deployment_parity' docs/CONTRACTS.md
 
