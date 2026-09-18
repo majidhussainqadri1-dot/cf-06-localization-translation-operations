@@ -51,17 +51,34 @@ final class HealthService
         }
         $productionEvidenceReady=true;
         $productionEvidence=array();
-        if('production'===$environment){
-            $context=array(
-                'plugin_version'=>SABRI_SLTO_VERSION,
-                'schema_version'=>SABRI_SLTO_SCHEMA_VERSION,
-                'contract_version'=>SABRI_SLTO_CONTRACT_VERSION,
-                'required'=>self::PRODUCTION_EVIDENCE,
-            );
+        $stagingAccepted=false;
+        $liveParityVerified=false;
+        $installedSchema=(string)get_option('slto_schema_version','0.0.0');
+        $installedContract=(string)get_option('slto_contract_version','0.0.0');
+        $configuredSourceCommit=defined('SLTO_DEPLOYED_SOURCE_COMMIT')?(string)SLTO_DEPLOYED_SOURCE_COMMIT:(string)getenv('SLTO_DEPLOYED_SOURCE_COMMIT');
+        $configuredSourceCommit=1===preg_match('/^[a-f0-9]{40}$/D',$configuredSourceCommit)?$configuredSourceCommit:'';
+        $context=array(
+            'plugin_version'=>SABRI_SLTO_VERSION,
+            'schema_version'=>SABRI_SLTO_SCHEMA_VERSION,
+            'contract_version'=>SABRI_SLTO_CONTRACT_VERSION,
+            'installed_schema_version'=>$installedSchema,
+            'installed_contract_version'=>$installedContract,
+            'deployed_source_commit'=>$configuredSourceCommit,
+            'required'=>self::PRODUCTION_EVIDENCE,
+        );
+        if('staging'===$environment){
+            $stagingAccepted=true===apply_filters('slto_verify_staging_acceptance_evidence',false,$context);
+        }elseif('production'===$environment){
             $candidate=apply_filters('slto_verify_production_activation_evidence',array(),$context);
             $productionEvidence=is_array($candidate)?$candidate:array();
             foreach(self::PRODUCTION_EVIDENCE as $required){
                 if(true!==($productionEvidence[$required]??false)){$productionEvidenceReady=false;}
+            }
+            $stagingAccepted=true===($productionEvidence['staging_acceptance']??false);
+            if($productionEvidenceReady&&''!==$configuredSourceCommit
+                &&hash_equals(SABRI_SLTO_SCHEMA_VERSION,$installedSchema)
+                &&hash_equals(SABRI_SLTO_CONTRACT_VERSION,$installedContract)){
+                $liveParityVerified=true===apply_filters('slto_verify_live_deployment_parity',false,$context,$productionEvidence);
             }
         }elseif(null===$environment){
             $productionEvidenceReady=false;
@@ -76,8 +93,7 @@ final class HealthService
             'production_release_evidence'=>$productionEvidenceReady,
         ],$integrations);
         $runtimeEnabled=(bool)get_option('slto_runtime_enabled',false);
-        $stagingAccepted='production'===$environment&&true===($productionEvidence['staging_acceptance']??false);
-        $liveDeployed='production'===$environment&&$productionEvidenceReady;
+        $liveDeployed='production'===$environment&&$productionEvidenceReady&&$liveParityVerified;
         $operational=$liveDeployed&&$runtimeEnabled&&!in_array(false,$gates,true);
         return [
             'status'=>in_array(false,$gates,true)?'degraded':'ready',
@@ -88,6 +104,8 @@ final class HealthService
             'integrations'=>$integrations,
             'production_evidence_required'=>'production'===$environment?self::PRODUCTION_EVIDENCE:array(),
             'production_evidence'=>$productionEvidence,
+            'live_parity_verified'=>$liveParityVerified,
+            'deployed_source_commit'=>$configuredSourceCommit?:null,
             'metrics'=>$schemaReady?$this->metrics->summary():[],
             'truth_status'=>[
                 'specified'=>'complete',
