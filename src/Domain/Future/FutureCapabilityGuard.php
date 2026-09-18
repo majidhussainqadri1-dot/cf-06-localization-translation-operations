@@ -19,6 +19,9 @@ final class FutureCapabilityGuard
     public static function normalize(string $id, array $input): array
     {
         return match ($id) {
+            'CF06-FUT-011' => self::timedRows($input,'segments',true),
+            'CF06-FUT-012' => self::timedRows($input,'cues',false),
+            'CF06-FUT-014' => self::pronunciation($input),
             'CF06-FUT-016' => self::ocr($input),
             'CF06-FUT-018' => self::regionalLocale($input),
             'CF06-FUT-020' => self::calendar($input),
@@ -34,6 +37,42 @@ final class FutureCapabilityGuard
             'CF06-FUT-037' => self::debtForecast($input),
             default => $input,
         };
+    }
+
+    private static function timedRows(array $input,string $field,bool $requireNonOverlap): array
+    {
+        $rows=$input[$field]??null;
+        if(!is_array($rows)||[]===$rows||count($rows)>1000){throw new InvalidArgumentException($field . ' must be a non-empty bounded timing array.');}
+        $lastEnd=0.0;$normalized=[];
+        foreach($rows as $index=>$row){
+            if(!is_array($row)){throw new InvalidArgumentException($field . ' entries must be objects.');}
+            foreach(['start','end'] as $timeField){
+                if(!array_key_exists($timeField,$row)||!is_numeric($row[$timeField])){throw new InvalidArgumentException($field . ' timing values must be numeric.');}
+                $value=(float)$row[$timeField];
+                if(!is_finite($value)||$value<0||$value>86400){throw new InvalidArgumentException($field . ' timing values exceed the governed range.');}
+                $row[$timeField]=$value;
+            }
+            if($row['end']<=$row['start']||($requireNonOverlap&&$row['start']<$lastEnd)){throw new InvalidArgumentException($field . ' timing order is invalid.');}
+            if(!is_scalar($row['text']??null)||''===trim((string)$row['text'])){throw new InvalidArgumentException($field . ' text must be a non-empty scalar string.');}
+            if(isset($row['id'])&&!is_scalar($row['id'])){throw new InvalidArgumentException($field . ' id must be scalar when provided.');}
+            $lastEnd=max($lastEnd,$row['end']);$normalized[]=$row;
+        }
+        $input[$field]=$normalized;return $input;
+    }
+
+    private static function pronunciation(array $input): array
+    {
+        $rows=$input['entries']??null;
+        if(!is_array($rows)||[]===$rows||count($rows)>1000){throw new InvalidArgumentException('Pronunciation entries must be a non-empty bounded array.');}
+        $normalized=[];
+        foreach($rows as $row){
+            if(!is_array($row)||!is_scalar($row['term']??null)||!is_scalar($row['pronunciation']??null)){throw new InvalidArgumentException('Pronunciation entries require scalar term and pronunciation.');}
+            $term=trim((string)$row['term']);$pron=trim((string)$row['pronunciation']);
+            $locale=LocaleValidator::canonicalize((string)($row['locale']??''));
+            if(''===$term||''===$pron||strlen($term)>512||strlen($pron)>512||null===$locale){throw new InvalidArgumentException('Pronunciation entry content or locale is invalid or oversized.');}
+            $row['term']=$term;$row['pronunciation']=$pron;$row['locale']=$locale;$normalized[]=$row;
+        }
+        $input['entries']=$normalized;return $input;
     }
 
     private static function ocr(array $input): array
@@ -247,6 +286,6 @@ final class FutureCapabilityGuard
     {
         if (! array_key_exists($field, $input) || ! is_numeric($input[$field])) { throw new InvalidArgumentException($field . ' must be numeric.'); }
         $value = (float)$input[$field];
-        if ($value < 0 || $value > 1) { throw new InvalidArgumentException($field . ' must be between 0 and 1.'); }
+        if (! is_finite($value) || $value < 0 || $value > 1) { throw new InvalidArgumentException($field . ' must be between 0 and 1.'); }
     }
 }
