@@ -65,6 +65,6 @@ final class Authorization
         }
 
         $decision = apply_filters('slto_authorize_action', true, $action, $context, $userId, $assertions);
-        return false !== $decision;
+        return true === $decision;
     }
 }
