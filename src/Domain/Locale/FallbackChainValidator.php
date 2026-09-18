@@ -20,7 +20,7 @@ final class FallbackChainValidator
         }
         $seen = array($locale => true);
         $current = $fallback;
-        for ($depth = 0; $depth <= $maximumDepth; $depth++) {
+        for ($depth = 0; $depth < $maximumDepth; $depth++) {
             if (isset($seen[$current])) {
                 throw new InvalidArgumentException('Locale fallback cycle detected.');
             }
