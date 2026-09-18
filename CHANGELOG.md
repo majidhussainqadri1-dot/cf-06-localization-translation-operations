@@ -10,6 +10,7 @@
 - Kept high-risk human review mandatory, AI/community auto-publication disabled, external/private data boundaries fail-closed, and companion-file ownership unchanged.
 - Bumped plugin candidate to `1.0.0-rc.5` and public contract to `1.3.0`; database schema remains `1.0.1` because Future40 does not introduce a schema migration in this candidate.
 - Updated deterministic package/SBOM metadata to bind the exact source commit and Future40 requirement range.
+- Hardened release packaging so the claimed source commit must equal the checked-out Git HEAD, non-`dist` working-tree changes are rejected, and the CycloneDX serial number is deterministic but unique per source commit.
 
 ### Truthful limitations
 
