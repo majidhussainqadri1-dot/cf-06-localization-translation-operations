@@ -13,8 +13,8 @@ final class JobQueue
     public function register(string $type, callable $handler): void
     {
         $type = sanitize_key($type);
-        if ('' === $type) {
-            throw new RuntimeException('Localization job type is invalid.');
+        if ('' === $type || strlen($type) > 80) {
+            throw new RuntimeException('Localization job type is invalid or exceeds the schema bound.');
         }
         $this->handlers[$type] = $handler;
     }
@@ -24,7 +24,7 @@ final class JobQueue
         global $wpdb;
         $type = sanitize_key($type);
         $dedupeKey = trim($dedupeKey);
-        if ('' === $type || '' === $dedupeKey || strlen($dedupeKey) > 191) {
+        if ('' === $type || strlen($type) > 80 || '' === $dedupeKey || strlen($dedupeKey) > 191) {
             throw new RuntimeException('Localization job identity is invalid.');
         }
         $json = wp_json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
