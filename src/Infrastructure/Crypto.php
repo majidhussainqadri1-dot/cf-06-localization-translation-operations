@@ -10,11 +10,12 @@ final class Crypto
 {
     public function available(): bool
     {
-        return null !== $this->activeKey();
+        return function_exists('openssl_encrypt')&&function_exists('openssl_decrypt')&&null !== $this->activeKey();
     }
 
     public function encrypt(string $plaintext, string $purpose): array
     {
+        if(!function_exists('openssl_encrypt')){throw new RuntimeException('Localization encryption runtime is unavailable.');}
         $active = $this->activeKey();
         if (null === $active) {
             throw new RuntimeException('Localization encryption key is unavailable.');
@@ -24,7 +25,7 @@ final class Crypto
         $tag = '';
         $aad = 'slto|' . $purpose . '|' . $keyId;
         $ciphertext = openssl_encrypt($plaintext, 'aes-256-gcm', $key, OPENSSL_RAW_DATA, $iv, $tag, $aad, 16);
-        if (false === $ciphertext) {
+        if (false === $ciphertext || 16 !== strlen($tag)) {
             throw new RuntimeException('Localization payload encryption failed.');
         }
         return array(
@@ -51,13 +52,20 @@ final class Crypto
         if (! hash_equals(hash('sha256', $aad), (string) ($envelope['aad_hash'] ?? ''))) {
             throw new RuntimeException('Localization payload purpose binding failed.');
         }
+        if(!function_exists('openssl_decrypt')){throw new RuntimeException('Localization decryption runtime is unavailable.');}
+        $ciphertext=base64_decode((string)($envelope['ciphertext']??''),true);
+        $nonce=base64_decode((string)($envelope['nonce']??''),true);
+        $tag=base64_decode((string)($envelope['tag']??''),true);
+        if(false===$ciphertext||false===$nonce||false===$tag||12!==strlen($nonce)||16!==strlen($tag)){
+            throw new RuntimeException('Localization payload encryption envelope is malformed.');
+        }
         $plaintext = openssl_decrypt(
-            base64_decode((string) ($envelope['ciphertext'] ?? ''), true) ?: '',
+            $ciphertext,
             'aes-256-gcm',
             $keys[$keyId],
             OPENSSL_RAW_DATA,
-            base64_decode((string) ($envelope['nonce'] ?? ''), true) ?: '',
-            base64_decode((string) ($envelope['tag'] ?? ''), true) ?: '',
+            $nonce,
+            $tag,
             $aad
         );
         if (false === $plaintext) {
