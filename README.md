@@ -48,7 +48,7 @@ bash tools/quality-check.sh
 SOURCE_COMMIT="$(git rev-parse HEAD)" python3 tools/build-release.py
 ```
 
-Local release building is bound to the checked-out Git HEAD and now rejects a dirty working tree; `SOURCE_COMMIT` may be supplied explicitly (as above) and must exactly match HEAD. If it is omitted, the builder resolves the same clean HEAD itself. The fixed ZIP archive epoch is a reproducibility control, not a build/deployment timestamp.
+Runtime encryption requires the PHP OpenSSL extension; this dependency is declared in Composer metadata and exercised by CI. Local release building is bound to the checked-out Git HEAD and now rejects a dirty working tree; `SOURCE_COMMIT` may be supplied explicitly (as above) and must exactly match HEAD. If it is omitted, the builder resolves the same clean HEAD itself. The fixed ZIP archive epoch is a reproducibility control, not a build/deployment timestamp.
 
 The CI matrix additionally performs real WordPress/MySQL activation, schema, index, idempotency, transaction and authorization integration suites across PHP 8.1/8.3 and the pinned declared-minimum/current WordPress versions 6.0.15/7.1.1.
 
