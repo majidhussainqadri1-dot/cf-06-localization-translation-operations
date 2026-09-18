@@ -31,18 +31,36 @@ final class ResourceService
         if(!in_array($risk,array('low','medium','high','critical','private'),true)||!in_array($data,array('C1','C2','C3','C4','C5'),true)){throw new InvalidArgumentException('Invalid resource risk or data class.');}
         $domain=sanitize_key((string)($input['domain']??'platform'))?:'platform';if(strlen($domain)>80){throw new InvalidArgumentException('Resource domain exceeds the canonical storage bound.');}
         $schema=PlaceholderValidator::normalizeSchema($input['placeholders']??array());PlaceholderValidator::assertSource($text,$schema);
+        $context=wp_kses_post((string)($input['context']??''));
+        $description=sanitize_textarea_field((string)($input['description']??''));
+        if(strlen($context)>262144||strlen($description)>65535){throw new InvalidArgumentException('Resource descriptive metadata exceeds canonical storage bounds.');}
+        $markup=is_array($input['markup_policy']??null)?$input['markup_policy']:array();
+        $references=is_array($input['references']??null)?array_slice($input['references'],0,100):array();
+        $translatability=is_array($input['translatability']??null)?$input['translatability']:array();
+        $markupJson=$this->encodeBoundedMetadata($markup,'markup policy');
+        $referencesJson=$this->encodeBoundedMetadata($references,'reference evidence');
+        $translatabilityJson=$this->encodeBoundedMetadata($translatability,'translatability evidence');
+        $hashPayload=wp_json_encode($this->canonicalize(array(
+            'key'=>$key,'locale'=>$locale,'text'=>$text,'context'=>$context,'description'=>$description,
+            'domain'=>$domain,'risk'=>$risk,'data'=>$data,'placeholders'=>$schema,'markup_policy'=>$markup,
+            'references'=>$references,'translatability'=>$translatability,
+        )),JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+        if(!is_string($hashPayload)){throw new InvalidArgumentException('Resource source evidence could not be encoded safely.');}
+        $hash=hash('sha256',$hashPayload);
         $existing=$this->repo->findOne('resources','resource_key',$key);
         if(is_array($existing)&&'retired'===(string)($existing['status']??'')){throw new InvalidArgumentException('A retired translatable resource cannot be reactivated through ordinary registration.');}
-        $hash=hash('sha256',wp_json_encode(array('key'=>$key,'locale'=>$locale,'text'=>$text,'context'=>(string)($input['context']??''),'domain'=>$domain,'risk'=>$risk,'data'=>$data,'placeholders'=>$schema),JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES));
         if(is_array($existing)&&'active'===(string)$existing['status']&&hash_equals((string)$existing['source_hash'],$hash)){return array('changed'=>false,'record'=>$existing);}
+        if(is_array($existing)&&(!array_key_exists('row_version',$input)||(int)$input['row_version']<=0)){throw new InvalidArgumentException('Resource update requires an explicit current row_version.');}
 
-        $result=$this->tx->run(function()use($existing,$key,$locale,$text,$hash,$input,$domain,$risk,$data,$schema):array{
+        $result=$this->tx->run(function()use($existing,$key,$locale,$text,$hash,$input,$domain,$risk,$data,$schema,$context,$description,$markupJson,$referencesJson,$translatabilityJson):array{
             $uuid=is_array($existing)?(string)$existing['uuid']:\Sabri\Localization\Infrastructure\Database::uuid();
             $secureId=null;$stored=$text;
             if(in_array($data,array('C4','C5'),true)||'private'===$risk){$secureId=$this->repo->storeSecurePayload('resource',$uuid,'source_text',$text);$stored='[ENCRYPTED RESTRICTED SOURCE]';}
-            $base=array('resource_key'=>$key,'source_locale'=>$locale,'source_text'=>$stored,'secure_payload_id'=>$secureId,'source_hash'=>$hash,'context'=>wp_kses_post((string)($input['context']??'')),'description'=>sanitize_textarea_field((string)($input['description']??'')),'domain_name'=>$domain,'risk_class'=>$risk,'data_class'=>$data,'placeholders'=>wp_json_encode($schema),'markup_policy'=>wp_json_encode($input['markup_policy']??array()),'references_json'=>wp_json_encode(array_slice(is_array($input['references']??null)?$input['references']:array(),0,100)),'translatability_json'=>wp_json_encode($input['translatability']??array()),'critical'=>RiskPolicy::criticalResource($risk,$domain)?1:0,'status'=>'active','updated_by'=>get_current_user_id());
+            $placeholdersJson=wp_json_encode($schema,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+            if(!is_string($placeholdersJson)){throw new InvalidArgumentException('Resource placeholder evidence could not be encoded safely.');}
+            $base=array('resource_key'=>$key,'source_locale'=>$locale,'source_text'=>$stored,'secure_payload_id'=>$secureId,'source_hash'=>$hash,'context'=>$context,'description'=>$description,'domain_name'=>$domain,'risk_class'=>$risk,'data_class'=>$data,'placeholders'=>$placeholdersJson,'markup_policy'=>$markupJson,'references_json'=>$referencesJson,'translatability_json'=>$translatabilityJson,'critical'=>RiskPolicy::criticalResource($risk,$domain)?1:0,'status'=>'active','updated_by'=>get_current_user_id());
             if(is_array($existing)){
-                $version=(int)$existing['row_version'];$base['source_version']=(int)$existing['source_version']+1;
+                $version=(int)$input['row_version'];$base['source_version']=(int)$existing['source_version']+1;
                 $updated=$this->repo->updateVersioned('resources',$uuid,$version,$base);
                 if(!empty($existing['secure_payload_id'])&&(int)$existing['secure_payload_id']!==(int)$secureId){$this->repo->retireSecurePayload((int)$existing['secure_payload_id']);}
                 $stale=$this->repo->markDependentUnitsStale($uuid,'source_changed');
@@ -87,5 +105,21 @@ final class ResourceService
     {
         if(!empty($resource['secure_payload_id'])){return $this->repo->readSecurePayload((int)$resource['secure_payload_id'],(string)$resource['uuid'],'source_text');}
         return (string)$resource['source_text'];
+    }
+
+    private function encodeBoundedMetadata(array $value,string $label): string
+    {
+        $json=wp_json_encode($this->canonicalize($value),JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+        if(!is_string($json)||strlen($json)>262144){throw new InvalidArgumentException('Resource '.$label.' is invalid or oversized.');}
+        return $json;
+    }
+
+    private function canonicalize(mixed $value): mixed
+    {
+        if(!is_array($value)){return $value;}
+        if(array_is_list($value)){return array_map(fn(mixed $item):mixed=>$this->canonicalize($item),$value);}
+        ksort($value,SORT_STRING);
+        foreach($value as $key=>$item){$value[$key]=$this->canonicalize($item);}
+        return $value;
     }
 }
