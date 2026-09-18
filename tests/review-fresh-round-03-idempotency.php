@@ -9,11 +9,16 @@ $t = new TestHarness();
 $code = (string) file_get_contents($root . '/src/Rest/Routes.php');
 
 $t->test('Business operation failure is the only path that marks idempotency failed', function () use ($code): void {
-    $operation = strpos($code, '$result=$operation();');
-    $catch = strpos($code, 'catch(Throwable $e)');
-    $complete = strpos($code, 'completeIdempotency($actor,$route,$key,$status,$body)');
+    $start = strpos($code, 'private function mutate(');
+    $end = strpos($code, 'private function ok(', $start === false ? 0 : $start);
+    TestHarness::assertTrue(false !== $start && false !== $end && $start < $end);
+    $mutate = substr($code, $start, $end - $start);
+    $operation = strpos($mutate, '$result=$operation();');
+    $catch = strpos($mutate, 'catch(Throwable $e)');
+    $complete = strpos($mutate, 'completeIdempotency($actor,$route,$key,$status,$body)');
     TestHarness::assertTrue(false !== $operation && false !== $catch && false !== $complete);
     TestHarness::assertTrue($operation < $catch && $catch < $complete);
+    TestHarness::assertTrue(substr_count($mutate, 'failIdempotency(') === 1);
 });
 
 $t->test('Idempotency failure persistence cannot mask primary operation exception', function () use ($code): void {
