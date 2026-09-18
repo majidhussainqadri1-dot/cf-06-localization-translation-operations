@@ -120,4 +120,4 @@ The central localization/internationalization constitution is additionally enfor
 
 All Future40 handlers are source-coded but default-disabled and return evidence-preview/validation envelopes only. They do not themselves publish, deploy, contact a provider, replace a native domain owner, or bypass qualified human review. `FutureRoutes` requires privileged authorization; `PlanCompliance` binds activation to Founder change-control, companion parity, staging, rollback and live verification.
 
-Every row above is a source-code requirement. Staging/manual acceptance evidence remains tracked separately and cannot be inferred from this table.
+Every row above is a source-code requirement. The canonical facade additionally enforces global byte/node bounds before all per-capability guards. Staging/manual acceptance evidence remains tracked separately and cannot be inferred from this table; live state requires separate exact deployed-source/DB/migration/runtime parity verification.
