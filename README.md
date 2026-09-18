@@ -39,7 +39,7 @@ The runtime, external machine-translation provider and all Future40 capabilities
 
 ## Canonical boundaries
 
-CF-06 owns localization **operations**, not original domain truth. File 20 owns the global language switcher/shell placement; File 25 owns visual RTL/LTR component implementation; File 26 owns transliteration and multilingual search ranking; CF-04 owns canonical media processing; each native domain owner approves and publishes its own translated content. CF-06 never turns a cache, bundle, translation memory, provider response, AI estimate or community suggestion into authorization or source of truth.
+CF-06 owns localization **operations**, not original domain truth. File 19 owns notification preferences/transport; File 20 owns the global language switcher/shell placement; Files 22/23 own page/dashboard composer authoring and presentation; File 24 owns independent assurance; File 25 owns visual RTL/LTR component implementation; File 26 owns transliteration and multilingual search ranking; CF-04 owns canonical media processing; each native domain owner approves and publishes its own translated content. CF-06 never turns a cache, bundle, translation memory, provider response, AI estimate or community suggestion into authorization or source of truth.
 
 ## Development
 
@@ -50,6 +50,6 @@ SOURCE_COMMIT="$(git rev-parse HEAD)" python3 tools/build-release.py
 
 Local release building is bound to the checked-out Git HEAD and now rejects a dirty working tree; `SOURCE_COMMIT` may be supplied explicitly (as above) and must exactly match HEAD. If it is omitted, the builder resolves the same clean HEAD itself. The fixed ZIP archive epoch is a reproducibility control, not a build/deployment timestamp.
 
-The CI matrix additionally performs a real WordPress/MySQL activation, schema, index, idempotency, transaction and authorization integration suite on PHP 8.1 and PHP 8.3.
+The CI matrix additionally performs real WordPress/MySQL activation, schema, index, idempotency, transaction and authorization integration suites across PHP 8.1/8.3 and the pinned declared-minimum/current WordPress versions 6.0.15/7.1.1.
 
 See `docs/ARCHITECTURE.md`, `docs/REQUIREMENTS-TRACEABILITY.md`, `docs/FUTURE40.md`, `docs/FORTY-ROUND-REVIEW-CORRECTION-LEDGER.md`, `docs/THREAT-MODEL.md`, `docs/STAGING.md` and `docs/KNOWN-LIMITATIONS.md`.
