@@ -27,7 +27,7 @@ final class ExtractionService
         $extractionHash = strtolower(trim((string)($input['extraction_hash'] ?? '')));
         $evidenceRef = sanitize_text_field((string)($input['evidence_ref'] ?? ''));
         $resourceCount = (int)($input['resource_count'] ?? -1);
-        if ('' === $ownerModule || '' === $repositoryRef || strlen($repositoryRef) > 191
+        if ('' === $ownerModule || strlen($ownerModule) > 40 || '' === $repositoryRef || strlen($repositoryRef) > 191
             || 1 !== preg_match('/^[a-f0-9]{7,64}$/D', $sourceCommit)
             || 1 !== preg_match('/^[a-f0-9]{64}$/D', $inventoryHash)
             || 1 !== preg_match('/^[a-f0-9]{64}$/D', $extractionHash)
@@ -40,7 +40,7 @@ final class ExtractionService
             'inventory_hash'=>$inventoryHash,'extraction_hash'=>$extractionHash,'evidence_ref'=>$evidenceRef,
             'resource_count'=>$resourceCount,'environment_name'=>sanitize_key((string)($input['environment_name'] ?? 'staging')),
         );
-        if ('staging' !== $evidence['environment_name'] || true !== apply_filters('slto_verify_extraction_evidence', false, $evidence)) {
+        if (strlen((string)$evidence['environment_name']) > 24 || 'staging' !== $evidence['environment_name'] || true !== apply_filters('slto_verify_extraction_evidence', false, $evidence)) {
             throw new InvalidArgumentException('Extraction evidence could not be independently verified in staging.');
         }
         return $this->tx->run(function() use ($evidence): array {
