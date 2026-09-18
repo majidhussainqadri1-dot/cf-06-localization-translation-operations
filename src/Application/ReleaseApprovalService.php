@@ -27,11 +27,14 @@ final class ReleaseApprovalService
         $stepUp=$this->strictUtcTimestamp($stepUpAt);$stepUpTimestamp=null===$stepUp?false:$stepUp->getTimestamp();
         if(!in_array($role,self::ROLES,true)||''===$evidenceRef||strlen($evidenceRef)>191||1!==preg_match('/^[a-f0-9]{64}$/D',$evidenceHash)||false===$stepUpTimestamp||abs(time()-$stepUpTimestamp)>self::APPROVAL_TTL_SECONDS){throw new InvalidArgumentException('Release approval evidence or recent strict UTC step-up proof is invalid.');}
         $actor=get_current_user_id();if($actor<=0){throw new InvalidArgumentException('Release approver identity is unavailable.');}
-        $existing=$this->repo->list('release_approvals',array('bundle_uuid'=>$bundleUuid,'status'=>'valid'),20,0,'approved_at DESC');
-        foreach($existing as $approval){if(!$this->isFreshApproval($approval)){continue;}if((int)$approval['approver_id']===$actor||(string)$approval['approval_role']===$role){throw new InvalidArgumentException('Fresh release approvals require distinct actors and distinct approval roles.');}}
+        $existing=$this->repo->list('release_approvals',array('bundle_uuid'=>$bundleUuid,'status'=>'valid'),20,0,'approved_at DESC');$reusable=null;
+        foreach($existing as $approval){
+            if($this->isFreshApproval($approval)){if((int)$approval['approver_id']===$actor||(string)$approval['approval_role']===$role){throw new InvalidArgumentException('Fresh release approvals require distinct actors and distinct approval roles.');}continue;}
+            if((string)$approval['approval_role']===$role){$reusable=$approval;}
+        }
         $evidence=array('bundle_uuid'=>$bundleUuid,'approval_role'=>$role,'approver_id'=>$actor,'evidence_ref'=>$evidenceRef,'evidence_hash'=>$evidenceHash,'step_up_at'=>$stepUp->format('Y-m-d H:i:s'));
         if(true!==apply_filters('slto_verify_release_approval_evidence',false,$evidence,$bundle)){throw new InvalidArgumentException('Release approval evidence could not be independently verified.');}
-        return $this->tx->run(function()use($evidence):array{$row=$this->repo->insert('release_approvals',array_merge($evidence,array('status'=>'valid','approved_at'=>Database::now(),'row_version'=>1)));$this->audit->record('bundle',(string)$evidence['bundle_uuid'],'release_approval_recorded','success',array('approval_role'=>$evidence['approval_role'],'approver_id'=>$evidence['approver_id'],'evidence_ref'=>$evidence['evidence_ref'],'evidence_hash'=>$evidence['evidence_hash']));return $row;});
+        return $this->tx->run(function()use($evidence,$reusable):array{$values=array_merge($evidence,array('status'=>'valid','approved_at'=>Database::now()));$row=is_array($reusable)?$this->repo->updateVersioned('release_approvals',(string)$reusable['uuid'],(int)$reusable['row_version'],$values):$this->repo->insert('release_approvals',array_merge($values,array('row_version'=>1)));$this->audit->record('bundle',(string)$evidence['bundle_uuid'],'release_approval_recorded','success',array('approval_role'=>$evidence['approval_role'],'approver_id'=>$evidence['approver_id'],'evidence_ref'=>$evidence['evidence_ref'],'evidence_hash'=>$evidence['evidence_hash'],'renewed'=>is_array($reusable)));return $row;});
     }
 
     public function assertDualApproval(string $bundleUuid): void
