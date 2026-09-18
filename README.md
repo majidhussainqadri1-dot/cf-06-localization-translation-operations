@@ -48,7 +48,7 @@ bash tools/quality-check.sh
 SOURCE_COMMIT="$(git rev-parse HEAD)" python3 tools/build-release.py
 ```
 
-Local release building requires an explicit exact 40-character `SOURCE_COMMIT`; the command above binds it to the checked-out Git HEAD. The fixed ZIP archive epoch is a reproducibility control, not a build/deployment timestamp.
+Local release building is bound to the checked-out Git HEAD and now rejects a dirty working tree; `SOURCE_COMMIT` may be supplied explicitly (as above) and must exactly match HEAD. If it is omitted, the builder resolves the same clean HEAD itself. The fixed ZIP archive epoch is a reproducibility control, not a build/deployment timestamp.
 
 The CI matrix additionally performs a real WordPress/MySQL activation, schema, index, idempotency, transaction and authorization integration suite on PHP 8.1 and PHP 8.3.
 
