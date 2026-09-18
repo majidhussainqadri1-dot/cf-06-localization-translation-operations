@@ -41,15 +41,21 @@ final class ProviderService
         if(strlen($contractVersion)>40||1!==preg_match('/^\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?$/D',$contractVersion)){throw new InvalidArgumentException('Provider contract version is invalid.');}
         $region=sanitize_text_field((string)($input['region']??''));
         if(''!==$region&&1!==preg_match('/^[A-Za-z0-9-]{2,32}$/D',$region)){throw new InvalidArgumentException('Provider region code is invalid.');}
+        $retention=0;
+        if(array_key_exists('retention_days',$input)){
+            $validatedRetention=filter_var($input['retention_days'],FILTER_VALIDATE_INT,['options'=>['min_range'=>0,'max_range'=>30]]);
+            if(false===$validatedRetention){throw new InvalidArgumentException('Provider retention_days must be an explicit integer from 0 through 30.');}
+            $retention=(int)$validatedRetention;
+        }
         $rawSubprocessors=is_array($input['subprocessors']??null)?$input['subprocessors']:[];
         if(count($rawSubprocessors)>100){throw new InvalidArgumentException('Provider subprocessor inventory exceeds the bounded limit.');}
         $subprocessors=[];foreach($rawSubprocessors as $sub){$sub=sanitize_text_field((string)$sub);if(''!==$sub){if(strlen($sub)>191){throw new InvalidArgumentException('Provider subprocessor identifier exceeds the bounded limit.');}$subprocessors[]=$sub;}}
         $subprocessors=array_values(array_unique($subprocessors));
         $hostsJson=wp_json_encode($hosts);$subsJson=wp_json_encode($subprocessors);if(!is_string($hostsJson)||!is_string($subsJson)||strlen($subsJson)>65535){throw new InvalidArgumentException('Provider metadata could not be encoded within governed bounds.');}
-        return $this->tx->run(function() use ($input,$key,$type,$url,$hostsJson,$subsJson,$credentialRef,$contractVersion,$region): array {
+        return $this->tx->run(function() use ($input,$key,$type,$url,$hostsJson,$subsJson,$credentialRef,$contractVersion,$region,$retention): array {
             $existing=$this->repo->findOne('providers','provider_key',$key);
             $data=array('provider_key'=>$key,'provider_type'=>$type,'base_url'=>$url?:null,'allowed_hosts'=>$hostsJson,
-                'region_code'=>$region?:null,'retention_days'=>max(0,min(30,(int)($input['retention_days']??0))),
+                'region_code'=>$region?:null,'retention_days'=>$retention,
                 'training_allowed'=>0,'subprocessors_json'=>$subsJson,'credential_reference'=>$credentialRef?:null,'contract_version'=>$contractVersion);
             if(is_array($existing)&&'active'===(string)$existing['status']){
                 foreach($data as $field=>$value){
