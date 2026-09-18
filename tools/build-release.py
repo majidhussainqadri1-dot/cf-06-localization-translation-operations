@@ -8,7 +8,9 @@ import os
 import pathlib
 import re
 import shutil
+import subprocess
 import sys
+import uuid
 import zipfile
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -55,9 +57,38 @@ def write_json(path: pathlib.Path, payload: object) -> None:
 
 
 def validated_source_commit() -> str:
-    if re.fullmatch(r"[0-9a-f]{40}", SOURCE_COMMIT) is None:
+    try:
+        head = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True, stderr=subprocess.STDOUT
+        ).strip().lower()
+    except (OSError, subprocess.CalledProcessError) as exc:
+        raise RuntimeError("Git HEAD is required to bind the candidate to exact repository source") from exc
+    if re.fullmatch(r"[0-9a-f]{40}", head) is None:
+        raise RuntimeError("Repository HEAD is not an exact lowercase 40-character Git SHA")
+
+    requested = SOURCE_COMMIT or head
+    if re.fullmatch(r"[0-9a-f]{40}", requested) is None:
         raise RuntimeError("SOURCE_COMMIT must bind the candidate to an exact lowercase 40-character Git SHA")
-    return SOURCE_COMMIT
+    if requested != head:
+        raise RuntimeError("SOURCE_COMMIT does not match the checked-out Git HEAD")
+
+    try:
+        status = subprocess.check_output(
+            ["git", "status", "--porcelain=v1", "--untracked-files=all"],
+            cwd=ROOT, text=True, stderr=subprocess.STDOUT
+        ).splitlines()
+    except (OSError, subprocess.CalledProcessError) as exc:
+        raise RuntimeError("Repository cleanliness could not be verified") from exc
+
+    dirty = []
+    for line in status:
+        path = line[3:] if len(line) > 3 else ""
+        if path == "dist" or path.startswith("dist/"):
+            continue
+        dirty.append(line)
+    if dirty:
+        raise RuntimeError("Release packaging requires a clean exact-commit working tree")
+    return requested
 
 
 def build() -> pathlib.Path:
@@ -99,7 +130,7 @@ def build() -> pathlib.Path:
 
     sbom = {
         "bomFormat": "CycloneDX", "specVersion": "1.5",
-        "serialNumber": "urn:uuid:cf060000-0000-4000-8000-000000000001", "version": 1,
+        "serialNumber": "urn:uuid:" + str(uuid.uuid5(uuid.NAMESPACE_URL, "cf06:" + source_commit)), "version": 1,
         "metadata": {
             "component": {
                 "type": "application", "name": "sabri-localization-translation-operations", "version": VERSION,
