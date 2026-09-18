@@ -684,28 +684,72 @@ final class Activator
         $required = array(
             'locales'=>array('locale_tag','fallback_tag','direction','status','row_version'),
             'resources'=>array('resource_key','source_locale','source_version','source_hash','risk_class','data_class','status','row_version'),
-            'projects'=>array('source_snapshot_hash','source_locale','target_locales','risk_ceiling','status','row_version'),
-            'assignments'=>array('unit_uuid','assignee_id','assignment_role','conflict_status','status','expires_at','row_version'),
-            'units'=>array('resource_uuid','target_locale','source_version','source_hash','status','provider_job_uuid','released_bundle_uuid','row_version'),
+            'secure_payloads'=>array('owner_type','owner_uuid','purpose','key_id','algorithm','ciphertext','aad_hash','payload_hash','deleted_at'),
+            'projects'=>array('name','description','source_snapshot_hash','source_locale','target_locales','scope_json','risk_ceiling','provider_key','release_target','status','row_version'),
+            'project_resources'=>array('project_uuid','resource_uuid','source_version','source_hash'),
+            'assignments'=>array('unit_uuid','assignee_id','assignment_role','locale_tag','qualification_json','conflict_status','status','expires_at','row_version'),
+            'units'=>array('project_uuid','resource_uuid','target_locale','source_version','source_hash','status','provider_job_uuid','released_bundle_uuid','row_version'),
+            'comments'=>array('unit_uuid','author_id','audience','comment_text','status','row_version'),
             'terminology'=>array('concept_id','target_locale','approved_term','reviewer_id','status','row_version'),
             'style_guides'=>array('locale_tag','domain_name','approved_by','status','row_version'),
             'memory'=>array('source_hash','context_hash','provenance_json','license_code','status'),
-            'providers'=>array('provider_key','base_url','allowed_hosts','region_code','contract_version','status','row_version'),
-            'vendor_jobs'=>array('provider_key','outbound_hash','status','deletion_evidence','row_version'),
+            'providers'=>array('provider_key','provider_type','base_url','allowed_hosts','region_code','credential_reference','contract_version','status','row_version'),
+            'vendor_jobs'=>array('provider_key','model_version','unit_uuids','outbound_hash','provider_reference','status','deletion_evidence','row_version'),
             'bundles'=>array('locale_tag','bundle_version','payload_json','source_list_json','bundle_hash','signature','status','previous_bundle_uuid','row_version'),
+            'qa_results'=>array('target_type','target_uuid','rule_code','result','severity','reviewer_id'),
             'feedback'=>array('locale_tag','route_path','category','severity','status','row_version'),
-            'content_links'=>array('owner_module','owner_object_id','target_locale','source_hash','publication_status','row_version'),
-            'idempotency'=>array('actor_id','route_key','idempotency_key','request_hash','status','expires_at'),
-            'integration_evidence'=>array('integration_key','manifest_hash','evidence_hash','environment_name','expires_at'),
-            'extraction_evidence'=>array('owner_module','source_commit','inventory_hash','extraction_hash'),
-            'qa_evidence'=>array('environment_name','build_sha','test_id','artifact_hash'),
-            'release_approvals'=>array('bundle_uuid','approval_role','approver_id','evidence_hash','step_up_at'),
+            'content_links'=>array('owner_module','owner_object_id','target_locale','source_version','source_hash','publication_status','owner_approval_ref','row_version'),
+            'integration_evidence'=>array('integration_key','manifest_hash','evidence_hash','environment_name','expires_at','row_version'),
+            'extraction_evidence'=>array('owner_module','source_commit','inventory_hash','extraction_hash','status','row_version'),
+            'qa_evidence'=>array('environment_name','plugin_version','build_sha','test_id','artifact_hash','result','row_version'),
+            'release_approvals'=>array('bundle_uuid','approval_role','approver_id','evidence_hash','step_up_at','status','row_version'),
+            'audit'=>array('trace_id','object_type','object_key','action_name','actor_id','result','previous_hash','event_hash'),
+            'outbox'=>array('event_name','aggregate_type','aggregate_uuid','contract_version','payload_hash','status','lease_until','attempts','available_at'),
+            'jobs'=>array('job_type','dedupe_key','payload_json','status','attempts','max_attempts','available_at','lease_until'),
+            'idempotency'=>array('actor_id','route_key','idempotency_key','request_hash','response_code','status','expires_at'),
+            'rate_limits'=>array('bucket_key','window_start','request_count','updated_at'),
+            'migrations'=>array('migration_key','migration_version','status','checkpoint_json','dry_run_report','updated_at'),
         );
         foreach ($required as $entity => $columns) {
             $table = Database::table($entity);
             $found = $wpdb->get_col("SHOW COLUMNS FROM {$table}", 0);
             if (! is_array($found) || '' !== (string) $wpdb->last_error || array_diff($columns, $found)) {
                 throw new \RuntimeException('CF-06 required schema columns are unavailable for ' . $entity . '.');
+            }
+        }
+
+        $criticalIndexes = array(
+            'locales'=>array('locale_tag'=>array('locale_tag')),
+            'resources'=>array('resource_key'=>array('resource_key')),
+            'project_resources'=>array('project_resource'=>array('project_uuid','resource_uuid')),
+            'units'=>array('resource_locale_project'=>array('project_uuid','resource_uuid','target_locale')),
+            'assignments'=>array('unit_role'=>array('unit_uuid','assignment_role')),
+            'terminology'=>array('concept_locale'=>array('concept_id','target_locale','term_version')),
+            'style_guides'=>array('locale_domain_version'=>array('locale_tag','domain_name','guide_version')),
+            'providers'=>array('provider_key'=>array('provider_key')),
+            'bundles'=>array('locale_version'=>array('locale_tag','bundle_version')),
+            'content_links'=>array('owner_locale'=>array('owner_module','owner_object_id','target_locale')),
+            'integration_evidence'=>array('integration_key'=>array('integration_key')),
+            'extraction_evidence'=>array('module_commit_hash'=>array('owner_module','source_commit','extraction_hash')),
+            'release_approvals'=>array('bundle_role'=>array('bundle_uuid','approval_role')),
+            'jobs'=>array('job_dedupe'=>array('job_type','dedupe_key')),
+            'idempotency'=>array('actor_route_key'=>array('actor_id','route_key','idempotency_key')),
+            'rate_limits'=>array('bucket_window'=>array('bucket_key','window_start')),
+            'migrations'=>array('migration_key'=>array('migration_key')),
+        );
+        foreach ($criticalIndexes as $entity => $indexes) {
+            $table = Database::table($entity);
+            foreach ($indexes as $indexName => $expectedColumns) {
+                $rows = $wpdb->get_results($wpdb->prepare("SHOW INDEX FROM {$table} WHERE Key_name=%s", $indexName), ARRAY_A);
+                if (! is_array($rows) || '' !== (string) $wpdb->last_error) {
+                    throw new \RuntimeException('CF-06 critical schema index inventory failed for ' . $entity . '.');
+                }
+                usort($rows, static fn(array $a,array $b): int => (int)($a['Seq_in_index']??0) <=> (int)($b['Seq_in_index']??0));
+                $actualColumns = array_values(array_map(static fn(array $row): string => (string)($row['Column_name']??''), $rows));
+                $nonUnique = array_values(array_unique(array_map(static fn(array $row): int => (int)($row['Non_unique']??1), $rows)));
+                if ($actualColumns !== $expectedColumns || $nonUnique !== array(0)) {
+                    throw new \RuntimeException('CF-06 required unique schema index is unavailable or drifted for ' . $entity . ':' . $indexName . '.');
+                }
             }
         }
     }
