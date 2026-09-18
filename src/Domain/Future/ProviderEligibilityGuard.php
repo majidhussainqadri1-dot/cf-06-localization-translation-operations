@@ -16,6 +16,7 @@ final class ProviderEligibilityGuard
             throw new InvalidArgumentException('providers must be an array.');
         }
         $eligible = [];
+        $seenIds = [];
         foreach ($providers as $provider) {
             if (! is_array($provider)
                 || true !== ($provider['approved'] ?? false)
@@ -29,9 +30,10 @@ final class ProviderEligibilityGuard
             $id = trim((string)($provider['id'] ?? ''));
             $quality = $provider['quality'] ?? null;
             $retention = filter_var($provider['retention_days'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0, 'max_range' => 30]]);
-            if ('' === $id || 1 !== preg_match('/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$/D', $id) || ! is_numeric($quality) || false === $retention) {
+            if ('' === $id || 1 !== preg_match('/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$/D', $id) || isset($seenIds[$id]) || ! is_numeric($quality) || false === $retention) {
                 continue;
             }
+            $seenIds[$id]=true;
             $quality = (float)$quality;
             if ($quality < 0 || $quality > 100) {
                 continue;
