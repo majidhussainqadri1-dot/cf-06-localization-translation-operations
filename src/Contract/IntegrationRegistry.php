@@ -14,11 +14,15 @@ final class IntegrationRegistry
     {
         return array(
             'file00_membership',
+            'file19_notifications',
             'file20_shell',
+            'file22_composer',
+            'file23_dashboard',
             'file24_assurance',
             'file25_visual',
             'file26_search',
             'domain_contracts',
+            'unicode_cldr_icu',
         );
     }
 
