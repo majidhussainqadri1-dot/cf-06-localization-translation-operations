@@ -20,7 +20,7 @@ $t->test('Existing resource updates require explicit optimistic lock and canonic
    "'references'=>\$references",
    "'translatability'=>\$translatability",
  ] as $n){TestHarness::assertTrue(str_contains($resource,$n),$n);}
- TestHarness::assertTrue(str_contains($resource,"$version=(int)$input['row_version']"));
+ TestHarness::assertTrue(str_contains($resource,"\$version=(int)\$input['row_version']"));
 });
 
 $t->test('Published content links are current resource-unit relationships and updates are versioned',function()use($content):void{
