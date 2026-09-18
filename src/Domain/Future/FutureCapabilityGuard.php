@@ -31,6 +31,7 @@ final class FutureCapabilityGuard
             'CF06-FUT-033' => self::providerRouter($input),
             'CF06-FUT-034' => self::providerBenchmark($input),
             'CF06-FUT-035' => self::residency($input),
+            'CF06-FUT-037' => self::debtForecast($input),
             default => $input,
         };
     }
@@ -127,6 +128,7 @@ final class FutureCapabilityGuard
         $resources = $input['resources'] ?? null;
         if (! is_array($resources)) { throw new InvalidArgumentException('resources must be an array.'); }
         $eligible = [];
+        $keys = [];
         foreach ($resources as $row) {
             if (! is_array($row)) { continue; }
             $dataClass = strtoupper((string)($row['data_class'] ?? ''));
@@ -137,6 +139,11 @@ final class FutureCapabilityGuard
             $current = ! array_key_exists('current', $row) || true === $row['current'];
             $stale = true === ($row['stale'] ?? false);
             if ('C1' === $dataClass && 'low' === $risk && $public && $approved && $current && ! $stale && ! RiskPolicy::requiresDomainReview($risk, $domain)) {
+                $key=trim((string)($row['key']??''));
+                if(1!==preg_match('/^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$/D',$key)||isset($keys[$key])){
+                    throw new InvalidArgumentException('Offline locale pack contains an invalid or duplicated resource key.');
+                }
+                $keys[$key]=true;
                 $eligible[] = $row;
             }
         }
@@ -218,6 +225,21 @@ final class FutureCapabilityGuard
         }
         $target = strtoupper(trim((string)($input['target_region'] ?? '')));
         if (1 !== preg_match('/^[A-Z0-9-]{2,16}$/D', $target)) { throw new InvalidArgumentException('target_region is invalid.'); }
+        return $input;
+    }
+
+    private static function debtForecast(array $input): array
+    {
+        $backlog=filter_var($input['backlog_units']??null,FILTER_VALIDATE_INT,['options'=>['min_range'=>0,'max_range'=>10000000]]);
+        $days=filter_var($input['forecast_days']??30,FILTER_VALIDATE_INT,['options'=>['min_range'=>1,'max_range'=>3650]]);
+        foreach(['daily_new_units','daily_review_capacity'] as $field){
+            if(!array_key_exists($field,$input)||!is_numeric($input[$field])){throw new InvalidArgumentException($field . ' must be a bounded numeric value.');}
+            $value=(float)$input[$field];
+            if(!is_finite($value)||$value<0||$value>1000000){throw new InvalidArgumentException($field . ' must be between 0 and 1000000.');}
+            $input[$field]=$value;
+        }
+        if(false===$backlog||false===$days){throw new InvalidArgumentException('Translation-debt forecast inputs exceed governed bounds.');}
+        $input['backlog_units']=$backlog;$input['forecast_days']=$days;
         return $input;
     }
 
