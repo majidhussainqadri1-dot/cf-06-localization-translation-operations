@@ -14,7 +14,7 @@ Production-oriented **source candidate** for the conditional localization operat
 | Live-Deployed | No |
 | Operational | No |
 
-The runtime, external machine-translation provider and all Future40 capabilities are **disabled by default**. Activation remains fail-closed until Founder approval, cross-file contracts, encryption/signing keys, qualified linguistic staffing, provider/privacy review, staging, rollback and acceptance evidence exist.
+The runtime, external machine-translation provider and all Future40 capabilities are **disabled by default**. Staging runtime enablement is fail-closed on Founder approval plus structural/security/integration/staffing prerequisites so real acceptance journeys can run; it does **not** claim Staging-Accepted. Production activation additionally requires the full approved environment-acceptance evidence. Future40 activation remains a separate governed change-control path.
 
 ## Implemented scope
 
