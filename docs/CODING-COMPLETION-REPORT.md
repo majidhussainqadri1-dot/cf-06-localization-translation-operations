@@ -28,9 +28,9 @@ An accepted exact commit must pass:
 - all current behavioral/adversarial unit tests, including ICU, bidi, MT-privacy, bundle-freshness and Future40 guards;
 - architecture/contract, ownership, security/privacy, lifecycle/resilience and release/acceptance suites;
 - the existing 40 post-correction guards;
-- Composer validation and all PHP syntax checks;
+- Composer validation (including the mandatory OpenSSL extension contract) and all PHP syntax checks;
 - secret-pattern and expanded requirements-traceability guards including `CF06-FUT-001`…`040`;
-- WordPress/MySQL integration on PHP 8.1 and PHP 8.3;
+- WordPress/MySQL integration on PHP 8.1 and PHP 8.3 across the pinned declared-minimum/current WordPress matrix;
 - deterministic package rebuild parity, ZIP CRC, manifest/SBOM and source/package parity;
 - clean-working-tree verification with the claimed source commit equal to the checked-out Git HEAD.
 
