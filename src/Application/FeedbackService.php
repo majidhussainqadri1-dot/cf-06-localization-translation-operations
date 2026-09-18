@@ -31,7 +31,7 @@ final class FeedbackService
         $suggestion=Redactor::redact(sanitize_textarea_field((string)($input['suggestion']??'')))['text'];
         if(''===trim($suggestion)||strlen($suggestion)>10000){throw new InvalidArgumentException('Feedback is empty or exceeds the bounded limit.');}
         $route=trim((string)($input['route']??''));
-        if(strlen($route)>1000||(''!==$route&&(!str_starts_with($route,'/')||str_contains($route,'://')||str_contains($route,"\0")))){throw new InvalidArgumentException('Feedback route must be a bounded same-origin relative path.');}
+        if(strlen($route)>255||(''!==$route&&(!str_starts_with($route,'/')||str_contains($route,'://')||str_contains($route,"\0")))){throw new InvalidArgumentException('Feedback route must be a bounded same-origin relative path.');}
         $resourceKey=trim((string)($input['resource_key']??''));
         if(strlen($resourceKey)>191){throw new InvalidArgumentException('Feedback resource key exceeds the bounded limit.');}
         if(''===$resourceKey&&''===$route){throw new InvalidArgumentException('Feedback must identify a resource key or route.');}
