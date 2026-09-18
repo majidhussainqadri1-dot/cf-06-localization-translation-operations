@@ -30,12 +30,12 @@ final class ProviderService
         }
         $hosts=array_values(array_unique($hosts));sort($hosts,SORT_STRING);if(count($hosts)>100){throw new InvalidArgumentException('Provider host allowlist exceeds the bounded limit.');}
         if(''===$key||strlen($key)>80||''===$type||strlen($type)>40){throw new InvalidArgumentException('Provider identity is required and must remain bounded.');}
-        if(''!==$url){UrlGuard::assertPublicHttps($url,$hosts);}
+        if(strlen($url)>255){throw new InvalidArgumentException('Provider base URL exceeds the canonical storage bound.');}if(''!==$url){UrlGuard::assertPublicHttps($url,$hosts);}
         if(!empty($input['training_allowed'])){throw new InvalidArgumentException('Provider training is denied by default.');}
         $credentialRef=sanitize_text_field((string)($input['credential_reference']??''));
         if(''!==$credentialRef&&1!==preg_match('/^env:[A-Z][A-Z0-9_]{2,127}$/D',$credentialRef)){throw new InvalidArgumentException('Provider credentials must use a bounded environment reference.');}
         $contractVersion=sanitize_text_field((string)($input['contract_version']??''));
-        if(1!==preg_match('/^\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?$/D',$contractVersion)){throw new InvalidArgumentException('Provider contract version is invalid.');}
+        if(strlen($contractVersion)>40||1!==preg_match('/^\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?$/D',$contractVersion)){throw new InvalidArgumentException('Provider contract version is invalid.');}
         $region=sanitize_text_field((string)($input['region']??''));
         if(''!==$region&&1!==preg_match('/^[A-Za-z0-9-]{2,32}$/D',$region)){throw new InvalidArgumentException('Provider region code is invalid.');}
         $subprocessors=[];foreach(array_slice(is_array($input['subprocessors']??null)?$input['subprocessors']:[],0,100) as $sub){$sub=sanitize_text_field((string)$sub);if(''!==$sub){if(strlen($sub)>191){throw new InvalidArgumentException('Provider subprocessor identifier exceeds the bounded limit.');}$subprocessors[]=$sub;}}
