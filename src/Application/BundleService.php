@@ -17,6 +17,7 @@ use Sabri\Localization\Infrastructure\Transaction;
 
 final class BundleService
 {
+    private const AUTOMATED_QA = array('bundle_nonempty','critical_coverage','unique_keys');
     private const HUMAN_QA = array('in_context_qa','accessibility','rtl_ltr','links','browser','performance','security');
 
     public function __construct(
@@ -63,8 +64,12 @@ final class BundleService
     public function transition(string $uuid,string $to,int $version,string $reason=''): array
     {
         $bundle=$this->repo->find('bundles',$uuid)??throw new InvalidArgumentException('Locale bundle not found.');$reason=sanitize_textarea_field($reason);if(strlen($reason)>1000){throw new InvalidArgumentException('Bundle transition reason exceeds the bounded limit.');}if(in_array($to,array('active','rolled_back','superseded','invalidated'),true)){throw new InvalidArgumentException('Bundle activation, invalidation and rollback require dedicated controlled paths.');}StateMachine::assert('bundle',(string)$bundle['status'],$to);if(in_array($to,array('staged','canary'),true)&&empty($bundle['signature'])){throw new InvalidArgumentException('Signed locale bundle is required for release.');}
-        $latest=$this->latestQaResults($uuid);if('automated_qa'===$to&&(empty($latest)||in_array('fail',array_column($latest,'result'),true))){throw new InvalidArgumentException('Current automated bundle QA evidence is incomplete or failed.');}
+        $latest=$this->latestQaResults($uuid);
+        if('automated_qa'===$to){$this->assertCurrentAutomatedQa($latest);}
         if('approved'===$to){$this->assertCurrentHumanQa($latest);}
+        if(in_array($to,array('staged','canary'),true)){
+            $sources=$this->validatedSourceList($bundle);$this->assertSourcesCurrent($sources);$this->integrations->assertReady();
+        }
         return $this->tx->run(function()use($bundle,$uuid,$to,$version,$reason):array{$changes=array('status'=>$to);if('approved'===$to){$changes['approved_by']=get_current_user_id();}$updated=$this->repo->updateVersioned('bundles',$uuid,$version,$changes);$this->audit->record('bundle',$uuid,'bundle_transition','success',array('from'=>$bundle['status'],'to'=>$to,'reason'=>$reason));return $updated;});
     }
 
@@ -107,6 +112,11 @@ final class BundleService
     private function latestQaResults(string $uuid): array
     {
         $rows=$this->repo->list('qa_results',array('target_type'=>'bundle','target_uuid'=>$uuid),500,0,'id DESC');$latest=[];foreach($rows as $row){$rule=(string)($row['rule_code']??'');if(''!==$rule&&!isset($latest[$rule])){$latest[$rule]=$row;}}return $latest;
+    }
+
+    private function assertCurrentAutomatedQa(array $latest): void
+    {
+        foreach(self::AUTOMATED_QA as $rule){if(!isset($latest[$rule])||'pass'!==(string)$latest[$rule]['result']){throw new InvalidArgumentException('Current automated bundle QA evidence is missing or failed: '.$rule);}}
     }
 
     private function assertCurrentHumanQa(array $latest): void
