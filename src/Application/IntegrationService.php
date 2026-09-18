@@ -180,8 +180,17 @@ final class IntegrationService
     private function dateOrNull(mixed $value): ?string
     {
         if (null === $value || '' === $value) { return null; }
-        $timestamp = strtotime((string)$value);
-        if (false === $timestamp) { throw new InvalidArgumentException('Integration evidence expiry is invalid.'); }
-        return gmdate('Y-m-d H:i:s', $timestamp);
+        $raw=trim((string)$value);
+        $formats=array('!Y-m-d\\TH:i:s\\Z','!Y-m-d H:i:s');
+        foreach($formats as $format){
+            $date=\DateTimeImmutable::createFromFormat($format,$raw,new \DateTimeZone('UTC'));
+            $errors=\DateTimeImmutable::getLastErrors();
+            $validErrors=false===$errors||((int)($errors['warning_count']??0)===0&&(int)($errors['error_count']??0)===0);
+            if($date instanceof \DateTimeImmutable&&$validErrors){
+                $canonical='!Y-m-d\\TH:i:s\\Z'===$format?$date->format('Y-m-d\\TH:i:s\\Z'):$date->format('Y-m-d H:i:s');
+                if(hash_equals($raw,$canonical)){return $date->format('Y-m-d H:i:s');}
+            }
+        }
+        throw new InvalidArgumentException('Integration evidence expiry must be an exact UTC timestamp.');
     }
 }
