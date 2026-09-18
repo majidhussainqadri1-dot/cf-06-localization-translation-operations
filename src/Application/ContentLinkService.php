@@ -46,6 +46,7 @@ final class ContentLinkService
         $approvalRef=sanitize_text_field((string)($input['owner_approval_ref']??''));if(strlen($approvalRef)>191){throw new InvalidArgumentException('Content owner approval reference exceeds the canonical storage bound.');}
         if('published'===$status){
             if(''===$approvalRef||!is_array($resource)||'active'!==(string)$resource['status']||!is_array($unit)
+                ||(string)$resource['source_locale']!==$source
                 ||!in_array((string)$unit['status'],['approved','released'],true)
                 ||(string)$unit['resource_uuid']!==(string)$resource['uuid']
                 ||(string)$unit['target_locale']!==$target
