@@ -45,6 +45,15 @@ final class QaEvidenceService
         if ('pass' === $result && ! hash_equals($expectedHash, $actualHash)) {
             throw new InvalidArgumentException('QA evidence cannot pass when expected and actual hashes differ.');
         }
+        $verification=array(
+            'target_type'=>$targetType,'target_uuid'=>$targetUuid,'environment_name'=>$environmentName,
+            'plugin_version'=>$pluginVersion,'build_sha'=>$buildSha,'test_id'=>$testId,'result'=>$result,
+            'expected_hash'=>$expectedHash,'actual_hash'=>$actualHash,'artifact_ref'=>$artifactRef,
+            'artifact_hash'=>$artifactHash,'reviewer_id'=>$reviewerId,
+        );
+        if(true!==apply_filters('slto_verify_qa_evidence',false,$verification)){
+            throw new InvalidArgumentException('QA evidence could not be independently verified.');
+        }
         return $this->tx->run(function() use ($input, $environmentName, $pluginVersion, $buildSha, $testId, $result, $expectedHash, $actualHash, $artifactRef, $artifactHash, $targetType, $targetUuid, $reviewerId): array {
             $row = $this->repo->insert('qa_evidence', array(
                 'target_type'=>$targetType,
