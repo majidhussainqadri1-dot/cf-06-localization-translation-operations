@@ -67,7 +67,7 @@ final class PrivacyService
         $hold=apply_filters('slto_privacy_erasure_hold',null,$userId,$payload);
         if(true===$hold){$this->audit->record('privacy',(string)$userId,'privacy_erasure_retained','success',['hold'=>true],'privacy');return;}
         $salt=wp_salt('auth');if(''===$salt){throw new RuntimeException('Privacy pseudonymization secret is unavailable.');}
-        $pseudonym=(int)hexdec(substr(hash_hmac('sha256',(string)$userId,$salt),0,15));
+        $pseudonym=$this->pseudonymId($userId,$salt);
         $this->tx->run(function()use($wpdb,$userId,$pseudonym):void{
             $now=Database::now();
             $run=function(string $sql,array $params)use($wpdb):void{
@@ -112,5 +112,18 @@ final class PrivacyService
                 throw new RuntimeException('Privacy erasure job payload could not be minimized after completion.');
             }
         }
+    }
+    private function pseudonymId(int $userId,string $salt): int
+    {
+        // Keep operational pseudonyms in a deterministic high-ID namespace and
+        // refuse any collision with a real WordPress account.
+        $base=4_611_686_018_427_387_904;
+        $span=1_152_921_504_606_846_975;
+        for($counter=0;$counter<32;++$counter){
+            $raw=(int)hexdec(substr(hash_hmac('sha256',$userId.'|'.$counter,$salt),0,15));
+            $candidate=$base+($raw%$span);
+            if($candidate!==$userId&&!get_userdata($candidate)){return $candidate;}
+        }
+        throw new RuntimeException('Privacy pseudonymization could not allocate a collision-free actor identity.');
     }
 }
