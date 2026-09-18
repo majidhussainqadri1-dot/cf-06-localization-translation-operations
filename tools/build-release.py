@@ -147,6 +147,7 @@ def build() -> pathlib.Path:
         "components": [
             {"type": "framework", "name": "WordPress", "version": ">=6.0"},
             {"type": "platform", "name": "PHP", "version": ">=8.1"},
+            {"type": "library", "name": "ext-openssl", "version": "required"},
         ],
     }
     sbom_path = DIST / "SBOM.cdx.json"
