@@ -102,8 +102,8 @@ final class IntegrationService
     {
         $row = $this->repo->find('integration_evidence', $uuid) ?? throw new InvalidArgumentException('Integration acceptance evidence not found.');
         $reason = sanitize_textarea_field($reason);
-        if ('' === $reason) {
-            throw new InvalidArgumentException('Integration revocation reason is required.');
+        if ('' === $reason || strlen($reason) > 2000) {
+            throw new InvalidArgumentException('A bounded integration revocation reason is required.');
         }
         return $this->tx->run(function() use ($row, $version, $reason): array {
             $updated = $this->repo->updateVersioned('integration_evidence', (string)$row['uuid'], $version, array('status'=>'revoked'));
@@ -129,6 +129,21 @@ final class IntegrationService
                 && (empty($row['expires_at']) || strtotime((string)$row['expires_at']) > time())
                 && 1 === preg_match('/^[a-f0-9]{64}$/D', (string)$row['manifest_hash'])
                 && 1 === preg_match('/^[a-f0-9]{64}$/D', (string)$row['evidence_hash']);
+            if ($valid) {
+                $evidence = array(
+                    'integration_key'=>$key,
+                    'storage_key'=>(string)$row['integration_key'],
+                    'contract_version'=>(string)$row['contract_version'],
+                    'manifest_hash'=>(string)$row['manifest_hash'],
+                    'evidence_hash'=>(string)$row['evidence_hash'],
+                    'evidence_ref'=>(string)$row['evidence_ref'],
+                    'environment_name'=>(string)$row['environment_name'],
+                    'approved_by'=>(int)$row['approved_by'],
+                    'approved_at'=>(string)$row['approved_at'],
+                    'expires_at'=>$row['expires_at']??null,
+                );
+                $valid = true === apply_filters('slto_verify_integration_acceptance_evidence', false, $evidence);
+            }
             $result[$key] = $valid;
         }
         return $result;
