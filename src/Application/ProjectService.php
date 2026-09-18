@@ -58,13 +58,13 @@ final class ProjectService
         }
         $targetsJson=wp_json_encode($targets);$scopeJson=wp_json_encode(['resource_count'=>count($resources),'resource_keys'=>array_column($resources,'resource_key')]);
         if(!is_string($targetsJson)||!is_string($scopeJson)){throw new RuntimeException('Project scope could not be encoded.');}
-        return $this->tx->run(function()use($input,$name,$sourceLocale,$targets,$targetsJson,$scopeJson,$resources,$snapshotHash,$riskCeiling):array{
+        return $this->tx->run(function()use($input,$name,$description,$releaseTarget,$projectProvider,$sourceLocale,$targets,$targetsJson,$scopeJson,$resources,$snapshotHash,$riskCeiling):array{
             $project=$this->repo->insert('projects',[
-                'name'=>$name,'description'=>sanitize_textarea_field((string)($input['description']??'')),'source_snapshot_hash'=>$snapshotHash,
+                'name'=>$name,'description'=>$description,'source_snapshot_hash'=>$snapshotHash,
                 'source_locale'=>$sourceLocale,'target_locales'=>$targetsJson,'scope_json'=>$scopeJson,
                 'priority'=>in_array((string)($input['priority']??'normal'),['low','normal','high','urgent'],true)?(string)$input['priority']:'normal',
-                'risk_ceiling'=>$riskCeiling,'owner_id'=>get_current_user_id(),'provider_key'=>sanitize_key((string)($input['provider_key']??''))?:null,
-                'release_target'=>sanitize_text_field((string)($input['release_target']??''))?:null,'due_at'=>$this->dateOrNull($input['due_at']??null),'status'=>'draft','row_version'=>1,
+                'risk_ceiling'=>$riskCeiling,'owner_id'=>get_current_user_id(),'provider_key'=>$projectProvider?:null,
+                'release_target'=>$releaseTarget?:null,'due_at'=>$this->dateOrNull($input['due_at']??null),'status'=>'draft','row_version'=>1,
             ]);
             foreach($resources as $resource){
                 $this->repo->insert('project_resources',['project_uuid'=>$project['uuid'],'resource_uuid'=>$resource['uuid'],'source_version'=>$resource['source_version'],'source_hash'=>$resource['source_hash']]);
