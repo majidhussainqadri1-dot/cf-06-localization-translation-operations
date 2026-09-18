@@ -62,7 +62,7 @@ This expansion adds forty future localization capabilities to CF-06 without chan
 
 The public source interface is **not** the raw handler service alone. Every exposed Future40 evaluation must follow this path:
 
-`FutureCapabilities registry → FutureCapabilitiesFacade → ReleaseLifecycleGuard → FutureCapabilityGuard → LocaleAccessibilityGuard → ProviderEligibilityGuard where applicable → FutureCapabilitiesService::fNNN → SemanticIntegrityGuard → LocaleAccessibilityGuard result checks → ReleaseLifecycleGuard result checks`.
+`FutureCapabilities registry → FutureCapabilitiesFacade global byte/node bound → ReleaseLifecycleGuard → HotfixApprovalGuard for FUT-028 → FutureCapabilityGuard → LocaleAccessibilityGuard → SemanticIntegrityGuard input normalization → ProviderEligibilityGuard for FUT-033 → FutureCapabilitiesService::fNNN → SemanticIntegrityGuard result checks → LocaleAccessibilityGuard result checks → ReleaseLifecycleGuard result checks`.
 
 `FutureCapabilitiesService` is an internal deterministic handler collection. `FutureCapabilitiesFacade` is the canonical exposed application service and must be used by `FutureRoutes` and application consumers. No caller may treat a raw handler response as activation, publication, provider-send or domain-owner approval evidence.
 
@@ -72,6 +72,8 @@ The public source interface is **not** the raw handler service alone. Every expo
 - `Sabri\Localization\Application\FutureCapabilitiesFacade` is the canonical guarded execution interface.
 - `Sabri\Localization\Application\FutureCapabilitiesService` implements the deterministic evidence-preview handlers behind the facade.
 - `Sabri\Localization\Domain\Future\ReleaseLifecycleGuard` enforces release identity, freshness, kill-switch, hotfix, delta and offline/low-bandwidth lifecycle constraints.
+- `Sabri\Localization\Domain\Future\HotfixApprovalGuard` independently enforces bounded actors, real calendar instants and freshness for emergency hotfix approval evidence.
+- `FutureCapabilitiesFacade` itself enforces the canonical byte/node limits, so internal application consumers cannot bypass the REST payload limits.
 - `FutureCapabilityGuard` enforces general validation, privacy, URL/provider/residency and fail-closed invariants.
 - `ProviderEligibilityGuard` enforces approved provider eligibility, data classes/locales/regions and bounded quality requirements.
 - `SemanticIntegrityGuard` protects declared facts/tokens/citations and guarantees AI semantic/quality outputs are advisory only.
