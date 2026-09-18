@@ -25,7 +25,7 @@ $t->test('Terminology and style guide creation are transaction-backed and bounde
 $t->test('Privacy erasure request queue and audit share one transaction',function()use($privacy):void{
  $start=strpos($privacy,'public function requestErasure');
  $tx=strpos($privacy,'return $this->tx->run',$start);
- $enqueue=strpos($privacy,"$this->jobs->enqueue('privacy_erasure'",$start);
+ $enqueue=strpos($privacy,'$this->jobs->enqueue(\'privacy_erasure\'',$start);
  $audit=strpos($privacy,"privacy_erasure_queued",$start);
  TestHarness::assertTrue(false!==$tx&&false!==$enqueue&&false!==$audit&&$tx<$enqueue&&$enqueue<$audit);
 });
