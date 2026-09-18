@@ -6,7 +6,7 @@ One localization operations owner, while every original record and final domain 
 
 ## Boundaries
 
-- **File 00:** identity, capabilities, suspension, guardian/entitlement assertions.
+- **File 00:** identity, capabilities, suspension, guardian/entitlement assertions, and independent assignment qualification attestation.
 - **File 20:** global language switcher, account preference presentation, shell route/slot placement.
 - **File 24:** assurance, privacy/security posture and evidence consumption.
 - **File 25:** visual RTL/LTR components, typography, responsive behavior and public presentation.
@@ -27,7 +27,7 @@ One localization operations owner, while every original record and final domain 
 - Runtime disabled by default.
 - C4/C5/private text encrypted at rest and excluded from external MT.
 - Provider response is only a machine draft; it cannot be published or approved automatically.
-- Every state transition is explicit; stale row versions fail with conflict.
+- Every state transition is explicit; stale row versions fail with conflict. Assignment competency evidence is independently verified through the File 00/native qualification contract rather than trusted from caller input.
 - Active bundles require signature, 100% critical coverage and accepted cross-file dependencies.
 - Rollback is versioned, audited and cache-invalidating.
 - Audit payloads contain hashes/minimized metadata, not unrestricted translated text.
