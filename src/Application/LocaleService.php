@@ -46,9 +46,9 @@ final class LocaleService
                 'region_subtag' => $parsed['region'],
                 'direction' => LocaleValidator::direction($parsed['tag']),
                 'fallback_tag' => $fallback,
-                'plural_rules_version' => sanitize_text_field((string) ($input['plural_version'] ?? 'CLDR-49')),
-                'format_data_version' => sanitize_text_field((string) ($input['format_version'] ?? 'CLDR-49')),
-                'enabled_surfaces' => wp_json_encode(array_values(array_unique(array_map('sanitize_key', is_array($input['surfaces'] ?? null) ? $input['surfaces'] : array())))),
+                'plural_rules_version' => $this->boundedMetadata((string) ($input['plural_version'] ?? 'CLDR-49'), 40, 'plural rules version'),
+                'format_data_version' => $this->boundedMetadata((string) ($input['format_version'] ?? 'CLDR-49'), 40, 'format data version'),
+                'enabled_surfaces' => $this->encodedSurfaces($input['surfaces'] ?? array()),
                 'status' => $status,
                 'owner' => 'CF-06',
                 'row_version' => 1,
@@ -155,6 +155,23 @@ final class LocaleService
             'fallback_used' => true,
             'chain' => $chain,
         );
+    }
+
+    private function boundedMetadata(string $value,int $max,string $label): string
+    {
+        $value=sanitize_text_field($value);
+        if(''===$value||strlen($value)>$max){throw new InvalidArgumentException('Locale '.$label.' is invalid or oversized.');}
+        return $value;
+    }
+
+    private function encodedSurfaces(mixed $value): string
+    {
+        $surfaces=array_values(array_unique(array_filter(array_map('sanitize_key',is_array($value)?$value:array()))));
+        if(count($surfaces)>100){throw new InvalidArgumentException('Locale surface list exceeds the bounded limit.');}
+        foreach($surfaces as $surface){if(strlen($surface)>80){throw new InvalidArgumentException('Locale surface identifier exceeds the bounded limit.');}}
+        $json=wp_json_encode($surfaces);
+        if(!is_string($json)||strlen($json)>65535){throw new InvalidArgumentException('Locale surface metadata is invalid or oversized.');}
+        return $json;
     }
 
     public function list(bool $public = false): array
