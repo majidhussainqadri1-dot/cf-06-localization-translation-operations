@@ -28,12 +28,17 @@ final class TerminologyService
         $prohibitedJson=wp_json_encode($prohibited,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);if(!is_string($prohibitedJson)||strlen($prohibitedJson)>131072){throw new InvalidArgumentException('Prohibited terminology evidence is invalid or oversized.');}
         $definition=sanitize_textarea_field((string)($input['definition']??''));$context=sanitize_textarea_field((string)($input['context']??''));$grammar=sanitize_textarea_field((string)($input['grammar_notes']??''));
         if(strlen($definition)>20000||strlen($context)>20000||strlen($grammar)>20000){throw new InvalidArgumentException('Terminology descriptive evidence exceeds the bounded limit.');}
-        $row=$this->repo->insert('terminology',array(
-            'concept_id'=>$concept,'domain_name'=>$domain,'source_locale'=>$sourceLocale,'source_term'=>$source,'target_locale'=>$targetLocale,'approved_term'=>$approved,
-            'prohibited_terms'=>$prohibitedJson,'definition_text'=>$definition,'context_text'=>$context,'grammar_notes'=>$grammar,
-            'created_by'=>get_current_user_id(),'status'=>'proposed','term_version'=>1,'row_version'=>1,
-        ));
-        $this->audit->record('terminology',(string)$row['uuid'],'terminology_proposed','success',array('concept_id'=>$concept,'locale'=>$targetLocale,'domain'=>$domain));return $row;
+        return $this->tx->run(function()use($concept,$domain,$source,$approved,$sourceLocale,$targetLocale,$prohibitedJson,$definition,$context,$grammar):array{
+            $existing=$this->repo->list('terminology',array('concept_id'=>$concept,'target_locale'=>$targetLocale),1,0,'term_version DESC');
+            $termVersion=empty($existing)?1:(int)$existing[0]['term_version']+1;
+            $row=$this->repo->insert('terminology',array(
+                'concept_id'=>$concept,'domain_name'=>$domain,'source_locale'=>$sourceLocale,'source_term'=>$source,'target_locale'=>$targetLocale,'approved_term'=>$approved,
+                'prohibited_terms'=>$prohibitedJson,'definition_text'=>$definition,'context_text'=>$context,'grammar_notes'=>$grammar,
+                'created_by'=>get_current_user_id(),'status'=>'proposed','term_version'=>$termVersion,'row_version'=>1,
+            ));
+            $this->audit->record('terminology',(string)$row['uuid'],'terminology_proposed','success',array('concept_id'=>$concept,'locale'=>$targetLocale,'domain'=>$domain,'term_version'=>$termVersion));
+            return $row;
+        });
     }
 
     public function transition(string $uuid,string $to,int $version,string $reason=''): array
@@ -59,10 +64,14 @@ final class TerminologyService
         $domain=sanitize_key((string)($input['domain']??'platform'))?:'platform';if(strlen($domain)>80){throw new InvalidArgumentException('Style guide domain exceeds the canonical storage bound.');}
         $rules=is_array($input['rules']??null)?$input['rules']:array();if(empty($rules)){throw new InvalidArgumentException('Style guide rules are required.');}
         $encoded=wp_json_encode($rules,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);if(false===$encoded||strlen($encoded)>250000){throw new InvalidArgumentException('Style guide rules exceed the bounded limit.');}
-        $examples=wp_json_encode(array_slice(is_array($input['examples']??null)?$input['examples']:array(),0,100),JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);if(!is_string($examples)||strlen($examples)>250000){throw new InvalidArgumentException('Style guide examples exceed the bounded limit.');}
-        $existing=$this->repo->list('style_guides',array('locale_tag'=>$locale,'domain_name'=>$domain),1,0,'id DESC');$guideVersion=empty($existing)?1:(int)$existing[0]['guide_version']+1;
-        $row=$this->repo->insert('style_guides',array('locale_tag'=>$locale,'domain_name'=>$domain,'guide_version'=>$guideVersion,'rules_json'=>$encoded,'examples_json'=>$examples,'created_by'=>get_current_user_id(),'approved_by'=>null,'status'=>'draft','effective_at'=>null,'row_version'=>1));
-        $this->audit->record('style_guide',(string)$row['uuid'],'style_guide_drafted','success',array('locale'=>$locale,'domain'=>$domain,'guide_version'=>$guideVersion));return $row;
+        $rawExamples=is_array($input['examples']??null)?$input['examples']:array();if(count($rawExamples)>100){throw new InvalidArgumentException('Style guide examples exceed the bounded item limit.');}
+        $examples=wp_json_encode($rawExamples,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);if(!is_string($examples)||strlen($examples)>250000){throw new InvalidArgumentException('Style guide examples exceed the bounded limit.');}
+        return $this->tx->run(function()use($locale,$domain,$encoded,$examples):array{
+            $existing=$this->repo->list('style_guides',array('locale_tag'=>$locale,'domain_name'=>$domain),1,0,'guide_version DESC');$guideVersion=empty($existing)?1:(int)$existing[0]['guide_version']+1;
+            $row=$this->repo->insert('style_guides',array('locale_tag'=>$locale,'domain_name'=>$domain,'guide_version'=>$guideVersion,'rules_json'=>$encoded,'examples_json'=>$examples,'created_by'=>get_current_user_id(),'approved_by'=>null,'status'=>'draft','effective_at'=>null,'row_version'=>1));
+            $this->audit->record('style_guide',(string)$row['uuid'],'style_guide_drafted','success',array('locale'=>$locale,'domain'=>$domain,'guide_version'=>$guideVersion));
+            return $row;
+        });
     }
 
     public function transitionStyleGuide(string $uuid,string $to,int $version,string $reason=''): array
