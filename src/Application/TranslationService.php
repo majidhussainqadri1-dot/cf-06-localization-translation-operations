@@ -144,7 +144,9 @@ final class TranslationService
     {
         if($actor<=0||!function_exists('smc_membership_assertions')){return false;}
         $assertions=smc_membership_assertions($actor);$state=is_array($assertions)?strtolower((string)($assertions['state']??'')):'';
-        if(!is_array($assertions)||!empty($assertions['suspended'])||!in_array($state,array('approved','active','verified'),true)){return false;}
+        $actorBound=is_array($assertions)&&(!isset($assertions['user_id'])||(int)$assertions['user_id']===$actor);
+        $fresh=true;if(is_array($assertions)&&isset($assertions['expires_at'])){$expiry=strtotime((string)$assertions['expires_at']);$fresh=false!==$expiry&&$expiry>time();}
+        if(!is_array($assertions)||!$actorBound||!$fresh||!empty($assertions['suspended'])||!in_array($state,array('approved','active','verified'),true)){return false;}
         $role=match($column){'translator_id'=>'translator','linguistic_reviewer_id'=>'linguistic_reviewer','domain_reviewer_id'=>'domain_reviewer',default=>''};
         if(''===$role){return false;}
         foreach($this->repo->list('assignments',array('unit_uuid'=>$unit['uuid'],'assignee_id'=>$actor,'assignment_role'=>$role,'status'=>'active'),10) as $assignment){
