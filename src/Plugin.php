@@ -53,8 +53,8 @@ final class Plugin
         Activator::maybeUpgrade();
         $installedSchema=(string)get_option('slto_schema_version','0.0.0');
         $installedContract=(string)get_option('slto_contract_version','0.0.0');
-        if(version_compare($installedSchema,SABRI_SLTO_SCHEMA_VERSION,'<')||version_compare($installedContract,SABRI_SLTO_CONTRACT_VERSION,'<')){
-            throw new \RuntimeException('CF-06 schema or contract upgrade is incomplete; runtime boot is denied.');
+        if($installedSchema!==SABRI_SLTO_SCHEMA_VERSION||$installedContract!==SABRI_SLTO_CONTRACT_VERSION){
+            throw new \RuntimeException('CF-06 schema or contract version is not an exact match for this runtime; boot is denied.');
         }
 
         add_action('init', static function(): void {
