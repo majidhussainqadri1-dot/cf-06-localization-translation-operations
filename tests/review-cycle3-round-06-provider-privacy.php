@@ -12,7 +12,7 @@ $risk=(string)file_get_contents($root.'/src/Domain/Translation/RiskPolicy.php');
 
 $t->test('Provider updates require caller-supplied optimistic-lock version',function()use($provider):void{
     TestHarness::assertTrue(str_contains($provider,'Provider update requires an explicit current row_version.'));
-    TestHarness::assertTrue(str_contains($provider,"array_key_exists('row_version',$input)"));
+    TestHarness::assertTrue(str_contains($provider,"array_key_exists('row_version',\$input)"));
 });
 
 $t->test('Provider governance metadata and transition narratives are bounded',function()use($provider):void{
@@ -26,8 +26,8 @@ $t->test('Privacy erasure uses secret-keyed deterministic pseudonymization',func
 
 $t->test('External MT remains low-risk C1 only and runtime provider-governed',function()use($mt,$risk):void{
     foreach(['assertActiveProvider','assertAdapterGovernance','approved provider region'] as $needle){TestHarness::assertTrue(str_contains($mt,$needle),$needle);}
-    TestHarness::assertTrue(str_contains($risk,"'C1' !== strtoupper($dataClass)"));
-    TestHarness::assertTrue(str_contains($risk,"'low' !== strtolower($riskClass)"));
+    TestHarness::assertTrue(str_contains($risk,"'C1' !== strtoupper(\$dataClass)"));
+    TestHarness::assertTrue(str_contains($risk,"'low' !== strtolower(\$riskClass)"));
 });
 
 $t->finish();
