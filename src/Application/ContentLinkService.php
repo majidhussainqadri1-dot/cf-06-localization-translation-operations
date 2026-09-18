@@ -26,7 +26,7 @@ final class ContentLinkService
         $target=LocaleValidator::canonicalize((string)($input['target_locale']??''));
         $hash=strtolower((string)($input['source_hash']??''));
         $sourceVersion=sanitize_text_field((string)($input['source_version']??''));
-        if(''===$owner||''===$object||null===$source||null===$target||$source===$target||''===$sourceVersion||1!==preg_match('/^[a-f0-9]{64}$/D',$hash)){
+        if(''===$owner||strlen($owner)>40||''===$object||strlen($object)>191||null===$source||null===$target||$source===$target||''===$sourceVersion||strlen($sourceVersion)>80||1!==preg_match('/^[a-f0-9]{64}$/D',$hash)){
             throw new InvalidArgumentException('Content translation relationship is invalid.');
         }
         $resourceUuid=$this->uuidOrNull($input['resource_uuid']??null);
