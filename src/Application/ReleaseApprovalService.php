@@ -56,10 +56,20 @@ final class ReleaseApprovalService
 
     private function isFreshApproval(array $row): bool
     {
-        $now=time();$stepUp=strtotime((string)($row['step_up_at']??''));$approved=strtotime((string)($row['approved_at']??''));
-        if(false===$stepUp||false===$approved){return false;}
-        $stepAge=$now-$stepUp;$approvalAge=$now-$approved;
+        $stepUp=$this->strictDbUtcTimestamp((string)($row['step_up_at']??''));
+        $approved=$this->strictDbUtcTimestamp((string)($row['approved_at']??''));
+        if(null===$stepUp||null===$approved){return false;}
+        $now=time();$stepAge=$now-$stepUp->getTimestamp();$approvalAge=$now-$approved->getTimestamp();
         return $stepAge>=-60&&$approvalAge>=-60&&$stepAge<=self::APPROVAL_TTL_SECONDS&&$approvalAge<=self::APPROVAL_TTL_SECONDS;
+    }
+
+    private function strictDbUtcTimestamp(string $value): ?DateTimeImmutable
+    {
+        if(1!==preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/D',$value)){return null;}
+        $date=DateTimeImmutable::createFromFormat('!Y-m-d H:i:s',$value,new DateTimeZone('UTC'));
+        $errors=DateTimeImmutable::getLastErrors();
+        $valid=false===$errors||((int)($errors['warning_count']??0)===0&&(int)($errors['error_count']??0)===0);
+        return $date instanceof DateTimeImmutable&&$valid&&$date->format('Y-m-d H:i:s')===$value?$date:null;
     }
 
     private function strictUtcTimestamp(string $value): ?DateTimeImmutable
