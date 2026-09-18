@@ -8,7 +8,7 @@ $root=dirname(__DIR__);$t=new TestHarness();
 $activator=(string)file_get_contents($root.'/src/Infrastructure/Activator.php');
 
 $t->test('Recorded schema versions never bypass actual schema verification',function()use($activator):void{
-    $current=strpos($activator,"version_compare($installedSchema, SABRI_SLTO_SCHEMA_VERSION, '>=')");
+    $current=strpos($activator,"version_compare(\$installedSchema, SABRI_SLTO_SCHEMA_VERSION, '>=')");
     $verify=strpos($activator,'self::verifySchema();',$current===false?0:$current);
     TestHarness::assertTrue(false!==$current&&false!==$verify&&$verify>$current);
     TestHarness::assertTrue(str_contains($activator,'Version options are not schema truth.'));
