@@ -28,6 +28,12 @@ final class ProjectService
     {
         $name=sanitize_text_field((string)($input['name']??''));
         if(''===$name||strlen($name)>191){throw new InvalidArgumentException('Translation project name is required and bounded.');}
+        $description=sanitize_textarea_field((string)($input['description']??''));
+        $releaseTarget=sanitize_text_field((string)($input['release_target']??''));
+        $projectProvider=sanitize_key((string)($input['provider_key']??''));
+        if(strlen($description)>65535||strlen($releaseTarget)>191||strlen($projectProvider)>80){
+            throw new InvalidArgumentException('Translation project metadata exceeds canonical storage bounds.');
+        }
         $sourceLocale=LocaleValidator::canonicalize((string)($input['source_locale']??''));
         if(null===$sourceLocale){throw new InvalidArgumentException('Project source locale is invalid.');}
         $targets=array_values(array_unique(array_filter(array_map(static fn($v):?string=>LocaleValidator::canonicalize((string)$v),is_array($input['target_locales']??null)?$input['target_locales']:array()))));
@@ -89,6 +95,19 @@ final class ProjectService
         $qualification=is_array($input['qualification']??null)?$input['qualification']:[];
         if(empty($qualification['locale_competency'])||!in_array((string)$unit['target_locale'],array_map('strval',(array)$qualification['locale_competency']),true)){throw new InvalidArgumentException('Target-locale competency evidence is required.');}
         if('domain_reviewer'===$role&&RiskPolicy::requiresDomainReview((string)$resource['risk_class'],(string)$resource['domain_name'])&&!in_array((string)$resource['domain_name'],array_map('sanitize_key',(array)($qualification['domains']??[])),true)){throw new InvalidArgumentException('Qualified domain reviewer evidence is required.');}
+        $qualificationEvidence=[
+            'assignee_id'=>$assignee,
+            'role'=>$role,
+            'target_locale'=>(string)$unit['target_locale'],
+            'domain'=>(string)$resource['domain_name'],
+            'risk_class'=>(string)$resource['risk_class'],
+            'qualification'=>$qualification,
+            'unit_uuid'=>(string)$unit['uuid'],
+            'project_uuid'=>(string)$unit['project_uuid'],
+        ];
+        if(true!==apply_filters('slto_verify_assignment_qualification',false,$qualificationEvidence)){
+            throw new InvalidArgumentException('Assignment qualification evidence could not be independently verified.');
+        }
         $conflict=sanitize_key((string)($input['conflict_status']??''));
         if(!in_array($conflict,['clear','disclosed-cleared'],true)){throw new InvalidArgumentException('A cleared conflict declaration is required.');}
         $due=$this->dateOrNull($input['due_at']??null);$expires=$this->dateOrNull($input['expires_at']??null);
