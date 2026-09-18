@@ -445,7 +445,8 @@ final class FutureCapabilitiesService
             if (! is_array($row)) { continue; }
             if ('C1' !== strtoupper((string)($row['data_class'] ?? '')) || ! (bool)($row['public'] ?? false)) { continue; }
             $key = trim((string)($row['key'] ?? ''));
-            if ('' !== $key) { $manifest[$key] = ['hash' => hash('sha256', (string)($row['text'] ?? '')), 'cache' => 'offline-approved']; }
+            if ('' === $key || isset($manifest[$key])) { throw new InvalidArgumentException('Offline locale pack resource key is missing or duplicated.'); }
+            $manifest[$key] = ['hash' => hash('sha256', (string)($row['text'] ?? '')), 'cache' => 'offline-approved'];
         }
         ksort($manifest);
         return ['manifest' => $manifest, 'resource_count' => count($manifest), 'private_content_included' => false];
