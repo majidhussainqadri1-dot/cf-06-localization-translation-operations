@@ -126,7 +126,7 @@ final class IntegrationService
             $valid = is_array($row)
                 && 'accepted' === (string)$row['status']
                 && $environment === (string)$row['environment_name']
-                && (empty($row['expires_at']) || strtotime((string)$row['expires_at']) > time())
+                && (empty($row['expires_at']) || $this->storedUtcFuture((string)$row['expires_at']))
                 && 1 === preg_match('/^[a-f0-9]{64}$/D', (string)$row['manifest_hash'])
                 && 1 === preg_match('/^[a-f0-9]{64}$/D', (string)$row['evidence_hash']);
             if ($valid) {
@@ -175,6 +175,15 @@ final class IntegrationService
     {
         $parts = explode('@', $stored, 2);
         return sanitize_key((string)$parts[0]);
+    }
+
+    private function storedUtcFuture(string $value): bool
+    {
+        if(1!==preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/D',$value)){return false;}
+        $date=\DateTimeImmutable::createFromFormat('!Y-m-d H:i:s',$value,new \DateTimeZone('UTC'));
+        $errors=\DateTimeImmutable::getLastErrors();
+        $valid=false===$errors||((int)($errors['warning_count']??0)===0&&(int)($errors['error_count']??0)===0);
+        return $date instanceof \DateTimeImmutable&&$valid&&$date->format('Y-m-d H:i:s')===$value&&$date->getTimestamp()>time();
     }
 
     private function dateOrNull(mixed $value): ?string
