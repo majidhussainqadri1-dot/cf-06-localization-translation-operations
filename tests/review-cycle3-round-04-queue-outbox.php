@@ -12,7 +12,7 @@ $migration=(string)file_get_contents($root.'/src/Application/MigrationService.ph
 
 $t->test('Job queue read and lease database failures are surfaced',function()use($jobs):void{
     foreach(['Localization job queue could not be read.','Localization job lease could not be persisted.','Expired localization job could not be moved to dead letter.','Localization job attempt state could not be read.'] as $needle){TestHarness::assertTrue(str_contains($jobs,$needle),$needle);}
-    TestHarness::assertTrue(str_contains($jobs,"'' !== (string)$wpdb->last_error"));
+    TestHarness::assertTrue(str_contains($jobs,'\'\' !== (string)$wpdb->last_error'));
 });
 
 $t->test('Outbox read lease and acknowledgement database failures are surfaced',function()use($outbox):void{
