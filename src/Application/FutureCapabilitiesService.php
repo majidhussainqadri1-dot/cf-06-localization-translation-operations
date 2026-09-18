@@ -145,6 +145,7 @@ final class FutureCapabilitiesService
         if (! is_array($texts)) { throw new InvalidArgumentException('texts must be an array.'); }
         $counts = [];
         foreach ($texts as $text) {
+            if(!is_scalar($text)){throw new InvalidArgumentException('texts entries must be scalar strings.');}
             foreach (preg_split('/[^\p{L}\p{N}-]+/u', (string)$text, -1, PREG_SPLIT_NO_EMPTY) ?: [] as $token) {
                 if (strlen($token) < 5) { continue; }
                 $key = $this->lower($token);
@@ -167,8 +168,13 @@ final class FutureCapabilitiesService
         if (! is_array($variants) || [] === $variants) { throw new InvalidArgumentException('variants are required.'); }
         $normalized = [];
         foreach ($variants as $locale => $terms) {
+            $canonical=\Sabri\Localization\Domain\Locale\LocaleValidator::canonicalize((string)$locale);
+            if(null===$canonical){throw new InvalidArgumentException('Terminology concept variants require canonical locale keys.');}
             $terms = is_array($terms) ? $terms : [$terms];
-            $normalized[(string)$locale] = array_values(array_unique(array_filter(array_map('strval', $terms))));
+            $clean=[];
+            foreach($terms as $term){if(!is_scalar($term)){throw new InvalidArgumentException('Terminology concept variant terms must be scalar.');}$term=trim((string)$term);if(''!==$term){$clean[]=$term;}}
+            if(empty($clean)){throw new InvalidArgumentException('Terminology concept locale variants cannot be empty.');}
+            $normalized[$canonical] = array_values(array_unique($clean));
         }
         ksort($normalized);
         return ['concept_id' => $concept, 'variants' => $normalized, 'canonical_status' => 'review-required'];
@@ -216,6 +222,7 @@ final class FutureCapabilitiesService
         $issues = [];
         $lastEnd = 0.0;
         foreach ($cues as $i => $cue) {
+            if(!is_array($cue)){throw new InvalidArgumentException('Each subtitle cue must be an object.');}
             $start = (float)($cue['start'] ?? 0);
             $end = (float)($cue['end'] ?? 0);
             $text = trim((string)($cue['text'] ?? ''));
@@ -248,10 +255,10 @@ final class FutureCapabilitiesService
         if (! is_array($entries)) { throw new InvalidArgumentException('entries must be an array.'); }
         $out = [];
         foreach ($entries as $entry) {
-            if (! is_array($entry)) { continue; }
+            if (! is_array($entry)) { throw new InvalidArgumentException('Each pronunciation entry must be an object.'); }
             $term = trim((string)($entry['term'] ?? ''));
             $pron = trim((string)($entry['pronunciation'] ?? ''));
-            if ('' === $term || '' === $pron) { continue; }
+            if ('' === $term || '' === $pron) { throw new InvalidArgumentException('Pronunciation entries require term and pronunciation.'); }
             $out[] = ['term' => $term, 'pronunciation' => $pron, 'locale' => (string)($entry['locale'] ?? ''), 'status' => 'reviewed-candidate'];
         }
         return ['entries' => $out, 'count' => count($out)];
@@ -264,8 +271,10 @@ final class FutureCapabilitiesService
         $allowed = ['heading', 'paragraph', 'table', 'figure', 'caption', 'footnote', 'endnote', 'citation'];
         $counts = array_fill_keys($allowed, 0);
         foreach ($structure as $item) {
+            if(!is_array($item)){throw new InvalidArgumentException('Document structure entries must be objects.');}
             $type = (string)($item['type'] ?? '');
-            if (isset($counts[$type])) { ++$counts[$type]; }
+            if (!isset($counts[$type])) { throw new InvalidArgumentException('Document structure contains an unsupported element type.'); }
+            ++$counts[$type];
         }
         return ['structure_counts' => $counts, 'preserve_page_refs' => true, 'preserve_citations' => true, 'layout_qa_required' => true];
     }
@@ -547,10 +556,10 @@ final class FutureCapabilitiesService
         if (! is_array($decisions) || [] === $decisions) { throw new InvalidArgumentException('decisions are required.'); }
         $agreements = 0; $comparisons = 0; $disputes = [];
         foreach ($decisions as $i => $row) {
-            if (! is_array($row)) { continue; }
-            $a = (string)($row['reviewer_a'] ?? '');
-            $b = (string)($row['reviewer_b'] ?? '');
-            if ('' === $a || '' === $b) { continue; }
+            if (! is_array($row)) { throw new InvalidArgumentException('Reviewer calibration decisions must be objects.'); }
+            $a = trim((string)($row['reviewer_a'] ?? ''));
+            $b = trim((string)($row['reviewer_b'] ?? ''));
+            if ('' === $a || '' === $b) { throw new InvalidArgumentException('Reviewer calibration decisions require both reviewer outcomes.'); }
             ++$comparisons;
             if ($a === $b) { ++$agreements; } else { $disputes[] = $i; }
         }
@@ -578,9 +587,16 @@ final class FutureCapabilitiesService
         $queues = is_array($in['queues'] ?? null) ? $in['queues'] : [];
         $providers = is_array($in['providers'] ?? null) ? $in['providers'] : [];
         $critical = is_array($in['critical_issues'] ?? null) ? $in['critical_issues'] : [];
+        $queueTotal=0;
+        foreach($queues as $value){
+            $validated=filter_var($value,FILTER_VALIDATE_INT,['options'=>['min_range'=>0,'max_range'=>10000000]]);
+            if(false===$validated){throw new InvalidArgumentException('Founder command-center queue counts must be bounded non-negative integers.');}
+            $queueTotal+=(int)$validated;
+            if($queueTotal>100000000){throw new InvalidArgumentException('Founder command-center aggregate queue count exceeds the governed bound.');}
+        }
         return [
             'locale_count' => count($locales),
-            'queue_total' => array_sum(array_map('intval', $queues)),
+            'queue_total' => $queueTotal,
             'provider_count' => count($providers),
             'critical_issue_count' => count($critical),
             'release_blocked' => [] !== $critical,
@@ -591,14 +607,18 @@ final class FutureCapabilitiesService
 
     private function requiredString(array $in, string $key): string
     {
-        $value = trim((string)($in[$key] ?? ''));
+        $raw=$in[$key]??null;
+        if(!is_scalar($raw)){throw new InvalidArgumentException($key . ' must be a scalar string.');}
+        $value = trim((string)$raw);
         if ('' === $value) { throw new InvalidArgumentException($key . ' is required.'); }
         return $value;
     }
 
     private function optionalString(array $in, string $key): string
     {
-        return trim((string)($in[$key] ?? ''));
+        if(!array_key_exists($key,$in)||null===$in[$key]){return '';}
+        if(!is_scalar($in[$key])){throw new InvalidArgumentException($key . ' must be a scalar string.');}
+        return trim((string)$in[$key]);
     }
 
     private function tokens(string $text, string $pattern): array
