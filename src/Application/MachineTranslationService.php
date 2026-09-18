@@ -37,6 +37,10 @@ final class MachineTranslationService
         foreach($unitUuids as $uuid){
             $unit=$this->repo->find('units',$uuid)??throw new InvalidArgumentException('Vendor unit is unavailable.');if(!in_array((string)$unit['status'],array('assigned','translating','stale'),true)){throw new InvalidArgumentException('Vendor unit is not open for a machine draft.');}
             $resource=$this->repo->find('resources',(string)$unit['resource_uuid'])??throw new InvalidArgumentException('Vendor source is unavailable.');
+            if('active'!==(string)$resource['status']||(int)$unit['source_version']!==(int)$resource['source_version']
+                ||!hash_equals((string)$unit['source_hash'],(string)$resource['source_hash'])){
+                throw new InvalidArgumentException('Vendor unit source is stale or no longer active; provider preparation is denied.');
+            }
             if(!RiskPolicy::machineTranslationAllowed((string)$resource['risk_class'],(string)$resource['data_class'],(string)$resource['domain_name'],$explicitHighRiskApproval)){throw new InvalidArgumentException('Machine translation is denied for this risk/data/domain class.');}
             $source=$this->resources->text($resource);$redacted=Redactor::redact($source);$schema=json_decode((string)$resource['placeholders'],true)?:array();PlaceholderValidator::assertSource($redacted['text'],$schema);
             $payload[]=array('unit_uuid'=>$uuid,'source_locale'=>$resource['source_locale'],'target_locale'=>$unit['target_locale'],'source_text'=>$redacted['text'],'placeholders'=>$schema,'domain'=>$resource['domain_name'],'risk'=>$resource['risk_class']);$summary[$uuid]=$redacted['counts'];
