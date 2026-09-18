@@ -77,6 +77,8 @@ grep -Fq 'deploymentEnvironment' src/Application/IntegrationService.php
 grep -Fq 'Integration evidence must match the explicitly configured deployment environment.' src/Application/IntegrationService.php
 grep -Fq 'evidenceStorageKey' src/Application/IntegrationService.php
 grep -Fq 'slto_verify_production_activation_evidence' src/Application/HealthService.php
+grep -Fq 'slto_verify_live_deployment_parity' src/Application/HealthService.php
+grep -Fq 'SLTO_DEPLOYED_SOURCE_COMMIT' src/Application/HealthService.php
 grep -Fq 'expected and actual hashes differ' src/Application/QaEvidenceService.php
 grep -Fq "status='running' AND lease_until IS NOT NULL" src/Infrastructure/JobQueue.php
 grep -Fq 'retained_audit_metadata' src/Application/PrivacyService.php
@@ -131,5 +133,7 @@ grep -Fq "'file23'" src/Contract/PlanCompliance.php
 grep -Fq "'file24'" src/Contract/PlanCompliance.php
 grep -Fq 'slto_verify_assignment_qualification' docs/CONTRACTS.md
 grep -Fq 'slto_verify_provider_purge_evidence' docs/CONTRACTS.md
+grep -Fq 'slto_verify_staging_acceptance_evidence' docs/CONTRACTS.md
+grep -Fq 'slto_verify_live_deployment_parity' docs/CONTRACTS.md
 
 echo 'QUALITY GATE PASS'
