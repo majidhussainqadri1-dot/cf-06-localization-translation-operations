@@ -2,7 +2,7 @@
 
 This matrix implements the Future40 amendment traceability rule. It is **source/automated evidence only**. Package evidence means the exact-commit manifest/SBOM/checksum and green CI produced for that commit. `Staging` and `Live` remain **Pending / not inferred from source** until real external evidence exists.
 
-Common execution boundary for every row: `FutureCapabilities` registry → `FutureCapabilitiesFacade` guarded normalization → `FutureCapabilitiesService::fNNN` evidence-preview handler → guarded result. All capabilities remain default-disabled; `FutureRoutes` is privileged evidence-preview only and has no activation/publication command.
+Common execution boundary for every row: `FutureCapabilities` registry → `FutureCapabilitiesFacade` global byte/node bound → `ReleaseLifecycleGuard` → `HotfixApprovalGuard` for FUT-028 → `FutureCapabilityGuard` → `LocaleAccessibilityGuard` → `SemanticIntegrityGuard` input normalization → `ProviderEligibilityGuard` for FUT-033 → `FutureCapabilitiesService::fNNN` evidence-preview handler → semantic/accessibility/release result guards. All capabilities remain default-disabled; `FutureRoutes` is privileged evidence-preview only and has no activation/publication command.
 
 | ID | Handler | Security/privacy/safety enforcement | Automated evidence | Canonical owner boundary | Package / staging / live evidence |
 |---|---|---|---|---|---|
