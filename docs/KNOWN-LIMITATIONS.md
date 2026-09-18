@@ -1,6 +1,6 @@
 # Known Limitations and Pending Acceptance
 
-The source implements the approved code scope, but the following are not proven by repository tests alone:
+The source candidate is intended to implement the approved code scope; coding completion is asserted only for an exact commit after its complete quality gate is green. Even a green repository commit does not prove the following external states:
 
 - Real Hostinger WordPress/MySQL installation and upgrade.
 - Real File 00/20/24/25/26 and native-domain contract acceptance.
@@ -10,4 +10,4 @@ The source implements the approved code scope, but the following are not proven 
 - Production-sized load/soak, backup restoration, key recovery, provider exit and disaster drill.
 - Independent penetration test, production deployment, monitoring/SLO and operational support.
 
-Accordingly this release is a source/package/automated-QA candidate, not staging accepted, live deployed or operational.
+Accordingly the repository may become a source/package/automated-QA candidate only for the exact commit that produced those artifacts. It is not staging accepted, live deployed or operational. `Live-Deployed` additionally requires configured exact deployed-source identity plus independent deployed-code/DB/migration/runtime parity evidence.
