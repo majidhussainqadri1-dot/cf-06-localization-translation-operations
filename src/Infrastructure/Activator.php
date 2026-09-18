@@ -701,7 +701,7 @@ final class Activator
             'content_links'=>array('owner_module','owner_object_id','target_locale','source_version','source_hash','publication_status','owner_approval_ref','row_version'),
             'integration_evidence'=>array('integration_key','manifest_hash','evidence_hash','environment_name','expires_at','row_version'),
             'extraction_evidence'=>array('owner_module','source_commit','inventory_hash','extraction_hash','status','row_version'),
-            'qa_evidence'=>array('environment_name','plugin_version','build_sha','test_id','artifact_hash','result','row_version'),
+            'qa_evidence'=>array('environment_name','plugin_version','build_sha','test_id','artifact_hash','result'),
             'release_approvals'=>array('bundle_uuid','approval_role','approver_id','evidence_hash','step_up_at','status','row_version'),
             'audit'=>array('trace_id','object_type','object_key','action_name','actor_id','result','previous_hash','event_hash'),
             'outbox'=>array('event_name','aggregate_type','aggregate_uuid','contract_version','payload_hash','status','lease_until','attempts','available_at'),
