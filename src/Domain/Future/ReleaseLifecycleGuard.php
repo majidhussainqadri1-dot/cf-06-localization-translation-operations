@@ -67,11 +67,15 @@ final class ReleaseLifecycleGuard
         if (! array_key_exists('kill', $input) || ! is_bool($input['kill'])) {
             throw new InvalidArgumentException('Kill-switch request must explicitly declare a boolean kill state.');
         }
-        foreach (['reason','actor_ref','evidence_ref'] as $field) {
-            if ('' === trim((string)($input[$field] ?? ''))) {
-                throw new InvalidArgumentException('Kill-switch state changes require reason, actor_ref and evidence_ref.');
-            }
+        $reason=trim((string)($input['reason']??''));
+        $actor=trim((string)($input['actor_ref']??''));
+        $evidence=trim((string)($input['evidence_ref']??''));
+        if(''===$reason||strlen($reason)>1000
+            ||1!==preg_match('/^[A-Za-z0-9][A-Za-z0-9_.:@-]{0,190}$/D',$actor)
+            ||''===$evidence||strlen($evidence)>191){
+            throw new InvalidArgumentException('Kill-switch state changes require bounded reason, actor_ref and evidence_ref.');
         }
+        $input['reason']=$reason;$input['actor_ref']=$actor;$input['evidence_ref']=$evidence;
         $input['scope'] = $scope;
         return $input;
     }
@@ -79,8 +83,8 @@ final class ReleaseLifecycleGuard
     private static function hotfix(array $input): array
     {
         $approvals = $input['approvals'] ?? null;
-        if (! is_array($approvals) || count($approvals) < 2) {
-            throw new InvalidArgumentException('Emergency hotfix requires two approval records.');
+        if (! is_array($approvals) || count($approvals) < 2 || count($approvals) > 20) {
+            throw new InvalidArgumentException('Emergency hotfix requires a bounded set of approval records.');
         }
         $approvedByRole = [];
         $normalized = [];
@@ -262,6 +266,8 @@ final class ReleaseLifecycleGuard
         if (1 !== preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})$/D', $value)) {
             return false;
         }
+        $parsed=date_parse($value);
+        if(($parsed['warning_count']??0)>0||($parsed['error_count']??0)>0){return false;}
         try {
             new DateTimeImmutable($value);
             return true;
