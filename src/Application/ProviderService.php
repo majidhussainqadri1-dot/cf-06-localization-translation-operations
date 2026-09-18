@@ -24,9 +24,12 @@ final class ProviderService
         $type=sanitize_key((string)($input['provider_type']??'mt'));
         $url=esc_url_raw((string)($input['base_url']??''));
         $hosts=[];
-        foreach(is_array($input['allowed_hosts']??null)?$input['allowed_hosts']:[] as $host){
+        $rawHosts=is_array($input['allowed_hosts']??null)?$input['allowed_hosts']:[];
+        if(count($rawHosts)>100){throw new InvalidArgumentException('Provider host allowlist exceeds the bounded limit.');}
+        foreach($rawHosts as $host){
             $host=strtolower(rtrim(trim((string)$host),'.'));
-            if(1===preg_match('/^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/D',$host)){$hosts[]=$host;}
+            if(1!==preg_match('/^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/D',$host)){throw new InvalidArgumentException('Provider host allowlist contains an invalid host.');}
+            $hosts[]=$host;
         }
         $hosts=array_values(array_unique($hosts));sort($hosts,SORT_STRING);if(count($hosts)>100){throw new InvalidArgumentException('Provider host allowlist exceeds the bounded limit.');}
         if(''===$key||strlen($key)>80||''===$type||strlen($type)>40){throw new InvalidArgumentException('Provider identity is required and must remain bounded.');}
@@ -38,7 +41,9 @@ final class ProviderService
         if(strlen($contractVersion)>40||1!==preg_match('/^\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?$/D',$contractVersion)){throw new InvalidArgumentException('Provider contract version is invalid.');}
         $region=sanitize_text_field((string)($input['region']??''));
         if(''!==$region&&1!==preg_match('/^[A-Za-z0-9-]{2,32}$/D',$region)){throw new InvalidArgumentException('Provider region code is invalid.');}
-        $subprocessors=[];foreach(array_slice(is_array($input['subprocessors']??null)?$input['subprocessors']:[],0,100) as $sub){$sub=sanitize_text_field((string)$sub);if(''!==$sub){if(strlen($sub)>191){throw new InvalidArgumentException('Provider subprocessor identifier exceeds the bounded limit.');}$subprocessors[]=$sub;}}
+        $rawSubprocessors=is_array($input['subprocessors']??null)?$input['subprocessors']:[];
+        if(count($rawSubprocessors)>100){throw new InvalidArgumentException('Provider subprocessor inventory exceeds the bounded limit.');}
+        $subprocessors=[];foreach($rawSubprocessors as $sub){$sub=sanitize_text_field((string)$sub);if(''!==$sub){if(strlen($sub)>191){throw new InvalidArgumentException('Provider subprocessor identifier exceeds the bounded limit.');}$subprocessors[]=$sub;}}
         $subprocessors=array_values(array_unique($subprocessors));
         $hostsJson=wp_json_encode($hosts);$subsJson=wp_json_encode($subprocessors);if(!is_string($hostsJson)||!is_string($subsJson)||strlen($subsJson)>65535){throw new InvalidArgumentException('Provider metadata could not be encoded within governed bounds.');}
         return $this->tx->run(function() use ($input,$key,$type,$url,$hostsJson,$subsJson,$credentialRef,$contractVersion,$region): array {
