@@ -55,22 +55,25 @@ final class Activator
         }
         self::normalizeIndexes();
         self::verifySchema();
-        if (false === update_option('slto_schema_version', SABRI_SLTO_SCHEMA_VERSION, false) && (string) get_option('slto_schema_version', '') !== SABRI_SLTO_SCHEMA_VERSION) {
-            throw new \RuntimeException('CF-06 schema version could not be persisted.');
-        }
         add_option('slto_runtime_enabled', false, '', false);
         add_option('slto_default_locale', 'en-US', '', false);
-        if (false === update_option('slto_contract_version', SABRI_SLTO_CONTRACT_VERSION, false) && (string) get_option('slto_contract_version', '') !== SABRI_SLTO_CONTRACT_VERSION) {
-            throw new \RuntimeException('CF-06 contract version could not be persisted.');
-        }
         add_option('slto_last_release_status', 'source-candidate', '', false);
         self::seedLocales();
         self::grantCapabilities();
         self::scheduleJobs();
+        // Version markers are completion evidence, not upgrade intent. Persist them
+        // only after schema, seeds, capabilities and schedules have all succeeded.
+        if (false === update_option('slto_schema_version', SABRI_SLTO_SCHEMA_VERSION, false) && (string) get_option('slto_schema_version', '') !== SABRI_SLTO_SCHEMA_VERSION) {
+            throw new \RuntimeException('CF-06 schema version could not be persisted.');
+        }
+        if (false === update_option('slto_contract_version', SABRI_SLTO_CONTRACT_VERSION, false) && (string) get_option('slto_contract_version', '') !== SABRI_SLTO_CONTRACT_VERSION) {
+            throw new \RuntimeException('CF-06 contract version could not be persisted.');
+        }
     }
 
     public static function deactivate(): void
     {
+        update_option('slto_runtime_enabled', false, false);
         wp_clear_scheduled_hook('slto_process_jobs');
         wp_clear_scheduled_hook('slto_daily_reconciliation');
     }
@@ -681,39 +684,13 @@ final class Activator
         if (! empty($missing)) {
             throw new \RuntimeException('CF-06 schema activation failed: ' . implode(', ', $missing));
         }
-        $required = array(
-            'locales'=>array('locale_tag','fallback_tag','direction','status','row_version'),
-            'resources'=>array('resource_key','source_locale','source_version','source_hash','risk_class','data_class','status','row_version'),
-            'secure_payloads'=>array('owner_type','owner_uuid','purpose','key_id','algorithm','ciphertext','aad_hash','payload_hash','deleted_at'),
-            'projects'=>array('name','description','source_snapshot_hash','source_locale','target_locales','scope_json','risk_ceiling','provider_key','release_target','status','row_version'),
-            'project_resources'=>array('project_uuid','resource_uuid','source_version','source_hash'),
-            'assignments'=>array('unit_uuid','assignee_id','assignment_role','locale_tag','qualification_json','conflict_status','status','expires_at','row_version'),
-            'units'=>array('project_uuid','resource_uuid','target_locale','source_version','source_hash','status','provider_job_uuid','released_bundle_uuid','row_version'),
-            'comments'=>array('unit_uuid','author_id','audience','comment_text','status','row_version'),
-            'terminology'=>array('concept_id','target_locale','approved_term','reviewer_id','status','row_version'),
-            'style_guides'=>array('locale_tag','domain_name','approved_by','status','row_version'),
-            'memory'=>array('source_hash','context_hash','provenance_json','license_code','status'),
-            'providers'=>array('provider_key','provider_type','base_url','allowed_hosts','region_code','credential_reference','contract_version','status','row_version'),
-            'vendor_jobs'=>array('provider_key','model_version','unit_uuids','outbound_hash','provider_reference','status','deletion_evidence','row_version'),
-            'bundles'=>array('locale_tag','bundle_version','payload_json','source_list_json','bundle_hash','signature','status','previous_bundle_uuid','row_version'),
-            'qa_results'=>array('target_type','target_uuid','rule_code','result','severity','reviewer_id'),
-            'feedback'=>array('locale_tag','route_path','category','severity','status','row_version'),
-            'content_links'=>array('owner_module','owner_object_id','target_locale','source_version','source_hash','publication_status','owner_approval_ref','row_version'),
-            'integration_evidence'=>array('integration_key','manifest_hash','evidence_hash','environment_name','expires_at','row_version'),
-            'extraction_evidence'=>array('owner_module','source_commit','inventory_hash','extraction_hash','status','row_version'),
-            'qa_evidence'=>array('environment_name','plugin_version','build_sha','test_id','artifact_hash','result'),
-            'release_approvals'=>array('bundle_uuid','approval_role','approver_id','evidence_hash','step_up_at','status','row_version'),
-            'audit'=>array('trace_id','object_type','object_key','action_name','actor_id','result','previous_hash','event_hash'),
-            'outbox'=>array('event_name','aggregate_type','aggregate_uuid','contract_version','payload_hash','status','lease_until','attempts','available_at'),
-            'jobs'=>array('job_type','dedupe_key','payload_json','status','attempts','max_attempts','available_at','lease_until'),
-            'idempotency'=>array('actor_id','route_key','idempotency_key','request_hash','response_code','status','expires_at'),
-            'rate_limits'=>array('bucket_key','window_start','request_count','updated_at'),
-            'migrations'=>array('migration_key','migration_version','status','checkpoint_json','dry_run_report','updated_at'),
-        );
-        foreach ($required as $entity => $columns) {
-            $table = Database::table($entity);
-            $found = $wpdb->get_col("SHOW COLUMNS FROM {$table}", 0);
-            if (! is_array($found) || '' !== (string) $wpdb->last_error || array_diff($columns, $found)) {
+        $expectedColumns=self::expectedSchemaColumns($wpdb->get_charset_collate());
+        foreach (Database::ENTITIES as $entity=>$suffix) {
+            $table=Database::table($entity);
+            $required=$expectedColumns[$table]??array();
+            if(empty($required)){throw new \RuntimeException('CF-06 canonical schema definition is missing for ' . $entity . '.');}
+            $found=$wpdb->get_col("SHOW COLUMNS FROM {$table}",0);
+            if(!is_array($found)||''!==(string)$wpdb->last_error||array_diff($required,$found)){
                 throw new \RuntimeException('CF-06 required schema columns are unavailable for ' . $entity . '.');
             }
         }
@@ -752,6 +729,25 @@ final class Activator
                 }
             }
         }
+    }
+
+    private static function expectedSchemaColumns(string $collation): array
+    {
+        $out=array();
+        foreach(self::schema($collation) as $sql){
+            $open=strpos($sql,'(');$close=strrpos($sql,')');
+            if(false===$open||false===$close||$close<=$open){continue;}
+            $head=trim(substr($sql,0,$open));
+            if(1!==preg_match('/^CREATE TABLE\s+([^\s]+)$/i',$head,$match)){continue;}
+            $table=(string)$match[1];$columns=array();
+            foreach(preg_split('/\R/',substr($sql,$open+1,$close-$open-1))?:array() as $line){
+                $line=trim(rtrim(trim($line),','));
+                if(''===$line||preg_match('/^(PRIMARY|UNIQUE|KEY)\s+/i',$line)){continue;}
+                if(1===preg_match('/^([A-Za-z_][A-Za-z0-9_]*)\s+/',$line,$column)){$columns[]=(string)$column[1];}
+            }
+            if(!empty($columns)){$out[$table]=array_values(array_unique($columns));}
+        }
+        return $out;
     }
 
     private static function seedLocales(): void
