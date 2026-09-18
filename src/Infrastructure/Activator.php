@@ -25,6 +25,10 @@ final class Activator
         $installedContract = (string) get_option('slto_contract_version', '0.0.0');
         if (version_compare($installedSchema, SABRI_SLTO_SCHEMA_VERSION, '>=')
             && version_compare($installedContract, SABRI_SLTO_CONTRACT_VERSION, '>=')) {
+            // Version options are not schema truth. Detect partial/manual drift even
+            // when the recorded versions claim parity.
+            self::normalizeIndexes();
+            self::verifySchema();
             return;
         }
         if (get_transient('slto_schema_upgrade_lock')) {
@@ -678,6 +682,20 @@ final class Activator
             throw new \RuntimeException('CF-06 schema activation failed: ' . implode(', ', $missing));
         }
         $required = array(
+            'locales'=>array('locale_tag','fallback_tag','direction','status','row_version'),
+            'resources'=>array('resource_key','source_locale','source_version','source_hash','risk_class','data_class','status','row_version'),
+            'projects'=>array('source_snapshot_hash','source_locale','target_locales','risk_ceiling','status','row_version'),
+            'assignments'=>array('unit_uuid','assignee_id','assignment_role','conflict_status','status','expires_at','row_version'),
+            'units'=>array('resource_uuid','target_locale','source_version','source_hash','status','provider_job_uuid','released_bundle_uuid','row_version'),
+            'terminology'=>array('concept_id','target_locale','approved_term','reviewer_id','status','row_version'),
+            'style_guides'=>array('locale_tag','domain_name','approved_by','status','row_version'),
+            'memory'=>array('source_hash','context_hash','provenance_json','license_code','status'),
+            'providers'=>array('provider_key','base_url','allowed_hosts','region_code','contract_version','status','row_version'),
+            'vendor_jobs'=>array('provider_key','outbound_hash','status','deletion_evidence','row_version'),
+            'bundles'=>array('locale_tag','bundle_version','payload_json','source_list_json','bundle_hash','signature','status','previous_bundle_uuid','row_version'),
+            'feedback'=>array('locale_tag','route_path','category','severity','status','row_version'),
+            'content_links'=>array('owner_module','owner_object_id','target_locale','source_hash','publication_status','row_version'),
+            'idempotency'=>array('actor_id','route_key','idempotency_key','request_hash','status','expires_at'),
             'integration_evidence'=>array('integration_key','manifest_hash','evidence_hash','environment_name','expires_at'),
             'extraction_evidence'=>array('owner_module','source_commit','inventory_hash','extraction_hash'),
             'qa_evidence'=>array('environment_name','build_sha','test_id','artifact_hash'),
