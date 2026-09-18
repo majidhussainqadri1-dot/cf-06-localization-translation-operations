@@ -13,7 +13,7 @@ $t->test('Review rechecks exact source freshness before approval',function()use(
     foreach(['Translation source changed or retired before review','source_version','source_hash'] as $needle){TestHarness::assertTrue(str_contains($translation,$needle),$needle);}
 });
 
-$t->test('Linguistic approval awaiting domain review is not mislabeled as rejected',function()use($translation):void{
+$t->test('Linguistic approval awaiting domain review is not mislabeled as rejected',function()use($translation,$events):void{
     TestHarness::assertTrue(str_contains($translation,"if('approved'===\$to)"));
     TestHarness::assertTrue(str_contains($translation,"elseif('approve'!==\$decision)"));
     TestHarness::assertTrue(str_contains($events,'TranslationRejected'));
