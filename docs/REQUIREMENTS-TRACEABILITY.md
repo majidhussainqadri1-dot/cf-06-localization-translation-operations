@@ -29,7 +29,7 @@ This matrix binds the source candidate to the latest CF-06 master plan **and** t
 | CF06-FR-021 Automation suggestions | TerminologyService memory suggestions | contracts |
 | CF06-FR-022 Provider feedback/training restriction | providers schema, ProviderService, PlanCompliance | schema/security review |
 | CF06-FR-023 Automated linguistic QA | QaService, MessageFormatValidator and validators | unit/contracts tests |
-| CF06-FR-024 In-context functional QA | QA results, bundle state machine | lifecycle/release review |
+| CF06-FR-024 In-context functional QA | BundleService QA results + `slto_verify_bundle_qa_evidence` + bundle state machine | independent route/device/accessibility evidence; lifecycle/release review; real staging remains external |
 | CF06-FR-025 Deterministic locale bundle | DeterministicBundle, BundleService | unit/package tests |
 | CF06-FR-026 Coverage/critical thresholds | LocalizationRepository::coverage, QaService | contracts |
 | CF06-FR-027 Staged release/rollback | BundleService, bundle state machine | lifecycle/release tests |
@@ -38,7 +38,7 @@ This matrix binds the source candidate to the latest CF-06 master plan **and** t
 | CF06-FR-030 Translation feedback | FeedbackService, feedback table | schema/contracts |
 | CF06-FR-031 Staleness propagation | ResourceService, DependencyInvalidator, markDependentUnitsStale | lifecycle/plan tests |
 | CF06-FR-032 Coverage/quality metrics | MetricsService, HealthService | contracts/admin evidence |
-| CF06-FR-033 Retention/deletion | PrivacyService, secure payloads/vendor purge | security/privacy review |
+| CF06-FR-033 Retention/deletion | PrivacyService, atomic erasure-job minimization, secure payloads/vendor purge | security/privacy review |
 | CF06-FR-034 Locale/provider deprecation | LocaleService, ProviderService, state machines | lifecycle tests |
 
 ## Latest CF-06 completion addendum
