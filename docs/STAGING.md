@@ -2,9 +2,9 @@
 
 Required before any production claim:
 
-1. Fresh install, upgrade and deactivation/reactivation without fatal error or duplicate schema/jobs.
+1. Fresh install, upgrade and deactivation/reactivation without fatal error or duplicate schema/jobs; staging runtime may be enabled only after prerequisite gates so these acceptance journeys can be executed, and this enablement does not itself constitute Staging-Accepted.
 2. File 00 role/capability/suspension checks; unauthorized and stale-version actions fail without side effects.
-3. File 20 language switcher/route contract, File 25 RTL/LTR visual contract, File 24 assurance manifest and native-domain approvals.
+3. File 19 notification delivery, File 20 language switcher/route contract, Files 22/23 composer/dashboard contracts, File 24 assurance manifest, File 25 RTL/LTR visual contract, File 26 search/transliteration boundary, CF-04 media boundary and native-domain approvals.
 4. Urdu/English/Arabic locale/fallback/plural/date/number/currency/time-zone fixtures.
 5. Full translator → linguistic reviewer → qualified domain reviewer → approved → bundle lifecycle.
 6. MT provider sandbox: redaction, timeout, malformed response, replay, purge, outage and no-training/retention evidence.
