@@ -8,8 +8,9 @@ $root=dirname(__DIR__);$t=new TestHarness();$code=(string)file_get_contents($roo
 
 $t->test('Active provider runtime health and residency are fail closed',function()use($code):void{
     TestHarness::assertTrue(str_contains($code,"array('configured','healthy','ready')"));
-    TestHarness::assertTrue(str_contains($code,"''===\$healthRegion"));
-    TestHarness::assertTrue(str_contains($code,'runtime health or region cannot be verified'));
+    TestHarness::assertTrue(str_contains($code,"''===\$region"));
+    TestHarness::assertTrue(str_contains($code,'runtime region differs from the approved provider record'));
+    TestHarness::assertTrue(str_contains($code,'runtime health is not eligible'));
 });
 $t->test('Provider response must attest approved region',function()use($code):void{
     TestHarness::assertTrue(str_contains($code,"''===\$responseRegion"));
