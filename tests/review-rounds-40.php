@@ -18,7 +18,7 @@ $checks=[
 ['09 Audit chain read errors are surfaced','src/Infrastructure/Repository/AuditRepository.php','audit chain head could not be read'],
 ['10 Audit advisory lock release is checked','src/Infrastructure/Repository/AuditRepository.php','audit chain lock could not be released'],
 ['11 File 00 assertions are mandatory','src/Security/Authorization.php',"! function_exists('smc_membership_assertions')"],
-['12 Authorization extension is deny-only','src/Security/Authorization.php','return false !== $decision'],
+['12 Authorization extension is deny-only and boolean-strict','src/Security/Authorization.php','return true === $decision'],
 ['13 Integration evidence is persisted','src/Infrastructure/Database.php',"'integration_evidence'"],
 ['14 Integration evidence has independent verifier','src/Application/IntegrationService.php','slto_verify_integration_acceptance_evidence'],
 ['15 Expired integration evidence is rejected','src/Application/IntegrationService.php','already expired'],
