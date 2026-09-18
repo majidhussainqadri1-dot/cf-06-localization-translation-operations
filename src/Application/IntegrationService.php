@@ -44,7 +44,7 @@ final class IntegrationService
         $evidenceHash = strtolower(trim((string)($input['evidence_hash'] ?? '')));
         $evidenceRef = sanitize_text_field((string)($input['evidence_ref'] ?? ''));
         $expiresAt = $this->dateOrNull($input['expires_at'] ?? null);
-        if (1 !== preg_match('/^\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?$/D', $contractVersion)
+        if (strlen($contractVersion) > 40 || 1 !== preg_match('/^\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?$/D', $contractVersion)
             || 1 !== preg_match('/^[a-f0-9]{64}$/D', $manifestHash)
             || 1 !== preg_match('/^[a-f0-9]{64}$/D', $evidenceHash)
             || '' === $evidenceRef || strlen($evidenceRef) > 191) {
