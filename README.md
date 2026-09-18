@@ -45,9 +45,9 @@ CF-06 owns localization **operations**, not original domain truth. File 20 owns 
 
 ```bash
 bash tools/quality-check.sh
-python3 tools/build-release.py
+SOURCE_COMMIT="$(git rev-parse HEAD)" python3 tools/build-release.py
 ```
 
-The CI matrix additionally performs a real WordPress/MySQL activation, schema, index, idempotency, transaction and authorization integration suite on PHP 8.1 and PHP 8.3.
+Local release building requires an explicit exact 40-character `SOURCE_COMMIT`; the command above binds it to the checked-out Git HEAD. The fixed ZIP archive epoch is a reproducibility control, not a build/deployment timestamp.\n\nThe CI matrix additionally performs a real WordPress/MySQL activation, schema, index, idempotency, transaction and authorization integration suite on PHP 8.1 and PHP 8.3.
 
 See `docs/ARCHITECTURE.md`, `docs/REQUIREMENTS-TRACEABILITY.md`, `docs/FUTURE40.md`, `docs/FORTY-ROUND-REVIEW-CORRECTION-LEDGER.md`, `docs/THREAT-MODEL.md`, `docs/STAGING.md` and `docs/KNOWN-LIMITATIONS.md`.
