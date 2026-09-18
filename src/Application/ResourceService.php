@@ -35,7 +35,9 @@ final class ResourceService
         $description=sanitize_textarea_field((string)($input['description']??''));
         if(strlen($context)>262144||strlen($description)>65535){throw new InvalidArgumentException('Resource descriptive metadata exceeds canonical storage bounds.');}
         $markup=is_array($input['markup_policy']??null)?$input['markup_policy']:array();
-        $references=is_array($input['references']??null)?array_slice($input['references'],0,100):array();
+        $rawReferences=is_array($input['references']??null)?$input['references']:array();
+        if(count($rawReferences)>100){throw new InvalidArgumentException('Resource reference evidence exceeds the bounded item limit.');}
+        $references=$rawReferences;
         $translatability=is_array($input['translatability']??null)?$input['translatability']:array();
         $markupJson=$this->encodeBoundedMetadata($markup,'markup policy');
         $referencesJson=$this->encodeBoundedMetadata($references,'reference evidence');
