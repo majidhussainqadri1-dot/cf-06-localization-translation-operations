@@ -7,10 +7,13 @@ One localization operations owner, while every original record and final domain 
 ## Boundaries
 
 - **File 00:** identity, capabilities, suspension, guardian/entitlement assertions, and independent assignment qualification attestation.
+- **File 19:** localized notification delivery/preferences transport consumer; not localization source truth.
 - **File 20:** global language switcher, account preference presentation, shell route/slot placement.
+- **Files 22/23:** page/dashboard composer authoring and presentation authority.
 - **File 24:** assurance, privacy/security posture and evidence consumption.
 - **File 25:** visual RTL/LTR components, typography, responsive behavior and public presentation.
 - **File 26:** transliteration, synonyms, multilingual query/ranking and discovery.
+- **CF-04:** canonical media processing, secure delivery and media/document artifacts.
 - **Native domain owner:** original post/lesson/profile/clinical/legal/financial truth and final translated publication approval.
 - **CF-06:** locales, translation resources/units/projects, assignments, terminology, memory, MT draft orchestration, QA and bundle lifecycle.
 
