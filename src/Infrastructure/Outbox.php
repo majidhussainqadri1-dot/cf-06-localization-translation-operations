@@ -14,6 +14,10 @@ final class Outbox
         if (1 !== preg_match('/^[A-Z][A-Za-z0-9]{2,79}$/D', $eventName)) {
             throw new RuntimeException('Localization event name is invalid.');
         }
+        $aggregateType=sanitize_key($aggregateType);
+        if(''===$aggregateType||strlen($aggregateType)>40||1!==preg_match('/^[a-f0-9-]{36}$/D',$aggregateUuid)){
+            throw new RuntimeException('Localization event aggregate identity is invalid or exceeds the schema bound.');
+        }
         $json = wp_json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         if (! is_string($json) || strlen($json) > 1048576) {
             throw new RuntimeException('Localization event payload is invalid or oversized.');
@@ -21,7 +25,7 @@ final class Outbox
         $table = Database::table('outbox');
         $uuid = Database::uuid();
         $ok = $wpdb->insert($table, array(
-            'uuid'=>$uuid,'event_name'=>$eventName,'aggregate_type'=>sanitize_key($aggregateType),'aggregate_uuid'=>$aggregateUuid,
+            'uuid'=>$uuid,'event_name'=>$eventName,'aggregate_type'=>$aggregateType,'aggregate_uuid'=>$aggregateUuid,
             'contract_version'=>SABRI_SLTO_CONTRACT_VERSION,'payload_json'=>$json,'payload_hash'=>hash('sha256',$json),
             'status'=>'pending','lease_owner'=>null,'lease_until'=>null,'attempts'=>0,'available_at'=>Database::now(),'created_at'=>Database::now(),
         ));
