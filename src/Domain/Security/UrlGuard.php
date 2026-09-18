@@ -11,8 +11,9 @@ final class UrlGuard
     public static function assertPublicHttps(string $url, array $allowedHosts): void
     {
         $parts = parse_url($url);
-        if (! is_array($parts) || 'https' !== strtolower((string) ($parts['scheme'] ?? '')) || empty($parts['host'])) {
-            throw new InvalidArgumentException('Provider URL must be an approved HTTPS endpoint.');
+        if (! is_array($parts) || 'https' !== strtolower((string) ($parts['scheme'] ?? '')) || empty($parts['host'])
+            || isset($parts['user']) || isset($parts['pass']) || isset($parts['fragment'])) {
+            throw new InvalidArgumentException('Provider URL must be an approved HTTPS endpoint without embedded credentials or fragments.');
         }
         $host = strtolower((string) $parts['host']);
         if (! in_array($host, array_map('strtolower', $allowedHosts), true)) {
