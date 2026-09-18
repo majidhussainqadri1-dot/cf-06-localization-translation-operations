@@ -45,6 +45,13 @@ final class Activator
     public static function activate(): void
     {
         global $wpdb;
+        $installedSchema=(string)get_option('slto_schema_version','0.0.0');
+        $installedContract=(string)get_option('slto_contract_version','0.0.0');
+        if(version_compare($installedSchema,SABRI_SLTO_SCHEMA_VERSION,'>')
+            ||version_compare($installedContract,SABRI_SLTO_CONTRACT_VERSION,'>')){
+            update_option('slto_runtime_enabled',false,false);
+            throw new \RuntimeException('CF-06 refuses to activate older code against a newer schema or contract.');
+        }
         require_once ABSPATH . 'wp-admin/includes/upgrade.php';
         $c = $wpdb->get_charset_collate();
         foreach (self::schema($c) as $sql) {
@@ -73,7 +80,9 @@ final class Activator
 
     public static function deactivate(): void
     {
-        update_option('slto_runtime_enabled', false, false);
+        if(false===update_option('slto_runtime_enabled', false, false)&&(bool)get_option('slto_runtime_enabled',true)!==false){
+            throw new \RuntimeException('CF-06 runtime could not be disabled during plugin deactivation.');
+        }
         wp_clear_scheduled_hook('slto_process_jobs');
         wp_clear_scheduled_hook('slto_daily_reconciliation');
     }
