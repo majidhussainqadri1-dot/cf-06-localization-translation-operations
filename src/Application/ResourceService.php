@@ -22,14 +22,14 @@ final class ResourceService
     public function register(array $input):array
     {
         $key=(string)($input['resource_key']??'');
-        if(1!==preg_match('/^[a-z][a-z0-9]*(?:[._-][a-z0-9]+){1,15}$/D',$key)){throw new InvalidArgumentException('Resource key must be stable, semantic and namespaced.');}
+        if(strlen($key)>191||1!==preg_match('/^[a-z][a-z0-9]*(?:[._-][a-z0-9]+){1,15}$/D',$key)){throw new InvalidArgumentException('Resource key must be stable, semantic and namespaced.');}
         $locale=LocaleValidator::canonicalize((string)($input['source_locale']??''));
         if(null===$locale||!$this->repo->findOne('locales','locale_tag',$locale)){throw new InvalidArgumentException('Source locale is not registered.');}
         $text=(string)($input['source_text']??'');if(''===trim($text)||strlen($text)>500000){throw new InvalidArgumentException('Source text is empty or exceeds the bounded limit.');}
         BidiValidator::assertSafe($text,true);
         $risk=strtolower((string)($input['risk_class']??'low'));$data=strtoupper((string)($input['data_class']??'C1'));
         if(!in_array($risk,array('low','medium','high','critical','private'),true)||!in_array($data,array('C1','C2','C3','C4','C5'),true)){throw new InvalidArgumentException('Invalid resource risk or data class.');}
-        $domain=sanitize_key((string)($input['domain']??'platform'))?:'platform';
+        $domain=sanitize_key((string)($input['domain']??'platform'))?:'platform';if(strlen($domain)>80){throw new InvalidArgumentException('Resource domain exceeds the canonical storage bound.');}
         $schema=PlaceholderValidator::normalizeSchema($input['placeholders']??array());PlaceholderValidator::assertSource($text,$schema);
         $existing=$this->repo->findOne('resources','resource_key',$key);
         if(is_array($existing)&&'retired'===(string)($existing['status']??'')){throw new InvalidArgumentException('A retired translatable resource cannot be reactivated through ordinary registration.');}
