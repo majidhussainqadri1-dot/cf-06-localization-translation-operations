@@ -11,8 +11,8 @@ $routes=(string)file_get_contents($root.'/src/Rest/Routes.php');
 
 $t->test('Translation memory requires explicit reusable-rights evidence and bounded license',function()use($translation):void{
     TestHarness::assertTrue(str_contains($translation,'translation_memory_reuse_allowed'));
-    TestHarness::assertTrue(str_contains($translation,"license_code"));
-    TestHarness::assertTrue(str_contains($translation,"strlen($license)>80"));
+    TestHarness::assertTrue(str_contains($translation,'license_code'));
+    TestHarness::assertTrue(str_contains($translation,'strlen($license)>80'));
 });
 $t->test('Translation memory records reviewer provider version and project provenance',function()use($translation):void{
     foreach(['project_uuid','source_version','source_hash','translator_id','linguistic_reviewer_id','domain_reviewer_id','provider_key','model_version','region_code'] as $needle){TestHarness::assertTrue(str_contains($translation,$needle),$needle);}
