@@ -35,7 +35,7 @@ final class QaEvidenceService
             || '' === $pluginVersion || strlen($pluginVersion) > 40 || '' === $testId || strlen($testId) > 80
             || '' === $targetType || strlen($targetType) > 40 || '' === $targetUuid || strlen($targetUuid) > 191 || $reviewerId <= 0
             || ! in_array($result, array('pass','fail','blocked'), true)
-            || 1 !== preg_match('/^[a-f0-9]{7,64}$/D', $buildSha)
+            || 1 !== preg_match('/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/D', $buildSha)
             || 1 !== preg_match('/^[a-f0-9]{64}$/D', $expectedHash)
             || 1 !== preg_match('/^[a-f0-9]{64}$/D', $actualHash)
             || '' === $artifactRef || strlen($artifactRef) > 191
@@ -78,7 +78,7 @@ final class QaEvidenceService
         $buildSha = null === $buildSha ? null : strtolower(trim($buildSha));
         if (empty($requiredTestIds) || count($requiredTestIds) > 100
             || (null !== $pluginVersion && ('' === $pluginVersion || strlen($pluginVersion) > 40))
-            || (null !== $buildSha && 1 !== preg_match('/^[a-f0-9]{7,64}$/D', $buildSha))) {
+            || (null !== $buildSha && 1 !== preg_match('/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/D', $buildSha))) {
             return false;
         }
         $rows = $this->repo->list('qa_evidence', array(
