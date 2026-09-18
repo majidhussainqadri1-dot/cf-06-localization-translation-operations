@@ -28,7 +28,7 @@ final class ExtractionService
         $evidenceRef = sanitize_text_field((string)($input['evidence_ref'] ?? ''));
         $resourceCount = (int)($input['resource_count'] ?? -1);
         if ('' === $ownerModule || strlen($ownerModule) > 40 || '' === $repositoryRef || strlen($repositoryRef) > 191
-            || 1 !== preg_match('/^[a-f0-9]{7,64}$/D', $sourceCommit)
+            || 1 !== preg_match('/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/D', $sourceCommit)
             || 1 !== preg_match('/^[a-f0-9]{64}$/D', $inventoryHash)
             || 1 !== preg_match('/^[a-f0-9]{64}$/D', $extractionHash)
             || '' === $evidenceRef || strlen($evidenceRef) > 191
