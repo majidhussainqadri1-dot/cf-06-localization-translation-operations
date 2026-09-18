@@ -71,7 +71,8 @@ final class PrivacyService
         if(true===$hold){$this->audit->record('privacy',(string)$userId,'privacy_erasure_retained','success',['hold'=>true],'privacy');return;}
         $salt=wp_salt('auth');if(''===$salt){throw new RuntimeException('Privacy pseudonymization secret is unavailable.');}
         $pseudonym=$this->pseudonymId($userId,$salt);
-        $this->tx->run(function()use($wpdb,$userId,$pseudonym):void{
+        $jobUuid=(string)($job['uuid']??'');
+        $this->tx->run(function()use($wpdb,$userId,$pseudonym,$jobUuid,$payload):void{
             $now=Database::now();
             $run=function(string $sql,array $params)use($wpdb):void{
                 $prepared=$wpdb->prepare($sql,...$params);
@@ -106,15 +107,14 @@ final class PrivacyService
                 throw new RuntimeException('Localization privacy erasure could not be completed atomically.');
             }
             $run("UPDATE ".Database::table('release_approvals')." SET approver_id=%d,row_version=row_version+1,updated_at=%s WHERE approver_id=%d",[$pseudonym,$now,$userId]);
-            $this->audit->record('privacy',(string)$userId,'privacy_erasure_completed','success',['pseudonymized_operational_roles'=>true,'immutable_audit_metadata_retained'=>true],'privacy');
-        });
-        $jobUuid=(string)($job['uuid']??'');
-        if(''!==$jobUuid){
-            $scrubbed=wp_json_encode(['erased'=>true,'request_id_hash'=>hash('sha256',(string)($payload['request_id']??''))]);
-            if(!is_string($scrubbed)||false===$wpdb->update(Database::table('jobs'),['payload_json'=>$scrubbed,'updated_at'=>Database::now()],['uuid'=>$jobUuid,'job_type'=>'privacy_erasure'])){
-                throw new RuntimeException('Privacy erasure job payload could not be minimized after completion.');
+            if(''!==$jobUuid){
+                $scrubbed=wp_json_encode(['erased'=>true,'request_id_hash'=>hash('sha256',(string)($payload['request_id']??''))]);
+                if(!is_string($scrubbed)||false===$wpdb->update(Database::table('jobs'),['payload_json'=>$scrubbed,'updated_at'=>$now],['uuid'=>$jobUuid,'job_type'=>'privacy_erasure','status'=>'running'])){
+                    throw new RuntimeException('Privacy erasure job payload could not be minimized atomically.');
+                }
             }
-        }
+            $this->audit->record('privacy',(string)$userId,'privacy_erasure_completed','success',['pseudonymized_operational_roles'=>true,'immutable_audit_metadata_retained'=>true,'job_payload_minimized'=>''!==$jobUuid],'privacy');
+        });
     }
     private function pseudonymId(int $userId,string $salt): int
     {
