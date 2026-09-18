@@ -258,8 +258,9 @@ final class FutureCapabilitiesService
             if (! is_array($entry)) { throw new InvalidArgumentException('Each pronunciation entry must be an object.'); }
             $term = trim((string)($entry['term'] ?? ''));
             $pron = trim((string)($entry['pronunciation'] ?? ''));
-            if ('' === $term || '' === $pron) { throw new InvalidArgumentException('Pronunciation entries require term and pronunciation.'); }
-            $out[] = ['term' => $term, 'pronunciation' => $pron, 'locale' => (string)($entry['locale'] ?? ''), 'status' => 'reviewed-candidate'];
+            $locale=(string)($entry['locale']??'');
+            if ('' === $term || '' === $pron || '' === $locale) { throw new InvalidArgumentException('Pronunciation entries require term, pronunciation and locale.'); }
+            $out[] = ['term' => $term, 'pronunciation' => $pron, 'locale' => $locale, 'status' => 'reviewed-candidate'];
         }
         return ['entries' => $out, 'count' => count($out)];
     }
