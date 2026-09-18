@@ -50,8 +50,20 @@ final class Outbox
         }
         $count = 0;
         foreach ($rows as $row) {
+            $wasDelivering='delivering'===(string)$row['status'];
+            if($wasDelivering&&((int)$row['attempts']+1)>=8){
+                $dead=$wpdb->update($table,array(
+                    'status'=>'dead_letter',
+                    'attempts'=>(int)$row['attempts']+1,
+                    'lease_owner'=>null,
+                    'lease_until'=>null,
+                    'last_error'=>'RuntimeException:'.hash('sha256','expired_outbox_delivery_lease'),
+                ),array('uuid'=>$row['uuid'],'status'=>'delivering','lease_until'=>$row['lease_until']));
+                if(false===$dead||''!==(string)$wpdb->last_error){throw new RuntimeException('Expired localization outbox delivery could not be dead-lettered.');}
+                continue;
+            }
             $leased = $wpdb->query($wpdb->prepare(
-                "UPDATE {$table} SET status='delivering',lease_owner=%s,lease_until=%s WHERE uuid=%s AND status IN ('pending','retry','delivering') AND (lease_until IS NULL OR lease_until<%s)",
+                "UPDATE {$table} SET status='delivering',lease_owner=%s,lease_until=%s,attempts=attempts+IF(status='delivering',1,0) WHERE uuid=%s AND status IN ('pending','retry','delivering') AND (lease_until IS NULL OR lease_until<%s)",
                 $worker, gmdate('Y-m-d H:i:s', time() + 300), $row['uuid'], $now
             ));
             if (false === $leased || '' !== (string)$wpdb->last_error) {
