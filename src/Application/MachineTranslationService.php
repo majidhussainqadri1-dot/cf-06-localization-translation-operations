@@ -81,9 +81,20 @@ final class MachineTranslationService
     public function purge(string $jobUuid,int $version): array
     {
         $job=$this->repo->find('vendor_jobs',$jobUuid)??throw new InvalidArgumentException('Vendor job not found.');$this->assertGovernedProviderForPurge((string)$job['provider_key']);if(!in_array($job['status'],array('accepted','rejected','failed','human_reviewed'),true)){throw new InvalidArgumentException('Vendor job is not eligible for purge.');}
-        if('human_reviewed'===$job['status']){StateMachine::assert('vendor_job','human_reviewed','rejected');$job=$this->repo->updateVersioned('vendor_jobs',$jobUuid,$version,array('status'=>'rejected'));$version=(int)$job['row_version'];}
-        StateMachine::assert('vendor_job',(string)$job['status'],'purged');$evidence=$this->provider->purge((string)$job['provider_reference']);if(!is_array($evidence)||empty($evidence)){throw new InvalidArgumentException('Provider purge evidence is missing.');}$verification=['job_uuid'=>$jobUuid,'provider_key'=>$job['provider_key'],'provider_reference'=>$job['provider_reference'],'evidence'=>$evidence];if(true!==apply_filters('slto_verify_provider_purge_evidence',false,$verification)){throw new InvalidArgumentException('Provider purge evidence could not be independently verified.');}$evidenceJson=wp_json_encode($evidence,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);if(!is_string($evidenceJson)||strlen($evidenceJson)>262144){throw new InvalidArgumentException('Provider purge evidence is invalid or oversized.');}
-        $updated=$this->repo->updateVersioned('vendor_jobs',$jobUuid,$version,array('status'=>'purged','deletion_evidence'=>$evidenceJson));$this->audit->record('vendor_job',$jobUuid,'vendor_job_purged','success',array('provider'=>$job['provider_key'],'evidence_hash'=>hash('sha256',wp_json_encode($evidence))));$this->outbox->enqueue('TranslationVendorJobPurged','vendor_job',$jobUuid,array('provider'=>$job['provider_key'],'purged_at'=>gmdate(DATE_ATOM)));return $updated;
+        if('human_reviewed'===$job['status']){StateMachine::assert('vendor_job','human_reviewed','rejected');StateMachine::assert('vendor_job','rejected','purged');}
+        else{StateMachine::assert('vendor_job',(string)$job['status'],'purged');}
+        $evidence=$this->provider->purge((string)$job['provider_reference']);if(!is_array($evidence)||empty($evidence)){throw new InvalidArgumentException('Provider purge evidence is missing.');}$verification=['job_uuid'=>$jobUuid,'provider_key'=>$job['provider_key'],'provider_reference'=>$job['provider_reference'],'evidence'=>$evidence];if(true!==apply_filters('slto_verify_provider_purge_evidence',false,$verification)){throw new InvalidArgumentException('Provider purge evidence could not be independently verified.');}$evidenceJson=wp_json_encode($evidence,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);if(!is_string($evidenceJson)||strlen($evidenceJson)>262144){throw new InvalidArgumentException('Provider purge evidence is invalid or oversized.');}
+        return $this->tx->run(function()use($job,$jobUuid,$version,$evidence,$evidenceJson):array{
+            $current=$job;$currentVersion=$version;
+            if('human_reviewed'===(string)$current['status']){
+                $current=$this->repo->updateVersioned('vendor_jobs',$jobUuid,$currentVersion,array('status'=>'rejected'));
+                $currentVersion=(int)$current['row_version'];
+            }
+            $updated=$this->repo->updateVersioned('vendor_jobs',$jobUuid,$currentVersion,array('status'=>'purged','deletion_evidence'=>$evidenceJson));
+            $this->audit->record('vendor_job',$jobUuid,'vendor_job_purged','success',array('provider'=>$job['provider_key'],'evidence_hash'=>hash('sha256',wp_json_encode($evidence))));
+            $this->outbox->enqueue('TranslationVendorJobPurged','vendor_job',$jobUuid,array('provider'=>$job['provider_key'],'purged_at'=>gmdate(DATE_ATOM)));
+            return $updated;
+        });
     }
 
     private function assertActiveProvider(?string $expectedKey=null): array
