@@ -16,7 +16,7 @@ $t->test('Anonymous feedback cannot directly emit a critical operational escalat
 });
 
 $t->test('Feedback identity fields are bounded before persistence',function()use($feedback):void{
-    foreach(['strlen($category)>40','strlen($route)>1000','strlen($resourceKey)>191','resource key or route'] as $needle){TestHarness::assertTrue(str_contains($feedback,$needle),$needle);}
+    foreach(['strlen($category)>40','strlen($route)>255','strlen($resourceKey)>191','resource key or route'] as $needle){TestHarness::assertTrue(str_contains($feedback,$needle),$needle);}
 });
 
 $t->test('Critical feedback escalation occurs only after privileged transition route',function()use($routes,$feedback):void{
