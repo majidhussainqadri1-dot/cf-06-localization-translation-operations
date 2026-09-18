@@ -32,7 +32,7 @@ final class ProviderService
             $hosts[]=$host;
         }
         $hosts=array_values(array_unique($hosts));sort($hosts,SORT_STRING);if(count($hosts)>100){throw new InvalidArgumentException('Provider host allowlist exceeds the bounded limit.');}
-        if(''===$key||strlen($key)>80||''===$type||strlen($type)>40){throw new InvalidArgumentException('Provider identity is required and must remain bounded.');}
+        if(''===$key||strlen($key)>80||''===$type||strlen($type)>32){throw new InvalidArgumentException('Provider identity is required and must remain bounded.');}
         if(strlen($url)>255){throw new InvalidArgumentException('Provider base URL exceeds the canonical storage bound.');}if(''!==$url){UrlGuard::assertPublicHttps($url,$hosts);}
         if(!empty($input['training_allowed'])){throw new InvalidArgumentException('Provider training is denied by default.');}
         $credentialRef=sanitize_text_field((string)($input['credential_reference']??''));
