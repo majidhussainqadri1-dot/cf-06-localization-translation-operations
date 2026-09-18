@@ -30,6 +30,8 @@ final class Manifest
             ),
             'non_owners' => array(
                 'user_language_preference', 'global_switcher', 'visual_rtl_components',
+                'localized_notification_transport', 'notification_preferences',
+                'page_composer_authority', 'dashboard_presentation_authority',
                 'original_domain_content', 'domain_publication_decision', 'search_transliteration',
                 'canonical_media_processing',
             ),
