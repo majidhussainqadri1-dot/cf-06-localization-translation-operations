@@ -69,12 +69,13 @@ final class HealthService
         if('staging'===$environment){
             $stagingAccepted=true===apply_filters('slto_verify_staging_acceptance_evidence',false,$context);
         }elseif('production'===$environment){
+            $stagingAccepted=true===apply_filters('slto_verify_staging_acceptance_evidence',false,$context);
             $candidate=apply_filters('slto_verify_production_activation_evidence',array(),$context);
             $productionEvidence=is_array($candidate)?$candidate:array();
             foreach(self::PRODUCTION_EVIDENCE as $required){
                 if(true!==($productionEvidence[$required]??false)){$productionEvidenceReady=false;}
             }
-            $stagingAccepted=true===($productionEvidence['staging_acceptance']??false);
+            if(!$stagingAccepted){$productionEvidenceReady=false;}
             if($productionEvidenceReady&&''!==$configuredSourceCommit
                 &&hash_equals(SABRI_SLTO_SCHEMA_VERSION,$installedSchema)
                 &&hash_equals(SABRI_SLTO_CONTRACT_VERSION,$installedContract)){
