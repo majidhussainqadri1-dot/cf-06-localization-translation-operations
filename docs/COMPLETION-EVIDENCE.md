@@ -18,13 +18,13 @@ Exact Git head, GitHub Actions run, artifact digest, package SHA-256 and determi
 
 ## Required automated evidence
 
-- PHP 8.1 and PHP 8.3 exact-source quality gates;
+- PHP 8.1 and PHP 8.3 exact-source quality gates, each exercised against pinned WordPress 6.0.15 and 7.1.1;
 - original behavioral, architecture/contract, ownership, security/privacy, lifecycle and release/acceptance suites;
 - 40 prior post-correction guards;
 - rc4 plan-reconciliation tests for ICU MessageFormat, balanced bidi isolates, low-risk C1-only external MT, source-correction propagation and stale-bundle rejection;
 - Future40 registry/handler tests covering every `CF06-FUT-001` through `CF06-FUT-040` under a disabled-by-default fail-closed policy;
-- real WordPress/MySQL activation and integration suite on both PHP versions;
-- Composer validation, all PHP syntax, secret-pattern guard and expanded requirements traceability;
+- real WordPress/MySQL activation and integration suite across the full PHP × WordPress compatibility matrix;
+- pinned Composer/WP-CLI CI toolchain, Composer validation, all PHP syntax, secret-pattern guard and expanded requirements traceability;
 - deterministic package rebuild parity, ZIP CRC, manifest, SBOM and source/package parity;
 - artifact upload tied to the exact commit.
 
