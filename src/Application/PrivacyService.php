@@ -69,32 +69,40 @@ final class PrivacyService
         $salt=wp_salt('auth');if(''===$salt){throw new RuntimeException('Privacy pseudonymization secret is unavailable.');}
         $pseudonym=(int)hexdec(substr(hash_hmac('sha256',(string)$userId,$salt),0,15));
         $this->tx->run(function()use($wpdb,$userId,$pseudonym):void{
-            $ops=[
-                $wpdb->update(Database::table('comments'),['comment_text'=>'[ERASED]','author_id'=>0],['author_id'=>$userId]),
-                $wpdb->update(Database::table('feedback'),['suggestion_text'=>'[ERASED]','reporter_id'=>0],['reporter_id'=>$userId]),
-                $wpdb->update(Database::table('feedback'),['assigned_to'=>$pseudonym,'updated_at'=>Database::now()],['assigned_to'=>$userId]),
-                $wpdb->update(Database::table('assignments'),['status'=>'revoked','assignee_id'=>0,'updated_at'=>Database::now()],['assignee_id'=>$userId]),
-                $wpdb->update(Database::table('assignments'),['created_by'=>$pseudonym,'updated_at'=>Database::now()],['created_by'=>$userId]),
-                $wpdb->update(Database::table('units'),['translator_id'=>null,'updated_at'=>Database::now()],['translator_id'=>$userId]),
-                $wpdb->update(Database::table('units'),['linguistic_reviewer_id'=>null,'updated_at'=>Database::now()],['linguistic_reviewer_id'=>$userId]),
-                $wpdb->update(Database::table('units'),['domain_reviewer_id'=>null,'updated_at'=>Database::now()],['domain_reviewer_id'=>$userId]),
-                $wpdb->update(Database::table('projects'),['owner_id'=>$pseudonym,'updated_at'=>Database::now()],['owner_id'=>$userId]),
-                $wpdb->update(Database::table('resources'),['created_by'=>$pseudonym,'updated_at'=>Database::now()],['created_by'=>$userId]),
-                $wpdb->update(Database::table('resources'),['updated_by'=>$pseudonym,'updated_at'=>Database::now()],['updated_by'=>$userId]),
-                $wpdb->update(Database::table('terminology'),['created_by'=>$pseudonym,'updated_at'=>Database::now()],['created_by'=>$userId]),
-                $wpdb->update(Database::table('terminology'),['reviewer_id'=>$pseudonym,'updated_at'=>Database::now()],['reviewer_id'=>$userId]),
-                $wpdb->update(Database::table('style_guides'),['created_by'=>$pseudonym,'updated_at'=>Database::now()],['created_by'=>$userId]),
-                $wpdb->update(Database::table('style_guides'),['approved_by'=>$pseudonym,'updated_at'=>Database::now()],['approved_by'=>$userId]),
-                $wpdb->update(Database::table('vendor_jobs'),['created_by'=>$pseudonym,'updated_at'=>Database::now()],['created_by'=>$userId]),
-                $wpdb->update(Database::table('bundles'),['approved_by'=>$pseudonym,'updated_at'=>Database::now()],['approved_by'=>$userId]),
-                $wpdb->update(Database::table('bundles'),['activated_by'=>$pseudonym,'updated_at'=>Database::now()],['activated_by'=>$userId]),
-                $wpdb->update(Database::table('qa_results'),['reviewer_id'=>$pseudonym],['reviewer_id'=>$userId]),
-                $wpdb->update(Database::table('integration_evidence'),['approved_by'=>$pseudonym,'updated_at'=>Database::now()],['approved_by'=>$userId]),
-                $wpdb->update(Database::table('extraction_evidence'),['approved_by'=>$pseudonym,'updated_at'=>Database::now()],['approved_by'=>$userId]),
-                $wpdb->update(Database::table('qa_evidence'),['reviewer_id'=>$pseudonym],['reviewer_id'=>$userId]),
-                $wpdb->update(Database::table('release_approvals'),['approver_id'=>$pseudonym,'updated_at'=>Database::now()],['approver_id'=>$userId]),
-            ];
-            if(in_array(false,$ops,true)){throw new RuntimeException('Localization privacy erasure could not be completed atomically.');}
+            $now=Database::now();
+            $run=function(string $sql,array $params)use($wpdb):void{
+                $prepared=$wpdb->prepare($sql,...$params);
+                if(!is_string($prepared)||false===$wpdb->query($prepared)){
+                    throw new RuntimeException('Localization privacy erasure could not be completed atomically.');
+                }
+            };
+            $run("UPDATE ".Database::table('comments')." SET comment_text=%s,author_id=0,row_version=row_version+1,updated_at=%s WHERE author_id=%d",['[ERASED]',$now,$userId]);
+            $run("UPDATE ".Database::table('feedback')." SET suggestion_text=%s,reporter_id=0,row_version=row_version+1,updated_at=%s WHERE reporter_id=%d",['[ERASED]',$now,$userId]);
+            $run("UPDATE ".Database::table('feedback')." SET assigned_to=%d,row_version=row_version+1,updated_at=%s WHERE assigned_to=%d",[$pseudonym,$now,$userId]);
+            $run("UPDATE ".Database::table('assignments')." SET status='revoked',assignee_id=0,row_version=row_version+1,updated_at=%s WHERE assignee_id=%d",[$now,$userId]);
+            $run("UPDATE ".Database::table('assignments')." SET created_by=%d,row_version=row_version+1,updated_at=%s WHERE created_by=%d",[$pseudonym,$now,$userId]);
+            $run("UPDATE ".Database::table('units')." SET translator_id=NULL,row_version=row_version+1,updated_at=%s WHERE translator_id=%d",[$now,$userId]);
+            $run("UPDATE ".Database::table('units')." SET linguistic_reviewer_id=NULL,row_version=row_version+1,updated_at=%s WHERE linguistic_reviewer_id=%d",[$now,$userId]);
+            $run("UPDATE ".Database::table('units')." SET domain_reviewer_id=NULL,row_version=row_version+1,updated_at=%s WHERE domain_reviewer_id=%d",[$now,$userId]);
+            $run("UPDATE ".Database::table('projects')." SET owner_id=%d,row_version=row_version+1,updated_at=%s WHERE owner_id=%d",[$pseudonym,$now,$userId]);
+            $run("UPDATE ".Database::table('resources')." SET created_by=%d,row_version=row_version+1,updated_at=%s WHERE created_by=%d",[$pseudonym,$now,$userId]);
+            $run("UPDATE ".Database::table('resources')." SET updated_by=%d,row_version=row_version+1,updated_at=%s WHERE updated_by=%d",[$pseudonym,$now,$userId]);
+            $run("UPDATE ".Database::table('terminology')." SET created_by=%d,row_version=row_version+1,updated_at=%s WHERE created_by=%d",[$pseudonym,$now,$userId]);
+            $run("UPDATE ".Database::table('terminology')." SET reviewer_id=%d,row_version=row_version+1,updated_at=%s WHERE reviewer_id=%d",[$pseudonym,$now,$userId]);
+            $run("UPDATE ".Database::table('style_guides')." SET created_by=%d,row_version=row_version+1,updated_at=%s WHERE created_by=%d",[$pseudonym,$now,$userId]);
+            $run("UPDATE ".Database::table('style_guides')." SET approved_by=%d,row_version=row_version+1,updated_at=%s WHERE approved_by=%d",[$pseudonym,$now,$userId]);
+            $run("UPDATE ".Database::table('vendor_jobs')." SET created_by=%d,row_version=row_version+1,updated_at=%s WHERE created_by=%d",[$pseudonym,$now,$userId]);
+            $run("UPDATE ".Database::table('bundles')." SET approved_by=%d,row_version=row_version+1,updated_at=%s WHERE approved_by=%d",[$pseudonym,$now,$userId]);
+            $run("UPDATE ".Database::table('bundles')." SET activated_by=%d,row_version=row_version+1,updated_at=%s WHERE activated_by=%d",[$pseudonym,$now,$userId]);
+            if(false===$wpdb->update(Database::table('qa_results'),['reviewer_id'=>$pseudonym],['reviewer_id'=>$userId])){
+                throw new RuntimeException('Localization privacy erasure could not be completed atomically.');
+            }
+            $run("UPDATE ".Database::table('integration_evidence')." SET approved_by=%d,row_version=row_version+1,updated_at=%s WHERE approved_by=%d",[$pseudonym,$now,$userId]);
+            $run("UPDATE ".Database::table('extraction_evidence')." SET approved_by=%d,row_version=row_version+1,updated_at=%s WHERE approved_by=%d",[$pseudonym,$now,$userId]);
+            if(false===$wpdb->update(Database::table('qa_evidence'),['reviewer_id'=>$pseudonym],['reviewer_id'=>$userId])){
+                throw new RuntimeException('Localization privacy erasure could not be completed atomically.');
+            }
+            $run("UPDATE ".Database::table('release_approvals')." SET approver_id=%d,row_version=row_version+1,updated_at=%s WHERE approver_id=%d",[$pseudonym,$now,$userId]);
             $this->audit->record('privacy',(string)$userId,'privacy_erasure_completed','success',['pseudonymized_operational_roles'=>true,'immutable_audit_metadata_retained'=>true],'privacy');
         });
         $jobUuid=(string)($job['uuid']??'');
