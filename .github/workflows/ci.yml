@@ -13,12 +13,13 @@ concurrency:
 
 jobs:
   quality:
-    name: quality (${{ matrix.php }})
+    name: quality (PHP ${{ matrix.php }} / WP ${{ matrix.wordpress }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         php: ['8.1', '8.3']
+        wordpress: ['6.0.15', '7.1.1']
     services:
       mysql:
         image: mysql:8.0@sha256:7dcddc01f13bab2f15cde676d44d01f61fc9f99fe7785e86196dfc07d358ae2b
@@ -44,7 +45,7 @@ jobs:
         with:
           php-version: ${{ matrix.php }}
           coverage: none
-          tools: composer, wp-cli
+          tools: composer:2.10.3, wp-cli:2.12.0
           extensions: mysqli, sodium
 
       - name: Generate ephemeral CI crypto material
@@ -68,7 +69,7 @@ jobs:
         shell: bash
         run: |
           set +e
-          bash tools/quality-check.sh 2>&1 | tee "quality-${{ matrix.php }}.log"
+          bash tools/quality-check.sh 2>&1 | tee "quality-${{ matrix.php }}-wp-${{ matrix.wordpress }}.log"
           code=${PIPESTATUS[0]}
           echo "exit_code=$code" >> "$GITHUB_OUTPUT"
           exit "$code"
@@ -77,8 +78,8 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: quality-log-${{ matrix.php }}
-          path: quality-${{ matrix.php }}.log
+          name: quality-log-${{ matrix.php }}-wp-${{ matrix.wordpress }}
+          path: quality-${{ matrix.php }}-wp-${{ matrix.wordpress }}.log
           if-no-files-found: warn
 
       - name: Install WordPress and run MySQL integration suite
@@ -87,12 +88,12 @@ jobs:
           set -euo pipefail
           db="cf06_${{ strategy.job-index }}"
           mysql -h127.0.0.1 -uroot -e "CREATE DATABASE ${db} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-          wpdir="/tmp/wp-${{ matrix.php }}"
+          wpdir="/tmp/wp-${{ matrix.php }}-${{ matrix.wordpress }}"
           mkdir -p "$wpdir"
-          wp core download --path="$wpdir" --force
+          wp core download --path="$wpdir" --version="${{ matrix.wordpress }}" --force
           wp config create --path="$wpdir" --dbname="$db" --dbuser=root --dbpass='' --dbhost=127.0.0.1 --skip-check
           admin_password="$(php -r 'echo bin2hex(random_bytes(16));')"
-          wp core install --path="$wpdir" --url="http://cf06-${{ matrix.php }}.local" --title=CF06 --admin_user=admin --admin_password="$admin_password" --admin_email=admin@example.test
+          wp core install --path="$wpdir" --url="http://cf06-${{ matrix.php }}-wp-${{ matrix.wordpress }}.local" --title=CF06 --admin_user=admin --admin_password="$admin_password" --admin_email=admin@example.test
           wp core version --path="$wpdir"
           ln -s "$GITHUB_WORKSPACE" "$wpdir/wp-content/plugins/sabri-localization-translation-operations"
           wp plugin activate sabri-localization-translation-operations --path="$wpdir"
@@ -117,7 +118,7 @@ jobs:
         with:
           php-version: '8.3'
           coverage: none
-          tools: composer
+          tools: composer:2.10.3
 
       - name: Build exact-commit candidate
         env:
