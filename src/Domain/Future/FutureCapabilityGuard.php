@@ -173,7 +173,7 @@ final class FutureCapabilityGuard
         if (! is_array($parts) || '' === (string)($parts['host'] ?? '') || ! in_array(strtolower((string)($parts['scheme'] ?? '')), ['https','http'], true)) {
             throw new InvalidArgumentException('Valid self-hosted MT endpoint is required.');
         }
-        if (isset($parts['user']) || isset($parts['pass'])) { throw new InvalidArgumentException('Self-hosted MT endpoint must not contain embedded credentials.'); }
+        if (isset($parts['user']) || isset($parts['pass']) || isset($parts['fragment'])) { throw new InvalidArgumentException('Self-hosted MT endpoint must not contain embedded credentials or fragments.'); }
         $host = strtolower((string)$parts['host']);
         $allow = array_map('strtolower', is_array($input['approved_hosts'] ?? null) ? $input['approved_hosts'] : []);
         if ([] === $allow || ! in_array($host, $allow, true)) { throw new InvalidArgumentException('Self-hosted MT endpoint host is not explicitly approved.'); }
