@@ -138,7 +138,7 @@ final class ProjectService
     public function revokeAssignment(string $uuid,int $version,string $reason): array
     {
         $assignment=$this->repo->find('assignments',$uuid)??throw new InvalidArgumentException('Assignment not found.');
-        $reason=sanitize_textarea_field($reason);if('active'!==$assignment['status']||''===trim($reason)){throw new InvalidArgumentException('Active assignment and revocation reason are required.');}
+        $reason=sanitize_textarea_field($reason);if('active'!==$assignment['status']||''===trim($reason)||strlen($reason)>2000){throw new InvalidArgumentException('Active assignment and a bounded revocation reason are required.');}
         $unit=$this->repo->find('units',(string)$assignment['unit_uuid'])??throw new InvalidArgumentException('Assignment unit is unavailable.');
         $column=match((string)$assignment['assignment_role']){'translator'=>'translator_id','linguistic_reviewer'=>'linguistic_reviewer_id','domain_reviewer'=>'domain_reviewer_id',default=>throw new InvalidArgumentException('Assignment role is invalid.')};
         return $this->tx->run(function()use($assignment,$unit,$column,$version,$reason):array{
@@ -156,6 +156,7 @@ final class ProjectService
     {
         global $wpdb;
         $project=$this->repo->find('projects',$uuid)??throw new InvalidArgumentException('Translation project not found.');
+        $reason=sanitize_textarea_field($reason);if(strlen($reason)>2000){throw new InvalidArgumentException('Project transition reason exceeds the bounded limit.');}
         StateMachine::assert('project',(string)$project['status'],$to);
         if('completed'===$to){$open=$wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM ".Database::table('units')." WHERE project_uuid=%s AND status NOT IN ('released','retired')",$uuid));if(''!==(string)$wpdb->last_error){throw new RuntimeException('Project completion state could not be verified.');}if((int)$open>0){throw new InvalidArgumentException('Project has unfinished translation units.');}}
         return $this->tx->run(function()use($project,$to,$version,$reason):array{$updated=$this->repo->updateVersioned('projects',(string)$project['uuid'],$version,['status'=>$to]);$this->audit->record('project',(string)$project['uuid'],'translation_project_transition','success',['from'=>$project['status'],'to'=>$to,'reason'=>$reason]);return $updated;});
@@ -177,7 +178,9 @@ final class ProjectService
     {
         if(!function_exists('smc_membership_assertions')){throw new InvalidArgumentException('File 00 membership assertions are unavailable.');}
         $a=smc_membership_assertions($userId);$state=is_array($a)?strtolower((string)($a['state']??'')):'';
-        if(!is_array($a)||!empty($a['suspended'])||!in_array($state,['approved','active','verified'],true)){throw new InvalidArgumentException('Assignee does not hold a current approved membership assertion.');}
+        $actorBound=is_array($a)&&(!isset($a['user_id'])||(int)$a['user_id']===$userId);
+        $fresh=true;if(is_array($a)&&isset($a['expires_at'])){$expiry=strtotime((string)$a['expires_at']);$fresh=false!==$expiry&&$expiry>time();}
+        if(!is_array($a)||!$actorBound||!$fresh||!empty($a['suspended'])||!in_array($state,['approved','active','verified'],true)){throw new InvalidArgumentException('Assignee does not hold a current actor-bound approved membership assertion.');}
     }
 
     private function dateOrNull(mixed $value):?string{if(null===$value||''===$value){return null;}$timestamp=strtotime((string)$value);if(false===$timestamp){throw new InvalidArgumentException('Invalid project date.');}return gmdate('Y-m-d H:i:s',$timestamp);}
