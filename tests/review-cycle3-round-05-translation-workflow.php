@@ -9,7 +9,7 @@ $translation=(string)file_get_contents($root.'/src/Application/TranslationServic
 $terms=(string)file_get_contents($root.'/src/Application/TerminologyService.php');
 $events=(string)file_get_contents($root.'/src/Contract/Events.php');
 
-$t->test('Review rechecks exact source freshness before approval',function()use($translation):void{
+$t->test('Review rechecks exact source freshness before approval',function()use($translation,$events):void{
     foreach(['Translation source changed or retired before review','source_version','source_hash'] as $needle){TestHarness::assertTrue(str_contains($translation,$needle),$needle);}
 });
 
