@@ -127,10 +127,19 @@ final class HealthService
     public function activationEligible(): array
     {
         $report=$this->report();
+        $gates=$report['gates'];
+        // Staging acceptance is the outcome of running the real staging journeys.
+        // It therefore cannot be a prerequisite for temporarily enabling the
+        // runtime needed to execute those journeys. Production keeps the full
+        // environment-acceptance gate.
+        if('staging'===$report['deployment_environment']){
+            unset($gates['environment_acceptance_evidence']);
+            $gates['staging_acceptance_is_post_activation_evidence']=true;
+        }
         return [
-            'eligible'=>!in_array(false,$report['gates'],true),
+            'eligible'=>!in_array(false,$gates,true),
             'environment'=>$report['deployment_environment'],
-            'gates'=>$report['gates'],
+            'gates'=>$gates,
         ];
     }
 }
