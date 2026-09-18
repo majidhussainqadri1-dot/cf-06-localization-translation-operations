@@ -8,3 +8,8 @@
 - Erasure anonymizes eligible operational identity while preserving required security/release/audit evidence; encrypted payload and provider deletion require explicit evidence.
 - Vendor jobs have purge dates and deletion evidence. A purge is not accepted merely because a provider adapter returns data: non-empty evidence must pass the independent `slto_verify_provider_purge_evidence` contract for the exact job/provider/reference. Provider deprecation requires outstanding-job reconciliation and exit proof.
 - Retention schedules and lawful/clinical/financial exceptions are finalized before activation per jurisdiction and native owner.
+
+
+## Operational actor pseudonymization
+
+Mutable operational actor references are pseudonymized during erasure into a deterministic high-ID namespace. Allocation explicitly refuses collision with a real WordPress user account; immutable audit-chain actor metadata remains retained only under the stated security/governance integrity exception.
