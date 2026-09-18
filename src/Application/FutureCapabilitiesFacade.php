@@ -17,6 +17,8 @@ use Sabri\Localization\Domain\Future\SemanticIntegrityGuard;
  */
 final class FutureCapabilitiesFacade
 {
+    private const MAX_EVALUATION_BYTES = 262144;
+    private const MAX_EVALUATION_NODES = 5000;
     public function __construct(private readonly FutureCapabilitiesService $handlers = new FutureCapabilitiesService()) {}
 
     public function catalogue(): array
@@ -26,6 +28,7 @@ final class FutureCapabilitiesFacade
 
     public function evaluate(string $id, array $input): array
     {
+        $this->assertBoundedInput($input);
         $id = strtoupper(trim($id));
         $input = ReleaseLifecycleGuard::normalize($id, $input);
         if ('CF06-FUT-028' === $id) {
@@ -47,5 +50,28 @@ final class FutureCapabilitiesFacade
         $out = SemanticIntegrityGuard::apply($id, $input, $out);
         $out = LocaleAccessibilityGuard::apply($id, $input, $out);
         return ReleaseLifecycleGuard::apply($id, $input, $out);
+    }
+
+    private function assertBoundedInput(array $input): void
+    {
+        try {
+            $encoded=json_encode($input,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR);
+        } catch (\JsonException $exception) {
+            throw new \InvalidArgumentException('Future capability input is not safely encodable.',0,$exception);
+        }
+        if(strlen($encoded)>self::MAX_EVALUATION_BYTES){
+            throw new \InvalidArgumentException('Future capability input exceeds the bounded byte limit.');
+        }
+        $count=0;$stack=[$input];
+        while([]!==$stack){
+            $current=array_pop($stack);
+            foreach($current as $item){
+                ++$count;
+                if($count>self::MAX_EVALUATION_NODES){
+                    throw new \InvalidArgumentException('Future capability input exceeds the bounded node limit.');
+                }
+                if(is_array($item)){$stack[]=$item;}
+            }
+        }
     }
 }
