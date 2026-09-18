@@ -36,6 +36,10 @@ final class HealthService
             $tables[$entity]=''===(string)$wpdb->last_error&&$found===$name;
         }
         $schemaReady=!in_array(false,$tables,true);
+        if($schemaReady){
+            try{\Sabri\Localization\Infrastructure\Activator::assertRuntimeSchemaParity();}
+            catch(\Throwable){$schemaReady=false;}
+        }
         $signing=DeterministicBundle::sign(str_repeat('0',64));
         $environment=IntegrationService::deploymentEnvironment();
         $environmentReady=null!==$environment;
@@ -91,7 +95,7 @@ final class HealthService
             'bundle_signing'=>null!==$signing,
             'staffing_approved'=>defined('SLTO_LOCALIZATION_STAFFING_APPROVED')&&true===SLTO_LOCALIZATION_STAFFING_APPROVED,
             'locale_release_ready'=>$localeReady,
-            'production_release_evidence'=>$productionEvidenceReady,
+            'environment_acceptance_evidence'=>'staging'===$environment?$stagingAccepted:('production'===$environment?$productionEvidenceReady:false),
         ],$integrations);
         $runtimeEnabled=(bool)get_option('slto_runtime_enabled',false);
         $liveDeployed='production'===$environment&&$productionEvidenceReady&&$liveParityVerified;
