@@ -83,7 +83,8 @@ def build() -> pathlib.Path:
         "schema_version": "1.0.1",
         "contract_version": "1.3.0",
         "runtime_default": "disabled",
-        "build_epoch": "2026-09-16T00:00:00Z",
+        "reproducible_archive_epoch": "2026-09-16T00:00:00Z",
+        "archive_epoch_policy": "deterministic-reproducibility-only-not-build-time",
         "source_commit": source_commit,
         "requirements": {
             "functional_first": "CF06-FR-001", "functional_last": "CF06-FR-034", "functional_count": 34,
@@ -100,7 +101,6 @@ def build() -> pathlib.Path:
         "bomFormat": "CycloneDX", "specVersion": "1.5",
         "serialNumber": "urn:uuid:cf060000-0000-4000-8000-000000000001", "version": 1,
         "metadata": {
-            "timestamp": "2026-09-16T00:00:00Z",
             "component": {
                 "type": "application", "name": "sabri-localization-translation-operations", "version": VERSION,
                 "licenses": [{"license": {"id": "GPL-2.0-or-later"}}],
