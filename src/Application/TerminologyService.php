@@ -22,7 +22,12 @@ final class TerminologyService
         $concept=sanitize_key((string)($input['concept_id']??''));$domain=sanitize_key((string)($input['domain']??''));
         $source=trim((string)($input['source_term']??''));$approved=trim((string)($input['approved_term']??''));
         $sourceLocale=LocaleValidator::canonicalize((string)($input['source_locale']??''));$targetLocale=LocaleValidator::canonicalize((string)($input['target_locale']??''));
-        if(''===$concept||strlen($concept)>80||''===$domain||strlen($domain)>80||''===$source||strlen($source)>191||''===$approved||strlen($approved)>191||null===$sourceLocale||null===$targetLocale){throw new InvalidArgumentException('Terminology entry is incomplete or exceeds canonical storage bounds.');}
+        if(''===$concept||strlen($concept)>80||''===$domain||strlen($domain)>80||''===$source||strlen($source)>191||''===$approved||strlen($approved)>191||null===$sourceLocale||null===$targetLocale||$sourceLocale===$targetLocale){throw new InvalidArgumentException('Terminology entry is incomplete, same-locale, or exceeds canonical storage bounds.');}
+        foreach(array($sourceLocale,$targetLocale) as $localeTag){
+            if(!is_array($this->repo->findOne('locales','locale_tag',$localeTag))){
+                throw new InvalidArgumentException('Terminology locale is not registered: '.$localeTag);
+            }
+        }
         $prohibited=[];foreach(is_array($input['prohibited_terms']??null)?$input['prohibited_terms']:[] as $term){$term=trim((string)$term);if(''!==$term){if(strlen($term)>191){throw new InvalidArgumentException('A prohibited terminology variant exceeds the bounded term length.');}$prohibited[]=$term;}}
         $prohibited=array_values(array_unique($prohibited));if(count($prohibited)>500){throw new InvalidArgumentException('Too many prohibited terminology variants.');}
         $prohibitedJson=wp_json_encode($prohibited,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);if(!is_string($prohibitedJson)||strlen($prohibitedJson)>131072){throw new InvalidArgumentException('Prohibited terminology evidence is invalid or oversized.');}
