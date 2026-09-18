@@ -91,6 +91,8 @@ grep -Fq 'Style guide activation requires preserved approval provenance.' src/Ap
 grep -Fq 'QA evidence is frozen once a bundle is approved for release' src/Application/BundleService.php
 grep -Fq 'assertActiveProvider' src/Application/MachineTranslationService.php
 grep -Fq 'assertGovernedProviderForPurge' src/Application/MachineTranslationService.php
+grep -Fq 'slto_verify_provider_purge_evidence' src/Application/MachineTranslationService.php
+grep -Fq 'slto_verify_assignment_qualification' src/Application/ProjectService.php
 grep -Fq 'assertAdapterGovernance' src/Application/MachineTranslationService.php
 grep -Fq 'response must attest the approved provider region' src/Application/MachineTranslationService.php
 grep -Fq 'response must include bounded reference and model-version provenance' src/Application/MachineTranslationService.php
@@ -127,5 +129,7 @@ grep -Fq "'file19'" src/Contract/PlanCompliance.php
 grep -Fq "'file22'" src/Contract/PlanCompliance.php
 grep -Fq "'file23'" src/Contract/PlanCompliance.php
 grep -Fq "'file24'" src/Contract/PlanCompliance.php
+grep -Fq 'slto_verify_assignment_qualification' docs/CONTRACTS.md
+grep -Fq 'slto_verify_provider_purge_evidence' docs/CONTRACTS.md
 
 echo 'QUALITY GATE PASS'
