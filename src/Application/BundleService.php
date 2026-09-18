@@ -58,7 +58,12 @@ final class BundleService
         if(in_array((string)$bundle['status'],array('approved','staged','canary','active','superseded','rolled_back','invalidated'),true)){throw new InvalidArgumentException('QA evidence is frozen once a bundle is approved for release.');}
         $rule=sanitize_key($rule);if(!in_array($rule,self::HUMAN_QA,true)){throw new InvalidArgumentException('Bundle QA rule is invalid.');}if(!in_array($result,array('pass','fail'),true)||!in_array($severity,array('medium','high','critical'),true)){throw new InvalidArgumentException('Bundle QA result is invalid.');}
         $encoded=wp_json_encode($details,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);if(!is_string($encoded)||strlen($encoded)>262144){throw new InvalidArgumentException('Bundle QA details are invalid or oversized.');}
-        return $this->tx->run(function()use($uuid,$rule,$result,$severity,$encoded):array{$record=$this->repo->insert('qa_results',array('target_type'=>'bundle','target_uuid'=>$uuid,'rule_code'=>$rule,'result'=>$result,'severity'=>$severity,'details_json'=>$encoded,'reviewer_id'=>get_current_user_id(),'fixed_at'=>null));$this->audit->record('bundle',$uuid,'bundle_qa_recorded','success',array('rule'=>$rule,'result'=>$result,'severity'=>$severity,'qa_uuid'=>$record['uuid']??null));return $record;});
+        $reviewerId=get_current_user_id();if($reviewerId<=0){throw new InvalidArgumentException('Bundle QA reviewer identity is unavailable.');}
+        if('pass'===$result){
+            $evidence=array('bundle_uuid'=>$uuid,'bundle_hash'=>(string)$bundle['bundle_hash'],'bundle_version'=>(int)$bundle['bundle_version'],'locale'=>(string)$bundle['locale_tag'],'rule'=>$rule,'result'=>$result,'severity'=>$severity,'details'=>$details,'reviewer_id'=>$reviewerId);
+            if(true!==apply_filters('slto_verify_bundle_qa_evidence',false,$evidence)){throw new InvalidArgumentException('Passing in-context bundle QA requires independently verified route/device/accessibility evidence.');}
+        }
+        return $this->tx->run(function()use($uuid,$rule,$result,$severity,$encoded,$reviewerId):array{$record=$this->repo->insert('qa_results',array('target_type'=>'bundle','target_uuid'=>$uuid,'rule_code'=>$rule,'result'=>$result,'severity'=>$severity,'details_json'=>$encoded,'reviewer_id'=>$reviewerId,'fixed_at'=>null));$this->audit->record('bundle',$uuid,'bundle_qa_recorded','success',array('rule'=>$rule,'result'=>$result,'severity'=>$severity,'qa_uuid'=>$record['uuid']??null,'reviewer_id'=>$reviewerId));return $record;});
     }
 
     public function transition(string $uuid,string $to,int $version,string $reason=''): array
