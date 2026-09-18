@@ -31,20 +31,28 @@ final class JobQueue
         if (! is_string($json) || strlen($json) > 1048576) {
             throw new RuntimeException('Localization job payload is invalid or oversized.');
         }
+        $scheduledAt = $availableAt ?: Database::now();
+        if (false === strtotime($scheduledAt)) {
+            throw new RuntimeException('Localization job availability timestamp is invalid.');
+        }
+        $scheduledAt = gmdate('Y-m-d H:i:s', strtotime($scheduledAt));
         $table = Database::table('jobs');
         $uuid = Database::uuid();
         $ok = $wpdb->query($wpdb->prepare(
-            "INSERT INTO {$table} (uuid,job_type,dedupe_key,payload_json,status,attempts,max_attempts,available_at,created_at,updated_at) VALUES (%s,%s,%s,%s,'queued',0,%d,%s,%s,%s) ON DUPLICATE KEY UPDATE payload_json=VALUES(payload_json),available_at=LEAST(available_at,VALUES(available_at)),updated_at=VALUES(updated_at)",
-            $uuid, $type, $dedupeKey, $json, max(1, min(20, $maxAttempts)), $availableAt ?: Database::now(), Database::now(), Database::now()
+            "INSERT INTO {$table} (uuid,job_type,dedupe_key,payload_json,status,attempts,max_attempts,available_at,created_at,updated_at) VALUES (%s,%s,%s,%s,'queued',0,%d,%s,%s,%s) ON DUPLICATE KEY UPDATE uuid=uuid",
+            $uuid, $type, $dedupeKey, $json, max(1, min(20, $maxAttempts)), $scheduledAt, Database::now(), Database::now()
         ));
         if (false === $ok || '' !== (string)$wpdb->last_error) {
             throw new RuntimeException('Localization job could not be queued.');
         }
-        $stored = $wpdb->get_var($wpdb->prepare("SELECT uuid FROM {$table} WHERE job_type=%s AND dedupe_key=%s LIMIT 1", $type, $dedupeKey));
-        if ('' !== (string)$wpdb->last_error || ! is_string($stored) || '' === $stored) {
+        $stored = $wpdb->get_row($wpdb->prepare("SELECT uuid,payload_json FROM {$table} WHERE job_type=%s AND dedupe_key=%s LIMIT 1", $type, $dedupeKey), ARRAY_A);
+        if ('' !== (string)$wpdb->last_error || ! is_array($stored) || '' === (string)($stored['uuid']??'')) {
             throw new RuntimeException('Localization job identity could not be verified.');
         }
-        return $stored;
+        if (! hash_equals(hash('sha256',$json), hash('sha256',(string)($stored['payload_json']??'')))) {
+            throw new RuntimeException('Localization job dedupe key was reused with a different payload.');
+        }
+        return (string)$stored['uuid'];
     }
 
     public function run(int $limit = 20): array
