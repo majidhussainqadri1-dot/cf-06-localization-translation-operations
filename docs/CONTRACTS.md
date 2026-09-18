@@ -20,3 +20,12 @@
 - A successful preview response does not authorize staging, production, publication, provider use or high-risk translation. `activation_ready` remains false until Founder change-control, privacy/security/domain review, companion-contract parity, real staging acceptance, rollback/restore rehearsal and live deployment verification are separately evidenced.
 - Raw `FutureCapabilitiesService` handlers are internal implementation details; application/REST consumers must use the guarded `FutureCapabilitiesFacade` path.
 - Per-ID security/privacy/safety rules, owner boundaries and evidence classes are recorded in `docs/FUTURE40-TRACEABILITY-EVIDENCE.md`.
+
+
+## Independent governance verification hooks
+
+These filters are fail-closed companion contracts; their default result is denial, never approval.
+
+- `slto_verify_assignment_qualification` — File 00/native qualification authority must independently attest the assignee, role, target locale, domain/risk, unit/project and supplied competency evidence before an assignment is created or transferred.
+- `slto_verify_provider_purge_evidence` — privacy/provider assurance must independently verify deletion evidence for the exact governed vendor job/provider/reference before CF-06 records the job as purged.
+- `slto_verify_release_approval_evidence`, `slto_verify_provider_activation_evidence`, `slto_verify_integration_acceptance_evidence`, `slto_verify_extraction_evidence` and `slto_verify_production_activation_evidence` remain separate evidence authorities; none may be inferred from another hook.
