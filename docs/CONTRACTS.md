@@ -28,6 +28,8 @@ These filters are fail-closed companion contracts; their default result is denia
 
 - `slto_verify_assignment_qualification` — File 00/native qualification authority must independently attest the assignee, role, target locale, domain/risk, unit/project and supplied competency evidence before an assignment is created or transferred.
 - `slto_verify_provider_purge_evidence` — privacy/provider assurance must independently verify deletion evidence for the exact governed vendor job/provider/reference before CF-06 records the job as purged.
+- `slto_verify_bundle_qa_evidence` — every **passing** in-context bundle QA rule must be independently attested for the exact bundle hash/version/locale, reviewer and rule before it can become release evidence. Failed QA can still be recorded without this approval path.
+- `slto_verify_qa_evidence` — durable CI/staging/production QA evidence rows are accepted only after an independent verifier attests the exact target, environment, plugin/build identity, test ID and artifact/hash evidence.
 - `slto_verify_release_approval_evidence`, `slto_verify_provider_activation_evidence`, `slto_verify_integration_acceptance_evidence`, `slto_verify_extraction_evidence` and `slto_verify_production_activation_evidence` remain separate evidence authorities; none may be inferred from another hook.
 - Stored integration acceptance is reverified through `slto_verify_integration_acceptance_evidence` whenever readiness is consumed.
 - `slto_verify_staging_acceptance_evidence` is the independent staging-acceptance lifecycle verifier. It is evaluated in staging and re-checked before production truth; it must not be inferred from repository, CI, package or production checkbox state.
@@ -40,3 +42,11 @@ These filters are fail-closed companion contracts; their default result is denia
 - A published content-translation relationship must bind the current active resource, the matching translation unit, target locale, source version and source hash. Native-owner approval is reverified after those relationships are proven.
 - Resource source/version identity covers governed translation-affecting metadata (context, description, placeholders, markup policy, references and translatability evidence) as well as source text/risk/domain classification.
 - `slto_verify_staging_acceptance_evidence` is re-run when production truth is evaluated; a boolean carried inside production evidence cannot by itself create `Staging-Accepted`.
+
+
+## Delivery and staging-activation boundaries
+
+- REST mutation payloads are bounded globally by byte and node count before idempotency or business logic runs.
+- WP-CLI status/inventory/jobs/events/bundle-build commands apply the same File 00-bound authorization classes as other privileged delivery surfaces; operators must run them with an authorized WordPress user.
+- Staging acceptance is an **outcome** of executing real staging journeys. Staging runtime activation therefore evaluates structural/security/integration/staffing gates but does not require the not-yet-created staging-acceptance result. Production activation retains the full environment-acceptance gate.
+- Runtime boot requires the persisted schema and public-contract versions to exactly equal the code constants. Older code refuses activation against newer persisted schema/contract state.
