@@ -15,7 +15,7 @@ $t->test('Plugin boot remains retryable until complete registration succeeds', f
 });
 
 $t->test('Migration and contract parity are checked before service construction', function () use ($code): void {
-    $parity = strpos($code, 'schema or contract upgrade is incomplete');
+    $parity = strpos($code, 'schema or contract version is not an exact match for this runtime; boot is denied.');
     $crypto = strpos($code, '$crypto = new Crypto();');
     TestHarness::assertTrue(false !== $parity && false !== $crypto && $parity < $crypto);
 });
