@@ -85,7 +85,23 @@ final class ProviderService
             $evidence=apply_filters('slto_verify_provider_activation_evidence',false,$row);
             if(true!==$evidence){throw new InvalidArgumentException('Provider privacy/security/region/retention/exit evidence is incomplete.');}
         }
-        if('deprecated'===$to&&$this->repo->count('vendor_jobs',['provider_key'=>$row['provider_key']],['purged'])>0){throw new InvalidArgumentException('Provider has unpurged jobs and cannot be deprecated.');}
+        if('deprecated'===$to){
+            if($this->repo->count('vendor_jobs',['provider_key'=>$row['provider_key']],['purged'])>0){
+                throw new InvalidArgumentException('Provider has unpurged jobs and cannot be deprecated.');
+            }
+            $deprecationEvidence=[
+                'provider_uuid'=>(string)$row['uuid'],
+                'provider_key'=>(string)$row['provider_key'],
+                'credential_reference'=>(string)($row['credential_reference']??''),
+                'region_code'=>(string)($row['region_code']??''),
+                'contract_version'=>(string)($row['contract_version']??''),
+                'reason'=>$reason,
+                'required'=>['provider_export_complete','provider_purge_complete','credential_revoked','exit_reconciled','rollback_window_documented'],
+            ];
+            if(true!==apply_filters('slto_verify_provider_deprecation_evidence',false,$deprecationEvidence)){
+                throw new InvalidArgumentException('Provider deprecation requires independently verified purge, credential-revocation and exit evidence.');
+            }
+        }
         return $this->tx->run(function() use ($row,$uuid,$to,$version,$reason): array {
             $updated=$this->repo->updateVersioned('providers',$uuid,$version,['status'=>$to]);
             $this->audit->record('provider',(string)$row['provider_key'],'localization_provider_transition','success',['from'=>$row['status'],'to'=>$to,'reason'=>$reason]);
