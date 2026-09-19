@@ -36,8 +36,16 @@ final class BundleService
         global $wpdb;
         $localeRecord=$this->repo->findOne('locales','locale_tag',$locale)??throw new InvalidArgumentException('Bundle locale is not registered.');
         if(!in_array((string)$localeRecord['status'],array('content_ready','enabled','degraded'),true)){throw new InvalidArgumentException('Bundle locale has not reached content-ready status.');}
-        $rows=$this->repo->releasedItems($locale);$items=[];$sources=[];
-        foreach($rows as $row){$items[(string)$row['resource_key']]=array('text'=>$this->translations->targetText($row),'source_hash'=>$row['source_hash'],'source_version'=>(int)$row['source_version'],'unit_uuid'=>$row['uuid']);$sources[]=array('key'=>$row['resource_key'],'source_hash'=>$row['source_hash'],'source_version'=>(int)$row['source_version'],'unit_uuid'=>$row['uuid']);}
+        $rows=$this->repo->releasedItems($locale);$items=[];$sources=[];$seenUnits=[];
+        foreach($rows as $row){
+            $resourceKey=(string)$row['resource_key'];$unitUuid=(string)$row['uuid'];
+            if(''===$resourceKey||isset($items[$resourceKey])||''===$unitUuid||isset($seenUnits[$unitUuid])){
+                throw new InvalidArgumentException('Locale bundle build found duplicated or invalid resource/unit identity.');
+            }
+            $seenUnits[$unitUuid]=true;
+            $items[$resourceKey]=array('text'=>$this->translations->targetText($row),'source_hash'=>$row['source_hash'],'source_version'=>(int)$row['source_version'],'unit_uuid'=>$unitUuid);
+            $sources[]=array('key'=>$resourceKey,'source_hash'=>$row['source_hash'],'source_version'=>(int)$row['source_version'],'unit_uuid'=>$unitUuid);
+        }
         $coverage=$this->repo->coverage($locale);$qa=$this->qa->bundle($locale,$items,$coverage);if(!$qa['passed']){throw new InvalidArgumentException('Locale bundle failed critical coverage or QA gates.');}$this->assertSourcesCurrent($sources);
         $lockName=$wpdb->prefix.'slto_bundle_version_'.hash('sha256',$locale);$locked=$wpdb->get_var($wpdb->prepare('SELECT GET_LOCK(%s,10)',$lockName));if(''!==(string)$wpdb->last_error||1!==(int)$locked){throw new RuntimeException('Locale bundle version lock is unavailable.');}
         $primaryError=null;
