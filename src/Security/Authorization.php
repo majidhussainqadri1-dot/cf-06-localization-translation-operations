@@ -43,7 +43,7 @@ final class Authorization
         if (! is_array($assertions)) {
             return false;
         }
-        if (isset($assertions['user_id']) && (int)$assertions['user_id'] !== $userId) {
+        if (! isset($assertions['user_id']) || (int)$assertions['user_id'] !== $userId) {
             return false;
         }
         if (isset($assertions['expires_at'])) {
