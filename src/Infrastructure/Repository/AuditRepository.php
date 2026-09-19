@@ -14,6 +14,19 @@ final class AuditRepository
         global $wpdb;
         $table = Database::table('audit');
         $traceId = $traceId ?: Database::uuid();
+        $objectType = sanitize_key($objectType);
+        $action = sanitize_key($action);
+        $purpose = sanitize_key($purpose);
+        $result = sanitize_key($result);
+        $objectKey = trim($objectKey);
+        if (1 !== preg_match('/^[a-f0-9-]{36}$/D', $traceId)
+            || '' === $objectType || strlen($objectType) > 40
+            || '' === $objectKey || strlen($objectKey) > 191
+            || '' === $action || strlen($action) > 80
+            || '' === $purpose || strlen($purpose) > 80
+            || '' === $result || strlen($result) > 20) {
+            throw new RuntimeException('Localization audit identity is invalid or exceeds the canonical schema bound.');
+        }
         $lockName = $wpdb->prefix . 'slto_audit_chain';
         $locked = $wpdb->get_var($wpdb->prepare('SELECT GET_LOCK(%s,5)', $lockName));
         if ('' !== (string) $wpdb->last_error || 1 !== (int) $locked) {
@@ -34,8 +47,8 @@ final class AuditRepository
             $created = Database::now();
             $eventHash = hash('sha256', implode('|', array($previous,$traceId,$objectType,$objectKey,$action,$result,$payloadHash,$created)));
             $ok = $wpdb->insert($table, array(
-                'uuid'=>Database::uuid(),'trace_id'=>$traceId,'object_type'=>sanitize_key($objectType),'object_key'=>substr($objectKey,0,191),
-                'action_name'=>sanitize_key($action),'actor_id'=>get_current_user_id(),'purpose'=>sanitize_key($purpose),'result'=>sanitize_key($result),
+                'uuid'=>Database::uuid(),'trace_id'=>$traceId,'object_type'=>$objectType,'object_key'=>$objectKey,
+                'action_name'=>$action,'actor_id'=>get_current_user_id(),'purpose'=>$purpose,'result'=>$result,
                 'payload_hash'=>$payloadHash,'previous_hash'=>$previous,'event_hash'=>$eventHash,'created_at'=>$created,
             ));
             if (false === $ok) {
@@ -55,10 +68,14 @@ final class AuditRepository
 
     private function minimize(array $payload): array
     {
-        $forbidden = array('source_text','target_text','password','otp','token','secret','ciphertext','clinical_note','message_body','card_number');
+        $forbidden = array('source_text','target_text','password','otp','token','secret','ciphertext','clinical_note','message_body','card_number','authorization','api_key','access_token','refresh_token','credential','cookie','session');
         array_walk_recursive($payload, static function (&$value, $key) use ($forbidden): void {
-            if (in_array(strtolower((string)$key), $forbidden, true)) {
-                $value = '[REDACTED]';
+            $normalized = strtolower((string)$key);
+            foreach ($forbidden as $needle) {
+                if ($normalized === $needle || str_contains($normalized, $needle)) {
+                    $value = '[REDACTED]';
+                    break;
+                }
             }
         });
         $json = wp_json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
