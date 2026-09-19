@@ -83,6 +83,7 @@ final class PlanCompliance
             ),
             'critical_release_gate' => '100-percent-current-critical-resources',
             'owner_boundaries' => array(
+                'file00' => 'identity-membership-suspension-capability-and-independent-qualification-authority',
                 'file19' => 'localized-delivery-consumer-boundary-not-localization-source-truth',
                 'file20' => 'language-preference-switcher-and-global-shell',
                 'file22' => 'page-composer-authoring-and-layout-authority',
@@ -91,6 +92,7 @@ final class PlanCompliance
                 'file25' => 'visual-rtl-ltr-components-typography-and-layout',
                 'file26' => 'transliteration-and-multilingual-search-ranking',
                 'cf04' => 'canonical-media-processing-secure-delivery-and-media-artifacts',
+                'unicode_cldr_icu' => 'pinned-tested-locale-formatting-plural-direction-reference-data-not-cf06-owned-truth',
                 'domain_owners' => 'source-truth-domain-meaning-and-final-publication-approval',
                 'cf06' => 'localization-workflow-terminology-review-bundle-and-release-governance',
             ),
