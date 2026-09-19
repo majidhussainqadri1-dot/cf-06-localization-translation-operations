@@ -119,7 +119,14 @@ final class BundleService
 
     public function publicBundle(string $locale): ?array
     {
-        $bundle=$this->repo->activeBundle($locale);if(!is_array($bundle)){return null;}$sources=$this->validatedSourceList($bundle);$this->assertSourcesCurrent($sources);$payload=json_decode((string)$bundle['payload_json'],true,128,JSON_THROW_ON_ERROR);return array('locale'=>$locale,'version'=>(int)$bundle['bundle_version'],'hash'=>$bundle['bundle_hash'],'signature'=>$bundle['signature'],'payload'=>$payload);
+        $localeRecord=$this->repo->findOne('locales','locale_tag',$locale);
+        if(!is_array($localeRecord)||!in_array((string)$localeRecord['status'],array('enabled','degraded'),true)){
+            return null;
+        }
+        $bundle=$this->repo->activeBundle($locale);if(!is_array($bundle)){return null;}
+        $sources=$this->validatedSourceList($bundle);$this->assertSourcesCurrent($sources);
+        $payload=json_decode((string)$bundle['payload_json'],true,128,JSON_THROW_ON_ERROR);
+        return array('locale'=>$locale,'version'=>(int)$bundle['bundle_version'],'hash'=>$bundle['bundle_hash'],'signature'=>$bundle['signature'],'payload'=>$payload);
     }
 
     private function latestQaResults(string $uuid): array
