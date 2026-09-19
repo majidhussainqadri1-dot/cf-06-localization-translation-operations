@@ -12,7 +12,7 @@ final class Events
         'TranslationApproved', 'TranslationRejected', 'TranslationReleased', 'TranslationRetired', 'TranslationContextQueryResolved',
         'TerminologyEntryApproved', 'TerminologyEntryDeprecated',
         'LocaleBundleBuilt', 'LocaleBundleActivated', 'LocaleBundleRolledBack',
-        'CriticalTranslationDefectDetected', 'TranslationCorrectionReleased',
+        'CriticalTranslationDefectDetected', 'TranslationCorrectionReleased', 'TranslationFeedbackReopened',
         'MachineTranslationDraftReceived', 'MachineTranslationJobReviewed',
         'TranslationVendorJobPurged', 'LocalizationCoverageDegraded',
         'LocalizationIntegrationAccepted', 'LocalizationPolicyChanged',
