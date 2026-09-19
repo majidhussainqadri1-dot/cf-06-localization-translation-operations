@@ -10,7 +10,7 @@ $approval=(string)file_get_contents($root.'/src/Application/ReleaseApprovalServi
 $contracts=(string)file_get_contents($root.'/docs/CONTRACTS.md');
 
 $t->test('Release narratives are bounded and current integration evidence is reverified',function()use($bundle,$integration):void{
- TestHarness::assertTrue(str_contains($bundle,'Bundle transition reason exceeds the bounded limit.'));
+ TestHarness::assertTrue(str_contains($bundle,'Bundle transition requires a nonempty bounded reason.'));
  TestHarness::assertTrue(str_contains($integration,'A bounded integration revocation reason is required.'));
  TestHarness::assertTrue(substr_count($integration,'slto_verify_integration_acceptance_evidence')>=2);
 });
