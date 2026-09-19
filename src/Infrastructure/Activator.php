@@ -709,40 +709,44 @@ final class Activator
             }
         }
 
-        $criticalIndexes = array(
-            'locales'=>array('locale_tag'=>array('locale_tag')),
-            'resources'=>array('resource_key'=>array('resource_key')),
-            'project_resources'=>array('project_resource'=>array('project_uuid','resource_uuid')),
-            'units'=>array('resource_locale_project'=>array('project_uuid','resource_uuid','target_locale')),
-            'assignments'=>array('unit_role'=>array('unit_uuid','assignment_role')),
-            'terminology'=>array('concept_locale'=>array('concept_id','target_locale','term_version')),
-            'style_guides'=>array('locale_domain_version'=>array('locale_tag','domain_name','guide_version')),
-            'providers'=>array('provider_key'=>array('provider_key')),
-            'bundles'=>array('locale_version'=>array('locale_tag','bundle_version')),
-            'content_links'=>array('owner_locale'=>array('owner_module','owner_object_id','target_locale')),
-            'integration_evidence'=>array('integration_key'=>array('integration_key')),
-            'extraction_evidence'=>array('module_commit_hash'=>array('owner_module','source_commit','extraction_hash')),
-            'release_approvals'=>array('bundle_role'=>array('bundle_uuid','approval_role')),
-            'jobs'=>array('job_dedupe'=>array('job_type','dedupe_key')),
-            'idempotency'=>array('actor_route_key'=>array('actor_id','route_key','idempotency_key')),
-            'rate_limits'=>array('bucket_window'=>array('bucket_key','window_start')),
-            'migrations'=>array('migration_key'=>array('migration_key')),
-        );
-        foreach ($criticalIndexes as $entity => $indexes) {
-            $table = Database::table($entity);
-            foreach ($indexes as $indexName => $expectedColumns) {
-                $rows = $wpdb->get_results($wpdb->prepare("SHOW INDEX FROM {$table} WHERE Key_name=%s", $indexName), ARRAY_A);
-                if (! is_array($rows) || '' !== (string) $wpdb->last_error) {
-                    throw new \RuntimeException('CF-06 critical schema index inventory failed for ' . $entity . '.');
+        $expectedUniqueIndexes=self::expectedUniqueIndexes($wpdb->get_charset_collate());
+        foreach (Database::ENTITIES as $entity=>$suffix) {
+            $table=Database::table($entity);
+            foreach ($expectedUniqueIndexes[$table]??array() as $indexName=>$expectedIndexColumns) {
+                $rows=$wpdb->get_results($wpdb->prepare("SHOW INDEX FROM {$table} WHERE Key_name=%s",$indexName),ARRAY_A);
+                if(!is_array($rows)||''!==(string)$wpdb->last_error){
+                    throw new \RuntimeException('CF-06 unique schema index inventory failed for '.$entity.'.');
                 }
-                usort($rows, static fn(array $a,array $b): int => (int)($a['Seq_in_index']??0) <=> (int)($b['Seq_in_index']??0));
-                $actualColumns = array_values(array_map(static fn(array $row): string => (string)($row['Column_name']??''), $rows));
-                $nonUnique = array_values(array_unique(array_map(static fn(array $row): int => (int)($row['Non_unique']??1), $rows)));
-                if ($actualColumns !== $expectedColumns || $nonUnique !== array(0)) {
-                    throw new \RuntimeException('CF-06 required unique schema index is unavailable or drifted for ' . $entity . ':' . $indexName . '.');
+                usort($rows,static fn(array $a,array $b):int=>(int)($a['Seq_in_index']??0)<=>(int)($b['Seq_in_index']??0));
+                $actualColumns=array_values(array_map(static fn(array $row):string=>(string)($row['Column_name']??''),$rows));
+                $nonUnique=array_values(array_unique(array_map(static fn(array $row):int=>(int)($row['Non_unique']??1),$rows)));
+                if($actualColumns!==$expectedIndexColumns||$nonUnique!==array(0)){
+                    throw new \RuntimeException('CF-06 required unique schema index is unavailable or drifted for '.$entity.':'.$indexName.'.');
                 }
             }
         }
+    }
+
+    private static function expectedUniqueIndexes(string $collation): array
+    {
+        $out=array();
+        foreach(self::schema($collation) as $sql){
+            $open=strpos($sql,'(');$close=strrpos($sql,')');
+            if(false===$open||false===$close||$close<=$open){continue;}
+            $head=trim(substr($sql,0,$open));
+            if(1!==preg_match('/^CREATE TABLE\s+([^\s]+)$/i',$head,$match)){continue;}
+            $table=(string)$match[1];
+            foreach(preg_split('/\R/',substr($sql,$open+1,$close-$open-1))?:array() as $line){
+                $line=trim(rtrim(trim($line),','));
+                if(1!==preg_match('/^UNIQUE KEY\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(([^)]+)\)$/i',$line,$idx)){continue;}
+                $columns=array_values(array_map(
+                    static fn(string $column):string=>trim($column," `\t\r\n"),
+                    explode(',',(string)$idx[2])
+                ));
+                if(!empty($columns)){$out[$table][(string)$idx[1]]=$columns;}
+            }
+        }
+        return $out;
     }
 
     private static function expectedSchemaColumns(string $collation): array
