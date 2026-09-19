@@ -56,6 +56,10 @@ final class Plugin
         if($installedSchema!==SABRI_SLTO_SCHEMA_VERSION||$installedContract!==SABRI_SLTO_CONTRACT_VERSION){
             throw new \RuntimeException('CF-06 schema or contract version is not an exact match for this runtime; boot is denied.');
         }
+        // An upgrade lock can legitimately make maybeUpgrade() return early. Version
+        // markers therefore cannot be the final boot proof: exact operational schema
+        // parity must be rechecked unconditionally before any service is registered.
+        Activator::assertRuntimeSchemaParity();
 
         add_action('init', static function(): void {
             load_plugin_textdomain('sabri-localization-translation-operations', false, dirname(plugin_basename(SABRI_SLTO_FILE)).'/languages');
