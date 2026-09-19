@@ -10,3 +10,8 @@
 8. Retire legacy write paths after parity; preserve historical redirects/mappings where needed.
 
 Migration never enables runtime automatically.
+
+
+## Evidence boundary
+
+The repository currently supplies schema upgrade logic plus migration inventory/dry-run/checkpoint evidence. A real legacy-data backfill is intentionally not fabricated from an unknown source schema. Before activation, the actual source stores and owner contracts must be frozen, a source-specific importer/backfill path must be implemented or approved, then dual-read/shadow comparison, reversible cutover and rollback must be executed on staging. Until that evidence exists, migration/backfill remains a staging acceptance gate rather than a repository-completion claim.
