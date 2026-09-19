@@ -10,7 +10,7 @@ $t->test('Assignment security dates require exact UTC timestamps',function()use(
         "DateTimeImmutable::createFromFormat",
         "DateTimeZone('UTC')",
         "Project and assignment dates must be exact UTC timestamps.",
-        "!Y-m-d\\TH:i:s\\Z",
+        "!Y-m-d\\\\TH:i:s\\\\Z",
         "!Y-m-d H:i:s",
     ] as $n){TestHarness::assertTrue(str_contains($p,$n),$n);}
     TestHarness::assertTrue(!str_contains($p,"\$timestamp=strtotime((string)\$value)"));
