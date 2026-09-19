@@ -33,7 +33,7 @@ This matrix binds the source candidate to the latest CF-06 master plan **and** t
 | CF06-FR-025 Deterministic locale bundle | DeterministicBundle, BundleService | unit/package tests |
 | CF06-FR-026 Coverage/critical thresholds | LocalizationRepository::coverage, QaService | contracts |
 | CF06-FR-027 Staged release/rollback | BundleService, bundle state machine | lifecycle/release tests |
-| CF06-FR-028 Content translation publication links | ContentLinkService, content_links table | ownership review |
+| CF06-FR-028 Content translation publication links | ContentLinkService, content_links table, `ContentTranslationPublicationChanged` outbox fact | current resource/unit/native-owner binding + search/retraction reconciliation notification; redirects/search purge remain staging acceptance |
 | CF06-FR-029 Style guides | TerminologyService, style_guides table | schema/contracts |
 | CF06-FR-030 Translation feedback | FeedbackService, feedback table | schema/contracts |
 | CF06-FR-031 Staleness propagation | ResourceService + DependencyInvalidator source/context/terminology/style-policy propagation | lifecycle/plan tests + cycle9 round10 |
