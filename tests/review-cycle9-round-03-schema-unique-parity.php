@@ -8,6 +8,6 @@ $t->test('Runtime schema parity derives every declared unique index from canonic
 });
 $t->test('Schema parity is no longer limited to a hand-selected critical-index list',function()use($a):void{
  TestHarness::assertTrue(!str_contains($a,'$criticalIndexes = array('));
- TestHarness::assertTrue(str_contains($a,"$out[$table][(string)$idx[1]]=$columns"));
+ TestHarness::assertTrue(str_contains($a,'$out[$table][(string)$idx[1]]=$columns'));
 });
 $t->finish();
