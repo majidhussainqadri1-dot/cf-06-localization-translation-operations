@@ -33,7 +33,7 @@ php tests/review-fresh-round-07-privacy-retention.php
 php tests/review-fresh-round-08-future40-hotfix.php
 php tests/review-cycle2-round-01-provider-parity.php
 php tests/review-cycle2-round-02-memory-governance.php
-for test in tests/review-cycle3-round-*.php tests/review-cycle4-round-*.php tests/review-cycle5-round-*.php tests/review-cycle6-round-*.php tests/review-cycle7-round-*.php tests/review-cycle8-round-*.php tests/review-cycle9-round-*.php; do
+for test in tests/review-cycle3-round-*.php tests/review-cycle4-round-*.php tests/review-cycle5-round-*.php tests/review-cycle6-round-*.php tests/review-cycle7-round-*.php tests/review-cycle8-round-*.php tests/review-cycle9-round-*.php tests/review-cycle10-round-*.php; do
   [ -e "$test" ] || continue
   php "$test"
 done
@@ -133,9 +133,11 @@ grep -Fq "'file23'" src/Contract/PlanCompliance.php
 grep -Fq "'file24'" src/Contract/PlanCompliance.php
 grep -Fq 'slto_verify_assignment_qualification' docs/CONTRACTS.md
 grep -Fq 'slto_verify_provider_purge_evidence' docs/CONTRACTS.md
+grep -Fq 'slto_verify_provider_deprecation_evidence' docs/CONTRACTS.md
 grep -Fq 'slto_verify_bundle_qa_evidence' docs/CONTRACTS.md
 grep -Fq 'slto_verify_qa_evidence' docs/CONTRACTS.md
 grep -Fq 'slto_verify_staging_acceptance_evidence' docs/CONTRACTS.md
 grep -Fq 'slto_verify_live_deployment_parity' docs/CONTRACTS.md
+grep -Fq 'ContentTranslationReconciliationRequired' src/Contract/Events.php
 
 echo 'QUALITY GATE PASS'
