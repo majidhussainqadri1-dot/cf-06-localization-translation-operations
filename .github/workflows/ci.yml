@@ -1,0 +1,169 @@
+name: CF-06 Complete Quality Gate
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cf06-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: quality (PHP ${{ matrix.php }} / WP ${{ matrix.wordpress }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.1', '8.3']
+        wordpress: ['6.0.15', '7.1.1']
+    services:
+      mysql:
+        image: mysql:8.0@sha256:7dcddc01f13bab2f15cde676d44d01f61fc9f99fe7785e86196dfc07d358ae2b
+        env:
+          MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot"
+          --health-interval=10s --health-timeout=5s --health-retries=12
+    steps:
+      - name: Check out exact source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - name: Verify checkout identity
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+          tools: composer:2.10.3, wp-cli:2.12.0
+          extensions: mysqli, openssl
+
+      - name: Generate ephemeral CI crypto material
+        shell: bash
+        run: |
+          php -r '
+          $data = base64_encode(random_bytes(32));
+          $sign = base64_encode(random_bytes(32));
+          $env = getenv("GITHUB_ENV");
+          file_put_contents($env, "SLTO_DATA_ENCRYPTION_KEYS={\"ci-data\":\"{$data}\"}\n", FILE_APPEND);
+          file_put_contents($env, "SLTO_ACTIVE_DATA_KEY_ID=ci-data\n", FILE_APPEND);
+          file_put_contents($env, "SLTO_BUNDLE_SIGNING_KEYS={\"ci-sign\":\"{$sign}\"}\n", FILE_APPEND);
+          file_put_contents($env, "SLTO_ACTIVE_BUNDLE_SIGNING_KEY_ID=ci-sign\n", FILE_APPEND);
+          '
+
+      - name: Validate Composer metadata
+        run: composer validate --strict --no-check-publish
+
+      - name: Exact-source quality gate
+        id: source_quality
+        shell: bash
+        run: |
+          set +e
+          bash tools/quality-check.sh 2>&1 | tee "quality-${{ matrix.php }}-wp-${{ matrix.wordpress }}.log"
+          code=${PIPESTATUS[0]}
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          exit "$code"
+
+      - name: Upload source-quality diagnostic
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: quality-log-${{ matrix.php }}-wp-${{ matrix.wordpress }}
+          path: quality-${{ matrix.php }}-wp-${{ matrix.wordpress }}.log
+          if-no-files-found: warn
+
+      - name: Install WordPress and run MySQL integration suite
+        shell: bash
+        run: |
+          set -euo pipefail
+          db="cf06_${{ strategy.job-index }}"
+          mysql -h127.0.0.1 -uroot -e "CREATE DATABASE ${db} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+          wpdir="/tmp/wp-${{ matrix.php }}-${{ matrix.wordpress }}"
+          mkdir -p "$wpdir"
+          wp core download --path="$wpdir" --version="${{ matrix.wordpress }}" --force
+          wp config create --path="$wpdir" --dbname="$db" --dbuser=root --dbpass='' --dbhost=127.0.0.1 --skip-check
+          admin_password="$(php -r 'echo bin2hex(random_bytes(16));')"
+          wp core install --path="$wpdir" --url="http://cf06-${{ matrix.php }}-wp-${{ matrix.wordpress }}.local" --title=CF06 --admin_user=admin --admin_password="$admin_password" --admin_email=admin@example.test
+          wp core version --path="$wpdir"
+          ln -s "$GITHUB_WORKSPACE" "$wpdir/wp-content/plugins/sabri-localization-translation-operations"
+          wp plugin activate sabri-localization-translation-operations --path="$wpdir" --skip-themes
+          wp eval-file "$GITHUB_WORKSPACE/tests/wp-integration.php" --path="$wpdir" --skip-themes
+
+  package:
+    name: deterministic package
+    runs-on: ubuntu-latest
+    needs: quality
+    steps:
+      - name: Check out exact source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - name: Verify checkout identity
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240
+        with:
+          php-version: '8.3'
+          coverage: none
+          tools: composer:2.10.3
+
+      - name: Build exact-commit candidate
+        env:
+          SOURCE_COMMIT: ${{ github.sha }}
+        run: python3 tools/build-release.py
+
+      - name: Verify exact-source manifest and SBOM binding
+        shell: bash
+        env:
+          SOURCE_COMMIT: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import os
+          manifest = json.load(open('dist/MANIFEST.json', encoding='utf-8'))
+          expected = os.environ['SOURCE_COMMIT']
+          if manifest.get('source_commit') != expected:
+              raise SystemExit('Manifest source commit mismatch')
+          sbom = json.load(open('dist/SBOM.cdx.json', encoding='utf-8'))
+          properties = {item['name']: item['value'] for item in sbom['metadata']['component']['properties']}
+          if properties.get('sabri:source-commit') != expected:
+              raise SystemExit('SBOM source commit mismatch')
+          PY
+
+      - name: Verify manifest, checksum, ZIP and deterministic rebuild parity
+        shell: bash
+        env:
+          SOURCE_COMMIT: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          (cd dist && sha256sum -c SHA256SUMS)
+          unzip -t dist/*.zip
+          first=$(sha256sum dist/*.zip | awk '{print $1}')
+          python3 tools/build-release.py >/tmp/rebuild.txt
+          second=$(sha256sum dist/*.zip | awk '{print $1}')
+          test "$first" = "$second"
+
+      - name: Upload release evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: cf-06-complete-source-candidate-rc5
+          path: |
+            dist/*.zip
+            dist/MANIFEST.json
+            dist/SBOM.cdx.json
+            dist/SHA256SUMS
+          if-no-files-found: error
