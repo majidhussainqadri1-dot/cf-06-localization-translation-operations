@@ -77,7 +77,7 @@ final class ProviderService
         $row=$this->repo->find('providers',$uuid)??throw new InvalidArgumentException('Localization provider not found.');
         $map=['disabled'=>['approved'],'approved'=>['active','disabled','deprecated'],'active'=>['disabled','deprecated'],'deprecated'=>['disabled']];
         if(!in_array($to,$map[(string)$row['status']]??[],true)){throw new InvalidArgumentException('Invalid provider transition.');}
-        $reason=sanitize_textarea_field($reason);if(strlen($reason)>2000){throw new InvalidArgumentException('Provider transition reason exceeds the bounded limit.');}
+        $reason=sanitize_textarea_field($reason);if(''===trim($reason)||strlen($reason)>2000){throw new InvalidArgumentException('Provider transition requires a nonempty bounded reason.');}
         if('active'===$to){
             if(!defined('SLTO_PROVIDER_ACTIVATION_APPROVED')||true!==SLTO_PROVIDER_ACTIVATION_APPROVED){throw new InvalidArgumentException('Provider activation has not received Founder approval.');}
             if(empty($row['base_url'])||empty($row['allowed_hosts'])||empty($row['credential_reference'])||empty($row['contract_version'])||empty($row['region_code'])){throw new InvalidArgumentException('Provider activation prerequisites are incomplete.');}
