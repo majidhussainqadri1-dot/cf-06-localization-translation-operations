@@ -50,3 +50,11 @@ These filters are fail-closed companion contracts; their default result is denia
 - WP-CLI status/inventory/jobs/events/bundle-build commands apply the same File 00-bound authorization classes as other privileged delivery surfaces; operators must run them with an authorized WordPress user.
 - Staging acceptance is an **outcome** of executing real staging journeys. Staging runtime activation therefore evaluates structural/security/integration/staffing gates but does not require the not-yet-created staging-acceptance result. Production activation retains the full environment-acceptance gate.
 - Runtime boot requires the persisted schema and public-contract versions to exactly equal the code constants. Older code refuses activation against newer persisted schema/contract state.
+
+
+## Context, policy-staleness and aggregate-metrics contracts
+
+- Resource context evidence includes bounded typed route/component/screenshot references and is part of source hash/version identity.
+- `POST /comments/{uuid}/resolve` records a versioned contextual-query answer. A resolution explicitly marked `affects_context` cannot silently leave related translations live: dependent units/content links are staled, affected active bundles are invalidated, and delivery cache is flushed.
+- Activating/deprecating an active terminology entry or style policy propagates locale+domain staleness through translation units/content links/active bundles. Native source content itself remains owned by its domain owner.
+- Metrics expose aggregate coverage/current-stale-missing source-word workload, released-unit turnaround, QA failures, feedback reopen facts and feedback grouped by locale/domain. Restricted source text and individual translator dimensions are excluded from these operational summaries.
