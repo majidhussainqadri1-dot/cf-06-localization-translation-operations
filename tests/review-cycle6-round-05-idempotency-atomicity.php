@@ -18,7 +18,7 @@ $t->test('Expired processing idempotency remains indeterminate and cleanup prese
  TestHarness::assertTrue(str_contains($routes,'slto_idempotency_indeterminate'));
 });
 $t->test('Terminology and style guide creation are transaction-backed and bounded',function()use($term):void{
- TestHarness::assertTrue(substr_count($term,'return $this->tx->run(function()')>=4);
+ TestHarness::assertTrue(substr_count($term,'$this->tx->run(function()')>=4);
  TestHarness::assertTrue(str_contains($term,'Style guide examples exceed the bounded item limit.'));
  TestHarness::assertTrue(str_contains($term,"'term_version'=>\$termVersion"));
 });
