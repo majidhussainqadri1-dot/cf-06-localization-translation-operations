@@ -8,6 +8,7 @@ use InvalidArgumentException;
 use Sabri\Localization\Domain\Locale\LocaleValidator;
 use Sabri\Localization\Domain\Workflow\StateMachine;
 use Sabri\Localization\Infrastructure\Database;
+use Sabri\Localization\Infrastructure\DependencyInvalidator;
 use Sabri\Localization\Infrastructure\Outbox;
 use Sabri\Localization\Infrastructure\Repository\AuditRepository;
 use Sabri\Localization\Infrastructure\Repository\LocalizationRepository;
@@ -56,9 +57,17 @@ final class TerminologyService
             $changes=array('status'=>$to);
             if('approved'===$to){$changes['reviewer_id']=get_current_user_id();}
             if('active'===$to){$changes['effective_at']=Database::now();}
-            $updated=$this->repo->updateVersioned('terminology',(string)$row['uuid'],$version,$changes);$this->audit->record('terminology',(string)$row['uuid'],'terminology_transition','success',array('from'=>$row['status'],'to'=>$to,'reason'=>$reason,'approval_reviewer_id'=>$row['reviewer_id']??($changes['reviewer_id']??null)));
+            $updated=$this->repo->updateVersioned('terminology',(string)$row['uuid'],$version,$changes);
+            $propagation=array('resources'=>0,'stale_units'=>0,'stale_content_links'=>0,'invalidated_bundles'=>0);
+            if('active'===$to||'active'===(string)$row['status']){
+                $propagation=DependencyInvalidator::invalidateLocaleDomain((string)$row['target_locale'],(string)$row['domain_name'],'terminology_policy_changed');
+            }
+            $this->audit->record('terminology',(string)$row['uuid'],'terminology_transition','success',array('from'=>$row['status'],'to'=>$to,'reason'=>$reason,'approval_reviewer_id'=>$row['reviewer_id']??($changes['reviewer_id']??null),'propagation'=>$propagation));
             if('active'===$to){$this->outbox->enqueue('TerminologyEntryApproved','terminology',(string)$row['uuid'],array('concept_id'=>$row['concept_id'],'locale'=>$row['target_locale'],'domain'=>$row['domain_name']));}
             if('deprecated'===$to){$this->outbox->enqueue('TerminologyEntryDeprecated','terminology',(string)$row['uuid'],array('concept_id'=>$row['concept_id'],'locale'=>$row['target_locale']));}
+            if(($propagation['stale_units']??0)>0||($propagation['stale_content_links']??0)>0||($propagation['invalidated_bundles']??0)>0){
+                $this->outbox->enqueue('LocalizationPolicyChanged','terminology',(string)$row['uuid'],array('locale'=>$row['target_locale'],'domain'=>$row['domain_name'],'reason'=>'terminology_policy_changed','propagation'=>$propagation));
+            }
             return $updated;
         });
     }
@@ -90,7 +99,16 @@ final class TerminologyService
             $changes=array('status'=>$to);
             if('approved'===$to){$changes['approved_by']=get_current_user_id();}
             if('active'===$to){$changes['effective_at']=Database::now();}
-            $updated=$this->repo->updateVersioned('style_guides',(string)$row['uuid'],$version,$changes);$this->audit->record('style_guide',(string)$row['uuid'],'style_guide_transition','success',array('from'=>$row['status'],'to'=>$to,'reason'=>$reason,'approval_actor_id'=>$row['approved_by']??($changes['approved_by']??null)));return $updated;
+            $updated=$this->repo->updateVersioned('style_guides',(string)$row['uuid'],$version,$changes);
+            $propagation=array('resources'=>0,'stale_units'=>0,'stale_content_links'=>0,'invalidated_bundles'=>0);
+            if('active'===$to||'active'===(string)$row['status']){
+                $propagation=DependencyInvalidator::invalidateLocaleDomain((string)$row['locale_tag'],(string)$row['domain_name'],'style_policy_changed');
+            }
+            $this->audit->record('style_guide',(string)$row['uuid'],'style_guide_transition','success',array('from'=>$row['status'],'to'=>$to,'reason'=>$reason,'approval_actor_id'=>$row['approved_by']??($changes['approved_by']??null),'propagation'=>$propagation));
+            if(($propagation['stale_units']??0)>0||($propagation['stale_content_links']??0)>0||($propagation['invalidated_bundles']??0)>0){
+                $this->outbox->enqueue('LocalizationPolicyChanged','style_guide',(string)$row['uuid'],array('locale'=>$row['locale_tag'],'domain'=>$row['domain_name'],'reason'=>'style_policy_changed','propagation'=>$propagation));
+            }
+            return $updated;
         });
     }
 
