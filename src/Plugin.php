@@ -89,7 +89,7 @@ final class Plugin
         $health = new HealthService($crypto,$metrics,$integrations);
         $privacy = new PrivacyService($jobs,$audit,$tx);
         $migration = new MigrationService($audit,$tx);
-        $contentLinks = new ContentLinkService($repo,$audit,$tx);
+        $contentLinks = new ContentLinkService($repo,$audit,$outbox,$tx);
         $providers = new ProviderService($repo,$audit,$tx);
         $future = new FutureCapabilitiesFacade();
 
