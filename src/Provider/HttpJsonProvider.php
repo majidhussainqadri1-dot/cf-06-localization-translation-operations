@@ -60,5 +60,14 @@ final class HttpJsonProvider implements MachineTranslationProvider
         $normalized=array_values(array_unique($normalized));sort($normalized,SORT_STRING);return $normalized;
     }
 
-    private function credential():string{$env=(string)($this->config['credential_env']??'');if(1!==preg_match('/^[A-Z][A-Z0-9_]{2,127}$/D',$env)){throw new RuntimeException('Provider credential reference is invalid.');}$value=(string)getenv($env);if(''===$value){throw new RuntimeException('Provider credential is unavailable.');}return $value;}
+    private function credential():string
+    {
+        $env=(string)($this->config['credential_env']??'');
+        if(1!==preg_match('/^[A-Z][A-Z0-9_]{2,127}$/D',$env)){throw new RuntimeException('Provider credential reference is invalid.');}
+        $value=(string)getenv($env);
+        if(''===$value||strlen($value)>4096||preg_match('/[\x00-\x1F\x7F]/',$value)){
+            throw new RuntimeException('Provider credential is unavailable or unsafe for an HTTP authorization header.');
+        }
+        return $value;
+    }
 }
