@@ -70,10 +70,18 @@ final class AuditRepository
             }
             $payloadHash = hash('sha256', $payloadJson);
             $created = Database::now();
-            $eventHash = hash('sha256', implode('|', array($previous,$traceId,$objectType,$objectKey,$action,$result,$payloadHash,$created)));
+            $eventUuid = Database::uuid();
+            $actorId = get_current_user_id();
+            // Bind every mutable audit-evidence field that carries identity or
+            // governance meaning into the chain hash. Otherwise actor/purpose/UUID
+            // could be altered without invalidating event_hash.
+            $eventHash = hash('sha256', implode('|', array(
+                $previous,$eventUuid,$traceId,$objectType,$objectKey,$action,
+                (string)$actorId,$purpose,$result,$payloadHash,$created
+            )));
             $ok = $wpdb->insert($table, array(
-                'uuid'=>Database::uuid(),'trace_id'=>$traceId,'object_type'=>$objectType,'object_key'=>$objectKey,
-                'action_name'=>$action,'actor_id'=>get_current_user_id(),'purpose'=>$purpose,'result'=>$result,
+                'uuid'=>$eventUuid,'trace_id'=>$traceId,'object_type'=>$objectType,'object_key'=>$objectKey,
+                'action_name'=>$action,'actor_id'=>$actorId,'purpose'=>$purpose,'result'=>$result,
                 'payload_hash'=>$payloadHash,'previous_hash'=>$previous,'event_hash'=>$eventHash,'created_at'=>$created,
             ));
             if (false === $ok) {
