@@ -13,7 +13,9 @@ $t->test('Recorded schema versions never bypass actual schema verification',func
     TestHarness::assertTrue(false!==$current&&false!==$verify&&$verify>$current);
     TestHarness::assertTrue(str_contains($activator,'Version options are not schema truth.'));
 });
-$t->test('Runtime schema parity covers primary operational entities',function()use($activator):void{
-    foreach(["'locales'=>array(","'resources'=>array(","'units'=>array(","'providers'=>array(","'bundles'=>array(","'feedback'=>array(","'idempotency'=>array("] as $needle){TestHarness::assertTrue(str_contains($activator,$needle),$needle);}
+$t->test('Runtime schema parity derives every canonical entity rather than a stale hand-maintained subset',function()use($activator):void{
+    foreach(['expectedSchemaColumns','foreach (Database::ENTITIES as $entity=>$suffix)','array_diff($required,$found)','canonical schema definition is missing'] as $needle){
+        TestHarness::assertTrue(str_contains($activator,$needle),$needle);
+    }
 });
 $t->finish();
