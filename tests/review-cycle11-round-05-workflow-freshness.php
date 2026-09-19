@@ -6,7 +6,7 @@ $translation=(string)file_get_contents($root.'/src/Application/TranslationServic
 $project=(string)file_get_contents($root.'/src/Application/ProjectService.php');
 
 $t->test('Translation submission refuses retired or inactive source resources',function()use($translation):void{
-  TestHarness::assertTrue(str_contains($translation,"'active'!==(string)($resource['status']??'')"));
+  TestHarness::assertTrue(str_contains($translation,"'active'!==(string)(\$resource['status']??'')"));
   TestHarness::assertTrue(str_contains($translation,'stale, retired or inactive'));
 });
 
