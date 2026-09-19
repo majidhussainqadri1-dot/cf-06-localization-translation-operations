@@ -28,6 +28,7 @@ These filters are fail-closed companion contracts; their default result is denia
 
 - `slto_verify_assignment_qualification` — File 00/native qualification authority must independently attest the assignee, role, target locale, domain/risk, unit/project and supplied competency evidence before an assignment is created or transferred.
 - `slto_verify_provider_purge_evidence` — privacy/provider assurance must independently verify deletion evidence for the exact governed vendor job/provider/reference before CF-06 records the job as purged.
+- `slto_verify_provider_deprecation_evidence` — provider deprecation is fail-closed until independent assurance verifies provider export/purge completion, credential revocation, exit reconciliation and the documented rollback window.
 - `slto_verify_bundle_qa_evidence` — every **passing** in-context bundle QA rule must be independently attested for the exact bundle hash/version/locale, reviewer and rule before it can become release evidence. Failed QA can still be recorded without this approval path.
 - `slto_verify_qa_evidence` — durable CI/staging/production QA evidence rows are accepted only after an independent verifier attests the exact target, environment, plugin/build identity, test ID and artifact/hash evidence.
 - `slto_verify_release_approval_evidence`, `slto_verify_provider_activation_evidence`, `slto_verify_integration_acceptance_evidence`, `slto_verify_extraction_evidence` and `slto_verify_production_activation_evidence` remain separate evidence authorities; none may be inferred from another hook.
@@ -58,3 +59,10 @@ These filters are fail-closed companion contracts; their default result is denia
 - `POST /comments/{uuid}/resolve` records a versioned contextual-query answer. A resolution explicitly marked `affects_context` cannot silently leave related translations live: dependent units/content links are staled, affected active bundles are invalidated, and delivery cache is flushed.
 - Activating/deprecating an active terminology entry or style policy propagates locale+domain staleness through translation units/content links/active bundles. Native source content itself remains owned by its domain owner.
 - Metrics expose aggregate coverage/current-stale-missing source-word workload, released-unit turnaround, QA failures, feedback reopen facts and feedback grouped by locale/domain. Restricted source text and individual translator dimensions are excluded from these operational summaries.
+
+
+## Universal transition evidence
+
+Every governed lifecycle transition requires a nonempty bounded reason/outcome in addition to the caller's current row version and REST idempotency evidence. Transition audits preserve source/target state and the bounded reason under the shared trace identity; special activation/rollback paths retain their stronger independent evidence requirements.
+
+`ContentTranslationPublicationChanged` is emitted for direct publication-state changes. `ContentTranslationReconciliationRequired` is emitted when source correction/retirement automatically stales translated publication relationships, so File 26/search consumers can reconcile or purge stale indexes without becoming source-of-truth owners.
