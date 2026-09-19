@@ -178,7 +178,7 @@ final class ProjectService
     {
         if(!function_exists('smc_membership_assertions')){throw new InvalidArgumentException('File 00 membership assertions are unavailable.');}
         $a=smc_membership_assertions($userId);$state=is_array($a)?strtolower((string)($a['state']??'')):'';
-        $actorBound=is_array($a)&&(!isset($a['user_id'])||(int)$a['user_id']===$userId);
+        $actorBound=is_array($a)&&isset($a['user_id'])&&(int)$a['user_id']===$userId;
         $fresh=true;if(is_array($a)&&isset($a['expires_at'])){$expiry=strtotime((string)$a['expires_at']);$fresh=false!==$expiry&&$expiry>time();}
         if(!is_array($a)||!$actorBound||!$fresh||!empty($a['suspended'])||!in_array($state,['approved','active','verified'],true)){throw new InvalidArgumentException('Assignee does not hold a current actor-bound approved membership assertion.');}
     }
