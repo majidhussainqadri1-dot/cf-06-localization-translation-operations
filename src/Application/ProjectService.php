@@ -183,5 +183,19 @@ final class ProjectService
         if(!is_array($a)||!$actorBound||!$fresh||!empty($a['suspended'])||!in_array($state,['approved','active','verified'],true)){throw new InvalidArgumentException('Assignee does not hold a current actor-bound approved membership assertion.');}
     }
 
-    private function dateOrNull(mixed $value):?string{if(null===$value||''===$value){return null;}$timestamp=strtotime((string)$value);if(false===$timestamp){throw new InvalidArgumentException('Invalid project date.');}return gmdate('Y-m-d H:i:s',$timestamp);}
+    private function dateOrNull(mixed $value):?string
+    {
+        if(null===$value||''===$value){return null;}
+        $raw=trim((string)$value);
+        foreach(array('!Y-m-d\\TH:i:s\\Z','!Y-m-d H:i:s') as $format){
+            $date=\DateTimeImmutable::createFromFormat($format,$raw,new \DateTimeZone('UTC'));
+            $errors=\DateTimeImmutable::getLastErrors();
+            $valid=false===$errors||((int)($errors['warning_count']??0)===0&&(int)($errors['error_count']??0)===0);
+            if($date instanceof \DateTimeImmutable&&$valid){
+                $canonical='!Y-m-d\\TH:i:s\\Z'===$format?$date->format('Y-m-d\\TH:i:s\\Z'):$date->format('Y-m-d H:i:s');
+                if(hash_equals($raw,$canonical)){return $date->format('Y-m-d H:i:s');}
+            }
+        }
+        throw new InvalidArgumentException('Project and assignment dates must be exact UTC timestamps.');
+    }
 }
