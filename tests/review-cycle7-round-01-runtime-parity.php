@@ -11,8 +11,8 @@ $t->test('Runtime boot requires exact schema and contract parity',function()use(
  TestHarness::assertTrue(str_contains($p,'exact match for this runtime'));
 });
 $t->test('Activation refuses an older runtime against newer persisted contracts',function()use($a):void{
- TestHarness::assertTrue(str_contains($a,"version_compare($installedSchema,SABRI_SLTO_SCHEMA_VERSION,'>')"));
- TestHarness::assertTrue(str_contains($a,"version_compare($installedContract,SABRI_SLTO_CONTRACT_VERSION,'>')"));
+ TestHarness::assertTrue(str_contains($a,"version_compare(\$installedSchema,SABRI_SLTO_SCHEMA_VERSION,'>')"));
+ TestHarness::assertTrue(str_contains($a,"version_compare(\$installedContract,SABRI_SLTO_CONTRACT_VERSION,'>')"));
  TestHarness::assertTrue(str_contains($a,'refuses to activate older code against a newer schema or contract'));
 });
 $t->test('Deactivation verifies runtime disable persistence before clearing schedules',function()use($a):void{
