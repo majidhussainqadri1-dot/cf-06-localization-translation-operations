@@ -13,7 +13,7 @@ $t->test('Business operation failure is the only path that marks idempotency fai
     $end = strpos($code, 'private function ok(', $start === false ? 0 : $start);
     TestHarness::assertTrue(false !== $start && false !== $end && $start < $end);
     $mutate = substr($code, $start, $end - $start);
-    $operation = strpos($mutate, '$result=$operation();');
+    $operation = strpos($mutate, '$result=AuditRepository::withTrace($traceId,$operation);');
     $catch = strpos($mutate, 'catch(Throwable $e)');
     $complete = strpos($mutate, 'completeIdempotency($actor,$route,$key,$status,$body)');
     TestHarness::assertTrue(false !== $operation && false !== $catch && false !== $complete);
@@ -23,7 +23,8 @@ $t->test('Business operation failure is the only path that marks idempotency fai
 
 $t->test('Idempotency failure persistence cannot mask primary operation exception', function () use ($code): void {
     TestHarness::assertTrue(str_contains($code, 'slto_idempotency_failure_persistence_error'));
-    TestHarness::assertTrue(str_contains($code, 'throw $e;'));
+    TestHarness::assertTrue(str_contains($code, 'return $this->error($e,$traceId);'));
+    TestHarness::assertTrue(str_contains($code, 'try{$this->s[\'repo\']->failIdempotency'));
 });
 
 $t->test('Completion persistence failure leaves replay state fail closed', function () use ($code): void {
