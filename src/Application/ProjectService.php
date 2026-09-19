@@ -156,7 +156,7 @@ final class ProjectService
     {
         global $wpdb;
         $project=$this->repo->find('projects',$uuid)??throw new InvalidArgumentException('Translation project not found.');
-        $reason=sanitize_textarea_field($reason);if(strlen($reason)>2000){throw new InvalidArgumentException('Project transition reason exceeds the bounded limit.');}
+        $reason=sanitize_textarea_field($reason);if(''===trim($reason)||strlen($reason)>2000){throw new InvalidArgumentException('Project transition requires a nonempty bounded reason.');}
         StateMachine::assert('project',(string)$project['status'],$to);
         if('completed'===$to){$open=$wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM ".Database::table('units')." WHERE project_uuid=%s AND status NOT IN ('released','retired')",$uuid));if(''!==(string)$wpdb->last_error){throw new RuntimeException('Project completion state could not be verified.');}if((int)$open>0){throw new InvalidArgumentException('Project has unfinished translation units.');}}
         return $this->tx->run(function()use($project,$to,$version,$reason):array{$updated=$this->repo->updateVersioned('projects',(string)$project['uuid'],$version,['status'=>$to]);$this->audit->record('project',(string)$project['uuid'],'translation_project_transition','success',['from'=>$project['status'],'to'=>$to,'reason'=>$reason]);return $updated;});
