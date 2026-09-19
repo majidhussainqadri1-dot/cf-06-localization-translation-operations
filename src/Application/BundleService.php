@@ -79,7 +79,7 @@ final class BundleService
         $bundle=$this->repo->find('bundles',$uuid)??throw new InvalidArgumentException('Locale bundle not found.');$reason=sanitize_textarea_field($reason);if(''===trim($reason)||strlen($reason)>1000){throw new InvalidArgumentException('Bundle transition requires a nonempty bounded reason.');}if(in_array($to,array('active','rolled_back','superseded','invalidated'),true)){throw new InvalidArgumentException('Bundle activation, invalidation and rollback require dedicated controlled paths.');}StateMachine::assert('bundle',(string)$bundle['status'],$to);if(in_array($to,array('staged','canary'),true)&&empty($bundle['signature'])){throw new InvalidArgumentException('Signed locale bundle is required for release.');}
         $latest=$this->latestQaResults($uuid);
         if('automated_qa'===$to){$this->assertCurrentAutomatedQa($latest);}
-        if('approved'===$to){$this->assertCurrentHumanQa($latest);}
+        if('approved'===$to){$this->assertCurrentHumanQa($latest,$bundle);}
         if(in_array($to,array('staged','canary'),true)){
             $sources=$this->validatedSourceList($bundle);$this->assertSourcesCurrent($sources);$this->integrations->assertReady();
         }
@@ -92,7 +92,7 @@ final class BundleService
         $updated=$this->withLocaleReleaseLock($locale,function()use($uuid,$version,$locale):array{
             global $wpdb;$bundle=$this->repo->find('bundles',$uuid)??throw new InvalidArgumentException('Locale bundle not found.');
             if($locale!==(string)$bundle['locale_tag']||!in_array((string)$bundle['status'],array('staged','canary'),true)){throw new InvalidArgumentException('Bundle must complete staged or canary release before activation.');}if((float)$bundle['critical_coverage']<100.0){throw new InvalidArgumentException('Bundle critical coverage gate failed.');}
-            $this->assertCurrentHumanQa($this->latestQaResults($uuid));
+            $this->assertCurrentHumanQa($this->latestQaResults($uuid),$bundle);
             $sourceList=$this->validatedSourceList($bundle);$this->assertSourcesCurrent($sourceList);$unitUuids=array_values(array_unique(array_column($sourceList,'unit_uuid')));if(empty($unitUuids)||count($unitUuids)!==count($sourceList)){throw new InvalidArgumentException('Bundle source-unit evidence is empty or duplicated.');}
             $this->integrations->assertReady();$this->releaseApprovals->assertDualApproval($uuid);
             return $this->tx->run(function()use($wpdb,$bundle,$version,$unitUuids):array{
@@ -139,9 +139,32 @@ final class BundleService
         foreach(self::AUTOMATED_QA as $rule){if(!isset($latest[$rule])||'pass'!==(string)$latest[$rule]['result']){throw new InvalidArgumentException('Current automated bundle QA evidence is missing or failed: '.$rule);}}
     }
 
-    private function assertCurrentHumanQa(array $latest): void
+    private function assertCurrentHumanQa(array $latest,array $bundle): void
     {
-        foreach(self::HUMAN_QA as $rule){if(!isset($latest[$rule])||'pass'!==(string)$latest[$rule]['result']){throw new InvalidArgumentException('Current in-context bundle QA evidence is missing or failed: '.$rule);}}
+        foreach(self::HUMAN_QA as $rule){
+            $row=$latest[$rule]??null;
+            if(!is_array($row)||'pass'!==(string)($row['result']??'')){
+                throw new InvalidArgumentException('Current in-context bundle QA evidence is missing or failed: '.$rule);
+            }
+            $details=json_decode((string)($row['details_json']??''),true);
+            if(!is_array($details)){$details=array();}
+            $evidence=array(
+                'bundle_uuid'=>(string)$bundle['uuid'],
+                'bundle_hash'=>(string)$bundle['bundle_hash'],
+                'bundle_version'=>(int)$bundle['bundle_version'],
+                'locale'=>(string)$bundle['locale_tag'],
+                'rule'=>$rule,
+                'result'=>'pass',
+                'severity'=>(string)($row['severity']??''),
+                'details'=>$details,
+                'reviewer_id'=>(int)($row['reviewer_id']??0),
+                'qa_uuid'=>(string)($row['uuid']??''),
+                'verification_phase'=>'consumption-time',
+            );
+            if(true!==apply_filters('slto_verify_bundle_qa_evidence',false,$evidence)){
+                throw new InvalidArgumentException('Current in-context bundle QA evidence could not be independently reverified: '.$rule);
+            }
+        }
     }
 
     private function validatedSourceList(array $bundle): array
