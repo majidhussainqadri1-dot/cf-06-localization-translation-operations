@@ -11,7 +11,7 @@ $t->test('Job dedupe identity cannot silently mutate an existing payload',functi
 });
 $t->test('Job availability timestamps are validated before persistence',function()use($j):void{
  TestHarness::assertTrue(str_contains($j,'Localization job availability timestamp is invalid.'));
- TestHarness::assertTrue(str_contains($j,"gmdate('Y-m-d H:i:s', strtotime($scheduledAt))"));
+ TestHarness::assertTrue(str_contains($j,"gmdate('Y-m-d H:i:s', strtotime(\$scheduledAt))"));
 });
 $t->test('Expired outbox deliveries consume bounded retry budget and dead-letter',function()use($o):void{
  foreach(['$wasDelivering','expired_outbox_delivery_lease','Expired localization outbox delivery could not be dead-lettered.','attempts=attempts+IF(status=\'delivering\',1,0)'] as $n){TestHarness::assertTrue(str_contains($o,$n),$n);}
