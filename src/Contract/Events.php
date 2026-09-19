@@ -15,6 +15,6 @@ final class Events
         'CriticalTranslationDefectDetected', 'TranslationCorrectionReleased',
         'MachineTranslationDraftReceived', 'MachineTranslationJobReviewed',
         'TranslationVendorJobPurged', 'LocalizationCoverageDegraded',
-        'LocalizationIntegrationAccepted',
+        'LocalizationIntegrationAccepted', 'LocalizationPolicyChanged',
     );
 }
