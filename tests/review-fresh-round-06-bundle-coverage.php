@@ -19,7 +19,7 @@ $t->test('Bundle build rejects duplicate canonical resource evidence',function()
     TestHarness::assertTrue(str_contains($bundle,'assertSourcesCurrent($sources)'));
 });
 $t->test('Activation rechecks current human QA and source freshness',function()use($bundle):void{
-    TestHarness::assertTrue(str_contains($bundle,'assertCurrentHumanQa($this->latestQaResults($uuid))'));
+    TestHarness::assertTrue(str_contains($bundle,'assertCurrentHumanQa($this->latestQaResults($uuid),$bundle)'));
     TestHarness::assertTrue(str_contains($bundle,'assertSourcesCurrent($sourceList)'));
 });
 
