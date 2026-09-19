@@ -96,8 +96,8 @@ jobs:
           wp core install --path="$wpdir" --url="http://cf06-${{ matrix.php }}-wp-${{ matrix.wordpress }}.local" --title=CF06 --admin_user=admin --admin_password="$admin_password" --admin_email=admin@example.test
           wp core version --path="$wpdir"
           ln -s "$GITHUB_WORKSPACE" "$wpdir/wp-content/plugins/sabri-localization-translation-operations"
-          wp plugin activate sabri-localization-translation-operations --path="$wpdir"
-          wp eval-file "$GITHUB_WORKSPACE/tests/wp-integration.php" --path="$wpdir"
+          wp plugin activate sabri-localization-translation-operations --path="$wpdir" --skip-themes
+          wp eval-file "$GITHUB_WORKSPACE/tests/wp-integration.php" --path="$wpdir" --skip-themes
 
   package:
     name: deterministic package
