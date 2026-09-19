@@ -11,6 +11,6 @@ $t->test('All REST mutations are byte and node bounded before idempotency/busine
  TestHarness::assertTrue(false!==$bound&&false!==$idemp&&$bound<$idemp);
 });
 $t->test('WP-CLI operations require File 00-bound authorization by operation class',function()use($c):void{
- foreach(["authorize('audit')","authorize('manage')","authorize('release')","Authorization::allowed($action)",'--user=<authorized-user>'] as $n){TestHarness::assertTrue(str_contains($c,$n),$n);}
+ foreach(["authorize('audit')","authorize('manage')","authorize('release')","Authorization::allowed(\$action)",'--user=<authorized-user>'] as $n){TestHarness::assertTrue(str_contains($c,$n),$n);}
 });
 $t->finish();
