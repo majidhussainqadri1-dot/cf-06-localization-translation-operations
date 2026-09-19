@@ -6,6 +6,6 @@ $t->test('Schema parity verifies the complete Database entity inventory from can
  foreach(['expectedSchemaColumns','foreach (Database::ENTITIES as $entity=>$suffix)','array_diff($required,$found)','canonical schema definition is missing'] as $n){TestHarness::assertTrue(str_contains($a,$n),$n);}
 });
 $t->test('Critical unique indexes are derived from canonical DDL and verified for drift',function()use($a):void{
- foreach(['expectedUniqueIndexes','UNIQUE KEY\\s+','SHOW INDEX FROM {$table} WHERE Key_name=%s','required unique schema index is unavailable or drifted'] as $n){TestHarness::assertTrue(str_contains($a,$n),$n);}
+ foreach(['expectedIndexes','UNIQUE KEY\\\\s+','KEY\\\\s+','SHOW INDEX FROM {$table} WHERE Key_name=%s','required unique schema index is unavailable or drifted','required non-unique schema index is unavailable or drifted'] as $n){TestHarness::assertTrue(str_contains($a,$n),$n);}
 });
 $t->finish();
