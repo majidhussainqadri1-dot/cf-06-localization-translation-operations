@@ -76,7 +76,7 @@ final class BundleService
 
     public function transition(string $uuid,string $to,int $version,string $reason=''): array
     {
-        $bundle=$this->repo->find('bundles',$uuid)??throw new InvalidArgumentException('Locale bundle not found.');$reason=sanitize_textarea_field($reason);if(strlen($reason)>1000){throw new InvalidArgumentException('Bundle transition reason exceeds the bounded limit.');}if(in_array($to,array('active','rolled_back','superseded','invalidated'),true)){throw new InvalidArgumentException('Bundle activation, invalidation and rollback require dedicated controlled paths.');}StateMachine::assert('bundle',(string)$bundle['status'],$to);if(in_array($to,array('staged','canary'),true)&&empty($bundle['signature'])){throw new InvalidArgumentException('Signed locale bundle is required for release.');}
+        $bundle=$this->repo->find('bundles',$uuid)??throw new InvalidArgumentException('Locale bundle not found.');$reason=sanitize_textarea_field($reason);if(''===trim($reason)||strlen($reason)>1000){throw new InvalidArgumentException('Bundle transition requires a nonempty bounded reason.');}if(in_array($to,array('active','rolled_back','superseded','invalidated'),true)){throw new InvalidArgumentException('Bundle activation, invalidation and rollback require dedicated controlled paths.');}StateMachine::assert('bundle',(string)$bundle['status'],$to);if(in_array($to,array('staged','canary'),true)&&empty($bundle['signature'])){throw new InvalidArgumentException('Signed locale bundle is required for release.');}
         $latest=$this->latestQaResults($uuid);
         if('automated_qa'===$to){$this->assertCurrentAutomatedQa($latest);}
         if('approved'===$to){$this->assertCurrentHumanQa($latest);}
