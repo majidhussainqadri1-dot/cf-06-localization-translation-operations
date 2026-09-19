@@ -6,6 +6,7 @@ namespace Sabri\Localization\Application;
 
 use InvalidArgumentException;
 use Sabri\Localization\Domain\Locale\LocaleValidator;
+use Sabri\Localization\Infrastructure\Outbox;
 use Sabri\Localization\Infrastructure\Repository\AuditRepository;
 use Sabri\Localization\Infrastructure\Repository\LocalizationRepository;
 use Sabri\Localization\Infrastructure\Transaction;
@@ -15,6 +16,7 @@ final class ContentLinkService
     public function __construct(
         private readonly LocalizationRepository $repo,
         private readonly AuditRepository $audit,
+        private readonly Outbox $outbox,
         private readonly Transaction $tx
     ) {}
 
@@ -66,6 +68,19 @@ final class ContentLinkService
             $row=is_array($existing)?$this->repo->updateVersioned('content_links',(string)$existing['uuid'],(int)$input['row_version'],$data)
                 :$this->repo->insert('content_links',array_merge($data,['owner_module'=>$owner,'owner_object_id'=>$object,'source_locale'=>$source,'target_locale'=>$target,'row_version'=>1]));
             $this->audit->record('content_link',(string)$row['uuid'],'content_translation_link_registered','success',['owner_module'=>$owner,'target_locale'=>$target,'source_hash'=>$hash,'publication_status'=>$status]);
+            $this->outbox->enqueue('ContentTranslationPublicationChanged','content_link',(string)$row['uuid'],[
+                'owner_module'=>$owner,
+                'owner_object_id'=>$object,
+                'target_locale'=>$target,
+                'source_locale'=>$source,
+                'source_version'=>$data['source_version'],
+                'source_hash'=>$hash,
+                'publication_status'=>$status,
+                'translated_url'=>$data['translated_url'],
+                'canonical_url'=>$data['canonical_url'],
+                'hreflang_code'=>$data['hreflang_code'],
+                'search_reconciliation_required'=>in_array($status,['published','stale','retracted','retired'],true),
+            ]);
             return $row;
         });
     }
