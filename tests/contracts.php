@@ -135,7 +135,16 @@ $t->test('Release requires signature, critical coverage and integrations', funct
 });
 
 $t->test('No embedded credentials or common private-key material', function () use ($allPhp): void {
-    foreach (array('BEGIN PRIVATE KEY','AKIA','ghp_','sk_live_','xoxb-') as $needle) {
+    // Build scanner probes from fragments so the regression test itself does not
+    // become a positive hit for the repository-wide secret-pattern gate.
+    $needles = array(
+        'BEGIN ' . 'PRIVATE KEY',
+        'AK' . 'IA',
+        'gh' . 'p_',
+        'sk_' . 'live_',
+        'xox' . 'b-',
+    );
+    foreach ($needles as $needle) {
         TestHarness::assertTrue(! str_contains($allPhp, $needle), "Secret-like token found: {$needle}");
     }
 });
