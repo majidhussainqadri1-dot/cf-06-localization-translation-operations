@@ -20,9 +20,9 @@ $t->test('Linguistic approval awaiting domain review is not mislabeled as reject
 });
 
 $t->test('Human review and terminology transition narrative fields are bounded',function()use($translation,$terms):void{
-    TestHarness::assertTrue(str_contains($translation,'Review reason exceeds the bounded limit.'));
-    TestHarness::assertTrue(str_contains($terms,'Terminology transition reason exceeds the bounded limit.'));
-    TestHarness::assertTrue(str_contains($terms,'Style guide transition reason exceeds the bounded limit.'));
+    TestHarness::assertTrue(str_contains($translation,'Every translation review transition requires a nonempty bounded reason.'));
+    TestHarness::assertTrue(str_contains($terms,'Terminology transition requires a nonempty bounded reason.'));
+    TestHarness::assertTrue(str_contains($terms,'Style guide transition requires a nonempty bounded reason.'));
 });
 
 $t->test('Translation memory similarity work is computationally bounded',function()use($terms):void{
