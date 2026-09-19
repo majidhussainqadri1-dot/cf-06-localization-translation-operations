@@ -40,7 +40,7 @@ $t->test('Automatic source staleness notifies search reconciliation consumers',f
 });
 
 $t->test('Exact-source quality gate executes this review cycle',function()use($quality):void{
-    TestHarness::assertTrue(str_contains($quality,'tests/review-cycle10-round-*.php'));
+    TestHarness::assertTrue(str_contains($quality,'for test in tests/review-cycle*-round-*.php'));
 });
 
 $t->finish();
