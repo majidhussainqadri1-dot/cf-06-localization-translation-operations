@@ -699,13 +699,28 @@ final class Activator
             throw new \RuntimeException('CF-06 schema activation failed: ' . implode(', ', $missing));
         }
         $expectedColumns=self::expectedSchemaColumns($wpdb->get_charset_collate());
+        $expectedColumnContracts=self::expectedColumnContracts($wpdb->get_charset_collate());
         foreach (Database::ENTITIES as $entity=>$suffix) {
             $table=Database::table($entity);
             $required=$expectedColumns[$table]??array();
             if(empty($required)){throw new \RuntimeException('CF-06 canonical schema definition is missing for ' . $entity . '.');}
-            $found=$wpdb->get_col("SHOW COLUMNS FROM {$table}",0);
-            if(!is_array($found)||''!==(string)$wpdb->last_error||array_diff($required,$found)){
+            $rows=$wpdb->get_results("SHOW COLUMNS FROM {$table}",ARRAY_A);
+            if(!is_array($rows)||''!==(string)$wpdb->last_error){
+                throw new \RuntimeException('CF-06 required schema columns could not be inventoried for ' . $entity . '.');
+            }
+            $found=array_values(array_map(static fn(array $row):string=>(string)($row['Field']??''),$rows));
+            if(array_diff($required,$found)){
                 throw new \RuntimeException('CF-06 required schema columns are unavailable for ' . $entity . '.');
+            }
+            $byName=array();
+            foreach($rows as $row){$byName[(string)($row['Field']??'')]=$row;}
+            foreach($expectedColumnContracts[$table]??array() as $column=>$contract){
+                $actual=$byName[$column]??null;
+                if(!is_array($actual)
+                    ||self::normalizeColumnType((string)($actual['Type']??''))!==self::normalizeColumnType((string)$contract['type'])
+                    ||strtoupper((string)($actual['Null']??''))!==(true===$contract['nullable']?'YES':'NO')){
+                    throw new \RuntimeException('CF-06 schema column contract is drifted for '.$entity.':'.$column.'.');
+                }
             }
         }
 
@@ -725,6 +740,37 @@ final class Activator
                 }
             }
         }
+    }
+
+    private static function expectedColumnContracts(string $collation): array
+    {
+        $out=array();
+        foreach(self::schema($collation) as $sql){
+            $open=strpos($sql,'(');$close=strrpos($sql,')');
+            if(false===$open||false===$close||$close<=$open){continue;}
+            $head=trim(substr($sql,0,$open));
+            if(1!==preg_match('/^CREATE TABLE\s+([^\s]+)$/i',$head,$match)){continue;}
+            $table=(string)$match[1];
+            foreach(preg_split('/\R/',substr($sql,$open+1,$close-$open-1))?:array() as $line){
+                $line=trim(rtrim(trim($line),','));
+                if(''===$line||preg_match('/^(PRIMARY|UNIQUE|KEY)\s+/i',$line)){continue;}
+                if(1===preg_match('/^([A-Za-z_][A-Za-z0-9_]*)\s+(.+?)\s+(NOT NULL|NULL)(?:\s|$)/i',$line,$column)){
+                    $out[$table][(string)$column[1]]=array(
+                        'type'=>trim((string)$column[2]),
+                        'nullable'=>'NULL'===strtoupper((string)$column[3]),
+                    );
+                }
+            }
+        }
+        return $out;
+    }
+
+    private static function normalizeColumnType(string $type): string
+    {
+        $type=strtolower(trim(preg_replace('/\s+/',' ',$type)??$type));
+        // MySQL 8 may omit historical integer display widths in SHOW COLUMNS.
+        $type=preg_replace('/\b(bigint|int|smallint|mediumint)\(\d+\)/','$1',$type)??$type;
+        return $type;
     }
 
     private static function expectedUniqueIndexes(string $collation): array
