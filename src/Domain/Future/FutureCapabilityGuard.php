@@ -179,9 +179,12 @@ final class FutureCapabilityGuard
             $stale = true === ($row['stale'] ?? false);
             if ('C1' === $dataClass && 'low' === $risk && $public && $approved && $current && ! $stale && ! RiskPolicy::requiresDomainReview($risk, $domain)) {
                 $key=trim((string)($row['key']??''));
-                if(1!==preg_match('/^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$/D',$key)||isset($keys[$key])){
-                    throw new InvalidArgumentException('Offline locale pack contains an invalid or duplicated resource key.');
+                $text=$row['text']??null;
+                if(1!==preg_match('/^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$/D',$key)||isset($keys[$key])
+                    ||!is_scalar($text)||''===trim((string)$text)||strlen((string)$text)>500000){
+                    throw new InvalidArgumentException('Offline locale pack contains an invalid/duplicated key or unbounded non-scalar text.');
                 }
+                $row['key']=$key;$row['text']=(string)$text;
                 $keys[$key]=true;
                 $eligible[] = $row;
             }
@@ -194,14 +197,23 @@ final class FutureCapabilityGuard
     {
         $bundle = $input['bundle'] ?? null;
         if (! is_array($bundle)) { throw new InvalidArgumentException('bundle must be an array.'); }
-        foreach ($bundle as $row) {
+        $seen=[];
+        foreach ($bundle as $key=>$row) {
             if (! is_array($row)) { throw new InvalidArgumentException('Low-bandwidth bundle rows must carry governance metadata.'); }
+            $resourceKey=trim((string)$key);
+            $text=$row['text']??null;
+            if(1!==preg_match('/^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$/D',$resourceKey)||isset($seen[$resourceKey])
+                ||!is_scalar($text)||''===trim((string)$text)||strlen((string)$text)>500000){
+                throw new InvalidArgumentException('Low-bandwidth bundle contains an invalid key or unbounded non-scalar text.');
+            }
             $risk = strtolower((string)($row['risk_class'] ?? ''));
             $domain = strtolower((string)($row['domain'] ?? ''));
             if ('C1' !== strtoupper((string)($row['data_class'] ?? '')) || true !== ($row['public'] ?? false) || true !== ($row['approved'] ?? false) || 'low' !== $risk || RiskPolicy::requiresDomainReview($risk, $domain)) {
                 throw new InvalidArgumentException('Low-bandwidth bundle contains material that is not approved public low-risk C1.');
             }
+            $seen[$resourceKey]=true;$row['text']=(string)$text;$bundle[$resourceKey]=$row;
         }
+        $input['bundle']=$bundle;
         return $input;
     }
 
