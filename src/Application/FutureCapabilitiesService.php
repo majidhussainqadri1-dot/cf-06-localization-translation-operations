@@ -327,7 +327,15 @@ final class FutureCapabilitiesService
     private function f020(array $in): array
     {
         $iso = $this->requiredString($in, 'canonical_iso_date');
-        if (! preg_match('/^\d{4}-\d{2}-\d{2}$/', $iso)) { throw new InvalidArgumentException('canonical_iso_date must use YYYY-MM-DD.'); }
+        if (1 !== preg_match('/^\d{4}-\d{2}-\d{2}$/D', $iso)) {
+            throw new InvalidArgumentException('canonical_iso_date must use YYYY-MM-DD.');
+        }
+        $date=\DateTimeImmutable::createFromFormat('!Y-m-d',$iso,new \DateTimeZone('UTC'));
+        $errors=\DateTimeImmutable::getLastErrors();
+        $valid=false===$errors||((int)($errors['warning_count']??0)===0&&(int)($errors['error_count']??0)===0);
+        if(!$date instanceof \DateTimeImmutable||!$valid||!hash_equals($iso,$date->format('Y-m-d'))){
+            throw new InvalidArgumentException('canonical_iso_date must be a real Gregorian calendar date.');
+        }
         $mode = (string)($in['display_mode'] ?? 'gregorian');
         if (! in_array($mode, ['gregorian', 'hijri', 'dual'], true)) { throw new InvalidArgumentException('Unsupported calendar display mode.'); }
         return ['canonical_storage' => $iso, 'display_mode' => $mode, 'conversion_source' => 'approved-calendar-library-required', 'canonical_date_mutated' => false];
