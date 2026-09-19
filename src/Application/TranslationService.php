@@ -109,6 +109,37 @@ final class TranslationService
         });
     }
 
+    public function resolveComment(string $commentUuid,int $version,string $resolution,bool $affectsContext=false): array
+    {
+        $comment=$this->repo->find('comments',$commentUuid)??throw new InvalidArgumentException('Translation comment or contextual query not found.');
+        if('open'!==(string)$comment['status']){throw new InvalidArgumentException('Only an open translation comment or contextual query can be resolved.');}
+        $unit=$this->repo->find('units',(string)$comment['unit_uuid'])??throw new InvalidArgumentException('Translation unit for contextual query is unavailable.');
+        $actor=get_current_user_id();$participant=false;
+        foreach(array('translator_id','linguistic_reviewer_id','domain_reviewer_id') as $column){
+            if($actor>0&&$actor===(int)($unit[$column]??0)&&$this->assignedActorIsCurrent($unit,$column,$actor)){$participant=true;break;}
+        }
+        if(!$participant&&!Authorization::allowed('manage',array('object'=>'unit','object_uuid'=>(string)$unit['uuid'],'record_version'=>(int)$unit['row_version']))){
+            throw new InvalidArgumentException('Only a current translation participant or localization manager may resolve this contextual query.');
+        }
+        $resolution=sanitize_textarea_field($resolution);
+        if(''===trim($resolution)||strlen($resolution)>10000){throw new InvalidArgumentException('Contextual-query resolution is empty or exceeds the bounded limit.');}
+        return $this->tx->run(function()use($comment,$unit,$version,$resolution,$affectsContext,$actor):array{
+            $updated=$this->repo->updateVersioned('comments',(string)$comment['uuid'],$version,array('status'=>'resolved','resolution_text'=>$resolution));
+            $staled=0;
+            if($affectsContext){
+                $staled=$this->repo->markDependentUnitsStale((string)$unit['resource_uuid'],'context_query_resolved');
+            }
+            $this->audit->record('unit',(string)$unit['uuid'],'translation_context_query_resolved','success',array(
+                'comment_uuid'=>$comment['uuid'],'audience'=>$comment['audience'],'resolved_by'=>$actor,
+                'affects_context'=>$affectsContext,'stale_units'=>$staled,
+            ));
+            $this->outbox->enqueue('TranslationContextQueryResolved','translation_unit',(string)$unit['uuid'],array(
+                'unit_uuid'=>$unit['uuid'],'comment_uuid'=>$comment['uuid'],'affects_context'=>$affectsContext,'stale_units'=>$staled,
+            ));
+            return array('comment'=>$updated,'related_units_marked_stale'=>$staled);
+        });
+    }
+
     public function targetText(array $unit):string
     {
         if(!empty($unit['secure_payload_id'])){return $this->repo->readSecurePayload((int)$unit['secure_payload_id'],(string)$unit['uuid'],'target_text');}
