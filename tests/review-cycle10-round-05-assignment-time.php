@@ -13,7 +13,7 @@ $t->test('Assignment security dates require exact UTC timestamps',function()use(
         "!Y-m-d\\TH:i:s\\Z",
         "!Y-m-d H:i:s",
     ] as $n){TestHarness::assertTrue(str_contains($p,$n),$n);}
-    TestHarness::assertTrue(!str_contains($p,"$timestamp=strtotime((string)$value)"));
+    TestHarness::assertTrue(!str_contains($p,"\$timestamp=strtotime((string)\$value)"));
 });
 
 $t->finish();
