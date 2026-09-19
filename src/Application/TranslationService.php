@@ -35,7 +35,7 @@ final class TranslationService
         }else{
             $this->assertAssignedActor($unit,'translator_id','Only the assigned translator may submit this unit.');
         }
-        if((int)$unit['source_version']!==(int)$resource['source_version']||!hash_equals((string)$unit['source_hash'],(string)$resource['source_hash'])){throw new InvalidArgumentException('Translation source is stale and must be reassigned.');}
+        if('active'!==(string)($resource['status']??'')||(int)$unit['source_version']!==(int)$resource['source_version']||!hash_equals((string)$unit['source_hash'],(string)$resource['source_hash'])){throw new InvalidArgumentException('Translation source is stale, retired or inactive and must be reassigned.');}
         if(''===trim($target)||strlen($target)>500000){throw new InvalidArgumentException('Translation target is empty or exceeds the bounded limit.');}
         $result=$this->qa->unit($unit,$resource,$target);if(!$result['passed']){throw new InvalidArgumentException('Translation failed automated linguistic QA.');}
         return $this->tx->run(function()use($unit,$resource,$target,$version,$machineDraft,$providerJob,$result):array{
