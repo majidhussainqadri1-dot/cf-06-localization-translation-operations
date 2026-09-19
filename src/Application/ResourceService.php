@@ -38,14 +38,16 @@ final class ResourceService
         $rawReferences=is_array($input['references']??null)?$input['references']:array();
         if(count($rawReferences)>100){throw new InvalidArgumentException('Resource reference evidence exceeds the bounded item limit.');}
         $references=$rawReferences;
+        $contextRefs=$this->normalizeContextRefs($input['context_refs']??array());
+        $referenceEnvelope=array('references'=>$references,'context_refs'=>$contextRefs);
         $translatability=is_array($input['translatability']??null)?$input['translatability']:array();
         $markupJson=$this->encodeBoundedMetadata($markup,'markup policy');
-        $referencesJson=$this->encodeBoundedMetadata($references,'reference evidence');
+        $referencesJson=$this->encodeBoundedMetadata($referenceEnvelope,'reference/context evidence');
         $translatabilityJson=$this->encodeBoundedMetadata($translatability,'translatability evidence');
         $hashPayload=wp_json_encode($this->canonicalize(array(
             'key'=>$key,'locale'=>$locale,'text'=>$text,'context'=>$context,'description'=>$description,
             'domain'=>$domain,'risk'=>$risk,'data'=>$data,'placeholders'=>$schema,'markup_policy'=>$markup,
-            'references'=>$references,'translatability'=>$translatability,
+            'references'=>$references,'context_refs'=>$contextRefs,'translatability'=>$translatability,
         )),JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
         if(!is_string($hashPayload)){throw new InvalidArgumentException('Resource source evidence could not be encoded safely.');}
         $hash=hash('sha256',$hashPayload);
@@ -107,6 +109,31 @@ final class ResourceService
     {
         if(!empty($resource['secure_payload_id'])){return $this->repo->readSecurePayload((int)$resource['secure_payload_id'],(string)$resource['uuid'],'source_text');}
         return (string)$resource['source_text'];
+    }
+
+    private function normalizeContextRefs(mixed $value): array
+    {
+        if(!is_array($value)||count($value)>100){throw new InvalidArgumentException('Resource context references must be a bounded array.');}
+        $out=[];$seen=[];
+        foreach($value as $row){
+            if(!is_array($row)){throw new InvalidArgumentException('Resource context reference entries must be objects.');}
+            $type=sanitize_key((string)($row['type']??''));
+            $ref=trim((string)($row['ref']??''));
+            if(!in_array($type,array('route','component','screenshot'),true)||''===$ref||strlen($ref)>191){
+                throw new InvalidArgumentException('Resource context reference type/ref is invalid or oversized.');
+            }
+            if('route'===$type){
+                if(!str_starts_with($ref,'/')||str_contains($ref,'://')||str_contains($ref,"\0")){
+                    throw new InvalidArgumentException('Resource route context reference must be a same-origin relative route.');
+                }
+            }elseif(1!==preg_match('/^[A-Za-z0-9][A-Za-z0-9._:\/@-]{0,190}$/D',$ref)){
+                throw new InvalidArgumentException('Resource component/screenshot context reference must be a stable canonical identifier.');
+            }
+            $key=$type.'|'.$ref;if(isset($seen[$key])){throw new InvalidArgumentException('Resource context reference is duplicated.');}
+            $seen[$key]=true;$out[]=array('type'=>$type,'ref'=>$ref);
+        }
+        usort($out,static fn(array $a,array $b):int=>strcmp($a['type'].'|'.$a['ref'],$b['type'].'|'.$b['ref']));
+        return $out;
     }
 
     private function encodeBoundedMetadata(array $value,string $label): string
