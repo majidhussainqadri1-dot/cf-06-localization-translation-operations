@@ -85,7 +85,11 @@ final class Routes
         if(strlen($body)>self::MAX_MUTATION_BYTES||$this->nodeCount($request->get_params())>self::MAX_MUTATION_NODES){
             return new WP_Error('slto_payload_too_large','Localization mutation payload exceeds the governed request limit.',['status'=>413]);
         }
-        $key=trim((string)$request->get_header('Idempotency-Key'));if($requireKey&&(''===$key||strlen($key)>191)){return new WP_Error('slto_idempotency_required','A valid Idempotency-Key header is required.',['status'=>400]);}if(''===$key){$key=hash('sha256',$route.'|'.wp_json_encode($request->get_json_params()).'|'.microtime(true));}
+        $key=trim((string)$request->get_header('Idempotency-Key'));
+        if($requireKey&&(''===$key||strlen($key)>191||1!==preg_match('/^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$/D',$key))){
+            return new WP_Error('slto_idempotency_required','A valid bounded Idempotency-Key header is required.',['status'=>400]);
+        }
+        if(''===$key){$key=hash('sha256',$route.'|'.wp_json_encode($request->get_json_params()).'|'.microtime(true));}
         $requestMaterial=wp_json_encode($this->canonicalize([
             'logical_route'=>$route,
             'method'=>$request->get_method(),
