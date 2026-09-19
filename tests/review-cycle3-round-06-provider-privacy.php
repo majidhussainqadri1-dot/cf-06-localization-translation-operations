@@ -16,7 +16,7 @@ $t->test('Provider updates require caller-supplied optimistic-lock version',func
 });
 
 $t->test('Provider governance metadata and transition narratives are bounded',function()use($provider):void{
-    foreach(['Provider host allowlist exceeds the bounded limit.','Provider subprocessor identifier exceeds the bounded limit.','Provider transition reason exceeds the bounded limit.'] as $needle){TestHarness::assertTrue(str_contains($provider,$needle),$needle);}
+    foreach(['Provider host allowlist exceeds the bounded limit.','Provider subprocessor identifier exceeds the bounded limit.','Provider transition requires a nonempty bounded reason.'] as $needle){TestHarness::assertTrue(str_contains($provider,$needle),$needle);}
 });
 
 $t->test('Privacy erasure uses secret-keyed deterministic pseudonymization',function()use($privacy):void{
