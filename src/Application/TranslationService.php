@@ -168,7 +168,24 @@ final class TranslationService
         $role=match($column){'translator_id'=>'translator','linguistic_reviewer_id'=>'linguistic_reviewer','domain_reviewer_id'=>'domain_reviewer',default=>''};
         if(''===$role){return false;}
         foreach($this->repo->list('assignments',array('unit_uuid'=>$unit['uuid'],'assignee_id'=>$actor,'assignment_role'=>$role,'status'=>'active'),10) as $assignment){
-            if((empty($assignment['expires_at'])||strtotime((string)$assignment['expires_at'])>=time())&&in_array((string)$assignment['conflict_status'],array('clear','disclosed-cleared'),true)){return true;}
+            if(!((empty($assignment['expires_at'])||strtotime((string)$assignment['expires_at'])>=time())&&in_array((string)$assignment['conflict_status'],array('clear','disclosed-cleared'),true))){continue;}
+            $qualification=json_decode((string)($assignment['qualification_json']??''),true);
+            if(!is_array($qualification)){continue;}
+            $resource=$this->repo->find('resources',(string)($unit['resource_uuid']??''));
+            if(!is_array($resource)){continue;}
+            $evidence=[
+                'assignee_id'=>$actor,
+                'role'=>$role,
+                'target_locale'=>(string)($unit['target_locale']??''),
+                'domain'=>(string)($resource['domain_name']??''),
+                'risk_class'=>(string)($resource['risk_class']??''),
+                'qualification'=>$qualification,
+                'unit_uuid'=>(string)($unit['uuid']??''),
+                'project_uuid'=>(string)($unit['project_uuid']??''),
+                'assignment_uuid'=>(string)($assignment['uuid']??''),
+                'verification_phase'=>'action-time',
+            ];
+            if(true===apply_filters('slto_verify_assignment_qualification',false,$evidence)){return true;}
         }
         return false;
     }
