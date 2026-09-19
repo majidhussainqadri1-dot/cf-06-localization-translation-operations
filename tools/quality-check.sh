@@ -33,7 +33,7 @@ php tests/review-fresh-round-07-privacy-retention.php
 php tests/review-fresh-round-08-future40-hotfix.php
 php tests/review-cycle2-round-01-provider-parity.php
 php tests/review-cycle2-round-02-memory-governance.php
-for test in tests/review-cycle3-round-*.php tests/review-cycle4-round-*.php tests/review-cycle5-round-*.php tests/review-cycle6-round-*.php tests/review-cycle7-round-*.php; do
+for test in tests/review-cycle3-round-*.php tests/review-cycle4-round-*.php tests/review-cycle5-round-*.php tests/review-cycle6-round-*.php tests/review-cycle7-round-*.php tests/review-cycle8-round-*.php; do
   [ -e "$test" ] || continue
   php "$test"
 done
