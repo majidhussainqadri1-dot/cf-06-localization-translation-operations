@@ -65,6 +65,20 @@ final class ProjectService
         $targetsJson=wp_json_encode($targets);$scopeJson=wp_json_encode(['resource_count'=>count($resources),'resource_keys'=>array_column($resources,'resource_key')]);
         if(!is_string($targetsJson)||!is_string($scopeJson)){throw new RuntimeException('Project scope could not be encoded.');}
         return $this->tx->run(function()use($input,$name,$description,$releaseTarget,$projectProvider,$sourceLocale,$targets,$targetsJson,$scopeJson,$resources,$snapshotHash,$riskCeiling):array{
+            foreach(array_merge([$sourceLocale],$targets) as $tag){
+                $locale=$this->repo->findOne('locales','locale_tag',$tag);
+                if(!is_array($locale)||!in_array((string)$locale['status'],['tested','content_ready','enabled','degraded'],true)){
+                    throw new InvalidArgumentException('Project locale changed eligibility before project creation: '.$tag);
+                }
+            }
+            foreach($resources as $resource){
+                $current=$this->repo->find('resources',(string)$resource['uuid']);
+                if(!is_array($current)||'active'!==(string)$current['status']||(string)$current['source_locale']!==$sourceLocale
+                    ||(int)$current['source_version']!==(int)$resource['source_version']
+                    ||!hash_equals((string)$current['source_hash'],(string)$resource['source_hash'])){
+                    throw new InvalidArgumentException('Project source changed before transactional snapshot creation: '.(string)$resource['resource_key']);
+                }
+            }
             $project=$this->repo->insert('projects',[
                 'name'=>$name,'description'=>$description,'source_snapshot_hash'=>$snapshotHash,
                 'source_locale'=>$sourceLocale,'target_locales'=>$targetsJson,'scope_json'=>$scopeJson,
