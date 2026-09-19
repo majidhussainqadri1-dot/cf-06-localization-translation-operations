@@ -7,14 +7,14 @@ This matrix binds the source candidate to the latest CF-06 master plan **and** t
 | Requirement | Implemented by | Primary evidence |
 |---|---|---|
 | CF06-FR-001 Locale registry | LocaleService, LocaleValidator, Activator | unit/contracts tests |
-| CF06-FR-002 Resource catalog | ResourceService, resources schema | contracts/review guards |
+| CF06-FR-002 Resource catalog | ResourceService, resources schema, governed route/component/screenshot context refs | contracts/review guards + cycle9 round10 |
 | CF06-FR-003 Explicit source language/version | ResourceService, project snapshots | contracts |
 | CF06-FR-004 Translatability/extraction rules | resource fields, ResourceService, ExtractionService | trace/schema checks |
 | CF06-FR-005 Risk classification | RiskPolicy, resource fields | unit/security review |
 | CF06-FR-006 Translation projects | ProjectService, projects/project_resources | schema/contracts |
 | CF06-FR-007 Assignment/qualification/SoD | ProjectService, assignments | code/review checks |
 | CF06-FR-008 Translation-unit lifecycle | StateMachine, TranslationService | lifecycle tests |
-| CF06-FR-009 Comments and queries | TranslationService, comments table | schema/contracts |
+| CF06-FR-009 Comments and queries | TranslationService versioned comment/query resolution, comments table, contextual-change dependency invalidation | cycle9 round10 + REST/contracts |
 | CF06-FR-010 Translation memory | TranslationService, TerminologyService, memory table | contracts |
 | CF06-FR-011 External vendor boundary | ProviderService, HttpJsonProvider, UrlGuard | security review |
 | CF06-FR-012 Terminology registry | TerminologyService, terminology table | schema/contracts |
@@ -36,8 +36,8 @@ This matrix binds the source candidate to the latest CF-06 master plan **and** t
 | CF06-FR-028 Content translation publication links | ContentLinkService, content_links table | ownership review |
 | CF06-FR-029 Style guides | TerminologyService, style_guides table | schema/contracts |
 | CF06-FR-030 Translation feedback | FeedbackService, feedback table | schema/contracts |
-| CF06-FR-031 Staleness propagation | ResourceService, DependencyInvalidator, markDependentUnitsStale | lifecycle/plan tests |
-| CF06-FR-032 Coverage/quality metrics | MetricsService, HealthService | contracts/admin evidence |
+| CF06-FR-031 Staleness propagation | ResourceService + DependencyInvalidator source/context/terminology/style-policy propagation | lifecycle/plan tests + cycle9 round10 |
+| CF06-FR-032 Coverage/quality metrics | MetricsService aggregate unit/word/turnaround/QA/reopen/feedback/coverage definitions, HealthService | cycle9 round10; no actor surveillance dimensions |
 | CF06-FR-033 Retention/deletion | PrivacyService, atomic erasure-job minimization, secure payloads/vendor purge | security/privacy review |
 | CF06-FR-034 Locale/provider deprecation | LocaleService, ProviderService, state machines | lifecycle tests |
 
