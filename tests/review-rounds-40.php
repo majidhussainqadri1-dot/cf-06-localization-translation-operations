@@ -42,7 +42,7 @@ $checks=[
 ['32 Assignment expiry must be future','src/Application/ProjectService.php','Assignment expiry must be in the future'],
 ['33 Assignment requires conflict declaration','src/Application/ProjectService.php','cleared conflict declaration'],
 ['34 Assignee eligibility comes from File 00','src/Application/ProjectService.php','assertEligibleAssignee'],
-['35 Rejection requires review reason','src/Application/TranslationService.php','A review reason is required'],
+['35 Every translation review transition requires reason','src/Application/TranslationService.php','Every translation review transition requires a nonempty bounded reason.'],
 ['36 Domain reviewer is independent','src/Application/TranslationService.php','independent reviewer'],
 ['37 Vendor comments deny protected units','src/Application/TranslationService.php','Vendor comments are denied for protected'],
 ['38 High-risk segments are excluded from TM','src/Application/TranslationService.php','RiskPolicy::requiresDomainReview'],
