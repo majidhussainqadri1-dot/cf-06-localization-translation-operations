@@ -60,6 +60,7 @@ final class FeedbackService
             $updated=$this->repo->updateVersioned('feedback',$uuid,$version,array('status'=>$to,'assigned_to'=>get_current_user_id(),'outcome_text'=>$outcome));
             $this->audit->record('feedback',$uuid,'translation_feedback_transition','success',array('from'=>$row['status'],'to'=>$to,'reported_severity'=>$row['severity']));
             if('triaged'===$to&&'critical'===(string)$row['severity']){$this->outbox->enqueue('CriticalTranslationDefectDetected','feedback',$uuid,array('locale'=>$row['locale_tag'],'resource_key'=>$row['resource_key'],'category'=>$row['category'],'triaged_by'=>get_current_user_id()));}
+            if('closed'===(string)$row['status']&&'triaged'===$to){$this->outbox->enqueue('TranslationFeedbackReopened','feedback',$uuid,array('locale'=>$row['locale_tag'],'resource_key'=>$row['resource_key'],'category'=>$row['category']));}
             if('released'===$to){$this->outbox->enqueue('TranslationCorrectionReleased','feedback',$uuid,array('locale'=>$row['locale_tag'],'resource_key'=>$row['resource_key']));}
             return $updated;
         });
