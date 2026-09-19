@@ -41,7 +41,18 @@ final class LocaleValidator
     public static function direction(string $tag): string
     {
         $parsed = self::parse($tag);
-        $rtl = array('ar', 'fa', 'he', 'ps', 'ur', 'sd', 'ug', 'dv', 'ku');
-        return null !== $parsed && in_array($parsed['language'], $rtl, true) ? 'rtl' : 'ltr';
+        if (null === $parsed) {
+            return 'ltr';
+        }
+
+        // An explicit script is stronger evidence than the language default.
+        // This avoids misclassifying locales such as ku-Latn or ur-Latn.
+        $rtlScripts = array('Adlm', 'Arab', 'Hebr', 'Nkoo', 'Rohg', 'Syrc', 'Thaa');
+        if ('' !== $parsed['script']) {
+            return in_array($parsed['script'], $rtlScripts, true) ? 'rtl' : 'ltr';
+        }
+
+        $rtlLanguages = array('ar', 'fa', 'he', 'ps', 'ur', 'sd', 'ug', 'dv', 'ku');
+        return in_array($parsed['language'], $rtlLanguages, true) ? 'rtl' : 'ltr';
     }
 }
