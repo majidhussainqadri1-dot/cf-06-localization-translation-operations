@@ -124,7 +124,7 @@ final class TranslationService
         }
         $resolution=sanitize_textarea_field($resolution);
         if(''===trim($resolution)||strlen($resolution)>10000){throw new InvalidArgumentException('Contextual-query resolution is empty or exceeds the bounded limit.');}
-        return $this->tx->run(function()use($comment,$unit,$version,$resolution,$affectsContext,$actor):array{
+        $result=$this->tx->run(function()use($comment,$unit,$version,$resolution,$affectsContext,$actor):array{
             $updated=$this->repo->updateVersioned('comments',(string)$comment['uuid'],$version,array('status'=>'resolved','resolution_text'=>$resolution));
             $propagation=array('stale_units'=>0,'stale_content_links'=>0,'invalidated_bundles'=>0);
             if($affectsContext){
@@ -142,6 +142,8 @@ final class TranslationService
             ));
             return array('comment'=>$updated,'propagation'=>$propagation);
         });
+        if($affectsContext&&array_sum(array_map('intval',(array)($result['propagation']??array())))>0){wp_cache_flush();}
+        return $result;
     }
 
     public function targetText(array $unit):string
