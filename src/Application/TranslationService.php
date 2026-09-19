@@ -7,6 +7,7 @@ namespace Sabri\Localization\Application;
 use InvalidArgumentException;
 use Sabri\Localization\Domain\Translation\RiskPolicy;
 use Sabri\Localization\Domain\Workflow\StateMachine;
+use Sabri\Localization\Infrastructure\DependencyInvalidator;
 use Sabri\Localization\Infrastructure\Outbox;
 use Sabri\Localization\Infrastructure\Repository\AuditRepository;
 use Sabri\Localization\Infrastructure\Repository\LocalizationRepository;
@@ -125,18 +126,21 @@ final class TranslationService
         if(''===trim($resolution)||strlen($resolution)>10000){throw new InvalidArgumentException('Contextual-query resolution is empty or exceeds the bounded limit.');}
         return $this->tx->run(function()use($comment,$unit,$version,$resolution,$affectsContext,$actor):array{
             $updated=$this->repo->updateVersioned('comments',(string)$comment['uuid'],$version,array('status'=>'resolved','resolution_text'=>$resolution));
-            $staled=0;
+            $propagation=array('stale_units'=>0,'stale_content_links'=>0,'invalidated_bundles'=>0);
             if($affectsContext){
-                $staled=$this->repo->markDependentUnitsStale((string)$unit['resource_uuid'],'context_query_resolved');
+                $resourceUuid=(string)$unit['resource_uuid'];
+                $propagation['stale_units']=$this->repo->markDependentUnitsStale($resourceUuid,'context_query_resolved');
+                $propagation['stale_content_links']=DependencyInvalidator::markContentLinksStale($resourceUuid);
+                $propagation['invalidated_bundles']=DependencyInvalidator::invalidateActiveBundles($resourceUuid);
             }
             $this->audit->record('unit',(string)$unit['uuid'],'translation_context_query_resolved','success',array(
                 'comment_uuid'=>$comment['uuid'],'audience'=>$comment['audience'],'resolved_by'=>$actor,
-                'affects_context'=>$affectsContext,'stale_units'=>$staled,
+                'affects_context'=>$affectsContext,'propagation'=>$propagation,
             ));
             $this->outbox->enqueue('TranslationContextQueryResolved','translation_unit',(string)$unit['uuid'],array(
-                'unit_uuid'=>$unit['uuid'],'comment_uuid'=>$comment['uuid'],'affects_context'=>$affectsContext,'stale_units'=>$staled,
+                'unit_uuid'=>$unit['uuid'],'comment_uuid'=>$comment['uuid'],'affects_context'=>$affectsContext,'propagation'=>$propagation,
             ));
-            return array('comment'=>$updated,'related_units_marked_stale'=>$staled);
+            return array('comment'=>$updated,'propagation'=>$propagation);
         });
     }
 
