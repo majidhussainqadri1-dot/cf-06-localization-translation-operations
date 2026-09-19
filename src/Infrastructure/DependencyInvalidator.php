@@ -81,4 +81,59 @@ final class DependencyInvalidator
         }
         return $invalidated;
     }
+
+    /**
+     * Conservative locale/domain invalidation for terminology or style-policy
+     * changes. It never changes canonical source records; it only removes stale
+     * translation projections from release eligibility until re-review.
+     */
+    public static function invalidateLocaleDomain(string $locale,string $domain,string $reason): array
+    {
+        global $wpdb;
+        $units=Database::table('units');$resources=Database::table('resources');$links=Database::table('content_links');$bundles=Database::table('bundles');
+        $resourceRows=$wpdb->get_col($wpdb->prepare(
+            "SELECT DISTINCT r.uuid FROM {$resources} r JOIN {$units} u ON u.resource_uuid=r.uuid WHERE r.status='active' AND r.domain_name=%s AND u.target_locale=%s",
+            $domain,$locale
+        ));
+        if(''!==(string)$wpdb->last_error){throw new RuntimeException('Locale/domain policy dependency inventory could not be read.');}
+        $resourceUuids=array_values(array_unique(array_map('strval',is_array($resourceRows)?$resourceRows:array())));
+        if(empty($resourceUuids)){return array('resources'=>0,'stale_units'=>0,'stale_content_links'=>0,'invalidated_bundles'=>0);}
+
+        $ph=implode(',',array_fill(0,count($resourceUuids),'%s'));$now=Database::now();
+        $stale=$wpdb->query($wpdb->prepare(
+            "UPDATE {$units} SET status='stale',stale_reason=%s,row_version=row_version+1,updated_at=%s WHERE target_locale=%s AND resource_uuid IN ({$ph}) AND status NOT IN ('new','retired','stale')",
+            $reason,$now,$locale,...$resourceUuids
+        ));
+        if(false===$stale){throw new RuntimeException('Locale/domain dependent units could not be marked stale.');}
+        $staleLinks=$wpdb->query($wpdb->prepare(
+            "UPDATE {$links} SET publication_status='stale',row_version=row_version+1,updated_at=%s WHERE target_locale=%s AND resource_uuid IN ({$ph}) AND publication_status IN ('review','approved','published')",
+            $now,$locale,...$resourceUuids
+        ));
+        if(false===$staleLinks){throw new RuntimeException('Locale/domain content relationships could not be marked stale.');}
+
+        $unitRows=$wpdb->get_col($wpdb->prepare(
+            "SELECT uuid FROM {$units} WHERE target_locale=%s AND resource_uuid IN ({$ph})",
+            $locale,...$resourceUuids
+        ));
+        if(''!==(string)$wpdb->last_error){throw new RuntimeException('Locale/domain unit dependency inventory could not be read.');}
+        $unitSet=array_fill_keys(array_map('strval',is_array($unitRows)?$unitRows:array()),true);
+        $active=$wpdb->get_results($wpdb->prepare("SELECT uuid,source_list_json FROM {$bundles} WHERE locale_tag=%s AND status='active'",$locale),ARRAY_A);
+        if(''!==(string)$wpdb->last_error){throw new RuntimeException('Locale/domain active bundle inventory could not be read.');}
+        $invalidated=0;
+        foreach(is_array($active)?$active:array() as $bundle){
+            try{$sources=json_decode((string)$bundle['source_list_json'],true,128,JSON_THROW_ON_ERROR);}catch(\JsonException $exception){throw new RuntimeException('Locale/domain active bundle source evidence is malformed.',0,$exception);}
+            $affected=false;
+            foreach(is_array($sources)?$sources:array() as $source){
+                if(is_array($source)&&isset($unitSet[(string)($source['unit_uuid']??'')])){$affected=true;break;}
+            }
+            if(!$affected){continue;}
+            $changed=$wpdb->query($wpdb->prepare(
+                "UPDATE {$bundles} SET status='invalidated',row_version=row_version+1,updated_at=%s WHERE uuid=%s AND status='active'",
+                $now,(string)$bundle['uuid']
+            ));
+            if(false===$changed){throw new RuntimeException('Locale/domain active bundle could not be invalidated.');}
+            $invalidated+=(int)$changed;
+        }
+        return array('resources'=>count($resourceUuids),'stale_units'=>(int)$stale,'stale_content_links'=>(int)$staleLinks,'invalidated_bundles'=>$invalidated);
+    }
 }
