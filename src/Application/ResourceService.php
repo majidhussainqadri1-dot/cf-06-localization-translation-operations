@@ -72,6 +72,7 @@ final class ResourceService
                 $bundles=DependencyInvalidator::invalidateActiveBundles($uuid);
                 $this->audit->record('resource',$key,'resource_versioned','success',array('source_version'=>$base['source_version'],'stale_units'=>$stale,'stale_content_links'=>$links,'invalidated_bundles'=>$bundles,'hash'=>$hash));
                 $this->outbox->enqueue('TranslatableResourceChanged','resource',$uuid,array('resource_key'=>$key,'source_version'=>$base['source_version'],'source_hash'=>$hash,'stale_units'=>$stale,'stale_content_links'=>$links,'invalidated_bundles'=>$bundles));
+                if($links>0){$this->outbox->enqueue('ContentTranslationReconciliationRequired','resource',$uuid,array('resource_key'=>$key,'reason'=>'source_changed','source_version'=>$base['source_version'],'source_hash'=>$hash,'stale_content_links'=>$links,'search_reconciliation_required'=>true));}
                 if($stale>0||$links>0||$bundles>0){$this->outbox->enqueue('LocalizationCoverageDegraded','resource',$uuid,array('resource_key'=>$key,'reason'=>'source_changed','stale_units'=>$stale,'stale_content_links'=>$links,'invalidated_bundles'=>$bundles));}
                 return array('changed'=>true,'record'=>$updated,'stale_units'=>$stale,'stale_content_links'=>$links,'invalidated_bundles'=>$bundles);
             }
@@ -98,6 +99,7 @@ final class ResourceService
             $bundles=DependencyInvalidator::invalidateActiveBundles($uuid);
             $this->audit->record('resource',(string)$resource['resource_key'],'resource_retired','success',array('reason'=>$reason,'stale_units'=>$stale,'stale_content_links'=>$links,'invalidated_bundles'=>$bundles));
             $this->outbox->enqueue('TranslatableResourceChanged','resource',$uuid,array('resource_key'=>$resource['resource_key'],'source_version'=>(int)$resource['source_version'],'source_hash'=>$resource['source_hash'],'status'=>'retired','reason'=>$reason,'stale_units'=>$stale,'stale_content_links'=>$links,'invalidated_bundles'=>$bundles));
+            if($links>0){$this->outbox->enqueue('ContentTranslationReconciliationRequired','resource',$uuid,array('resource_key'=>$resource['resource_key'],'reason'=>'source_retired','source_version'=>(int)$resource['source_version'],'source_hash'=>$resource['source_hash'],'stale_content_links'=>$links,'search_reconciliation_required'=>true));}
             $this->outbox->enqueue('LocalizationCoverageDegraded','resource',$uuid,array('resource_key'=>$resource['resource_key'],'reason'=>'source_retired','stale_units'=>$stale,'stale_content_links'=>$links,'invalidated_bundles'=>$bundles));
             return array('record'=>$updated,'stale_units'=>$stale,'stale_content_links'=>$links,'invalidated_bundles'=>$bundles);
         });
