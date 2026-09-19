@@ -115,6 +115,22 @@ final class QaEvidenceService
                 || ! hash_equals((string)$row['expected_hash'], (string)$row['actual_hash'])) {
                 return false;
             }
+            $verification=array(
+                'target_type'=>(string)$row['target_type'],
+                'target_uuid'=>(string)$row['target_uuid'],
+                'environment_name'=>(string)$row['environment_name'],
+                'plugin_version'=>(string)$row['plugin_version'],
+                'build_sha'=>(string)$row['build_sha'],
+                'test_id'=>(string)$row['test_id'],
+                'result'=>(string)$row['result'],
+                'expected_hash'=>(string)$row['expected_hash'],
+                'actual_hash'=>(string)$row['actual_hash'],
+                'artifact_ref'=>(string)$row['artifact_ref'],
+                'artifact_hash'=>(string)$row['artifact_hash'],
+                'reviewer_id'=>(int)$row['reviewer_id'],
+                'verification_phase'=>'consumption-time',
+            );
+            if(true!==apply_filters('slto_verify_qa_evidence',false,$verification)){return false;}
         }
         return true;
     }
