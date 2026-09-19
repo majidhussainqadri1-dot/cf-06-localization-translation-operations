@@ -31,9 +31,10 @@ php tests/review-fresh-round-05-workflow-provenance.php
 php tests/review-fresh-round-06-bundle-coverage.php
 php tests/review-fresh-round-07-privacy-retention.php
 php tests/review-fresh-round-08-future40-hotfix.php
-php tests/review-cycle2-round-01-provider-parity.php
-php tests/review-cycle2-round-02-memory-governance.php
-for test in tests/review-cycle3-round-*.php tests/review-cycle4-round-*.php tests/review-cycle5-round-*.php tests/review-cycle6-round-*.php tests/review-cycle7-round-*.php tests/review-cycle8-round-*.php tests/review-cycle9-round-*.php tests/review-cycle10-round-*.php; do
+# Execute every numbered review-cycle regression automatically. This is
+# intentionally future-proof so a newly added cycle cannot be syntactically
+# linted yet silently omitted from behavioral CI.
+for test in tests/review-cycle*-round-*.php; do
   [ -e "$test" ] || continue
   php "$test"
 done
