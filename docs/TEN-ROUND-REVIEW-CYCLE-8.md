@@ -13,7 +13,7 @@ This ledger records the eighth explicit ten-round repository review cycle. Each 
 | 7 | Clean | Bundle build/release/rollback, source freshness, QA evidence, release approval, integration readiness and staging/live truth were re-audited with no new defect found. |
 | 8 | Defects found and corrected | Future40 offline and low-bandwidth evidence accepted malformed nested/unbounded text shapes. Canonical key, scalar text, non-empty text and size bounds were added with adversarial regression coverage. |
 | 9 | Clean | CI/package exact-source controls, version coherence, documentation truth and repository hygiene were re-audited with no new defect found. |
-| 10 | Defects found and corrected | Final exact-head validation exposed historical schema-parity tests coupled to a removed hand-maintained schema map. Both affected regressions were converted to assert canonical DDL-derived all-entity parity, and final Cycle-8 regression coverage was added. |
+| 10 | Defects found and corrected | Final exact-head validation exposed historical schema-parity tests coupled to a removed hand-maintained schema map; stale/interpolating Cycle-7 test literals; incomplete explicit companion-boundary wording; a secret-scanner self-test that triggered the scanner itself; and a WordPress 6.0.15 bundled-theme defect that contaminated plugin integration. Historical tests were aligned to current contracts, scanner probes were made non-self-triggering, documentation was made explicit, and WP integration was isolated from theme loading while continuing to exercise the real plugin/MySQL path. |
 
 ## Final validation law
 
