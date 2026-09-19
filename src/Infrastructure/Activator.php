@@ -724,19 +724,23 @@ final class Activator
             }
         }
 
-        $expectedUniqueIndexes=self::expectedUniqueIndexes($wpdb->get_charset_collate());
+        $expectedIndexes=self::expectedIndexes($wpdb->get_charset_collate());
         foreach (Database::ENTITIES as $entity=>$suffix) {
             $table=Database::table($entity);
-            foreach ($expectedUniqueIndexes[$table]??array() as $indexName=>$expectedIndexColumns) {
+            foreach ($expectedIndexes[$table]??array() as $indexName=>$contract) {
                 $rows=$wpdb->get_results($wpdb->prepare("SHOW INDEX FROM {$table} WHERE Key_name=%s",$indexName),ARRAY_A);
                 if(!is_array($rows)||''!==(string)$wpdb->last_error){
-                    throw new \RuntimeException('CF-06 unique schema index inventory failed for '.$entity.'.');
+                    throw new \RuntimeException('CF-06 schema index inventory failed for '.$entity.'.');
                 }
                 usort($rows,static fn(array $a,array $b):int=>(int)($a['Seq_in_index']??0)<=>(int)($b['Seq_in_index']??0));
                 $actualColumns=array_values(array_map(static fn(array $row):string=>(string)($row['Column_name']??''),$rows));
                 $nonUnique=array_values(array_unique(array_map(static fn(array $row):int=>(int)($row['Non_unique']??1),$rows)));
-                if($actualColumns!==$expectedIndexColumns||$nonUnique!==array(0)){
-                    throw new \RuntimeException('CF-06 required unique schema index is unavailable or drifted for '.$entity.':'.$indexName.'.');
+                $expectedNonUnique=true===$contract['unique']?array(0):array(1);
+                if($actualColumns!==$contract['columns']||$nonUnique!==$expectedNonUnique){
+                    $message=true===$contract['unique']
+                        ?'CF-06 required unique schema index is unavailable or drifted for '
+                        :'CF-06 required non-unique schema index is unavailable or drifted for ';
+                    throw new \RuntimeException($message.$entity.':'.$indexName.'.');
                 }
             }
         }
@@ -773,7 +777,7 @@ final class Activator
         return $type;
     }
 
-    private static function expectedUniqueIndexes(string $collation): array
+    private static function expectedIndexes(string $collation): array
     {
         $out=array();
         foreach(self::schema($collation) as $sql){
@@ -784,12 +788,19 @@ final class Activator
             $table=(string)$match[1];
             foreach(preg_split('/\R/',substr($sql,$open+1,$close-$open-1))?:array() as $line){
                 $line=trim(rtrim(trim($line),','));
-                if(1!==preg_match('/^UNIQUE KEY\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(([^)]+)\)$/i',$line,$idx)){continue;}
+                $name='';$columnsText='';$unique=false;
+                if(1===preg_match('/^PRIMARY KEY\s*\(([^)]+)\)$/i',$line,$idx)){
+                    $name='PRIMARY';$columnsText=(string)$idx[1];$unique=true;
+                }elseif(1===preg_match('/^UNIQUE KEY\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(([^)]+)\)$/i',$line,$idx)){
+                    $name=(string)$idx[1];$columnsText=(string)$idx[2];$unique=true;
+                }elseif(1===preg_match('/^KEY\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(([^)]+)\)$/i',$line,$idx)){
+                    $name=(string)$idx[1];$columnsText=(string)$idx[2];$unique=false;
+                }else{continue;}
                 $columns=array_values(array_map(
-                    static fn(string $column):string=>trim($column," `\t\r\n"),
-                    explode(',',(string)$idx[2])
+                    static fn(string $column):string=>trim(preg_replace('/\s+(?:ASC|DESC)$/i','',trim($column," `\t\r\n"))??$column),
+                    explode(',',$columnsText)
                 ));
-                if(!empty($columns)){$out[$table][(string)$idx[1]]=$columns;}
+                if(''!==$name&&!empty($columns)){$out[$table][$name]=array('columns'=>$columns,'unique'=>$unique);}
             }
         }
         return $out;
