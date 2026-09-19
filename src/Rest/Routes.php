@@ -8,6 +8,8 @@ use DomainException;
 use InvalidArgumentException;
 use Sabri\Localization\Contract\Manifest;
 use Sabri\Localization\Plugin;
+use Sabri\Localization\Infrastructure\Database;
+use Sabri\Localization\Infrastructure\Repository\AuditRepository;
 use Sabri\Localization\Security\Authorization;
 use Throwable;
 use WP_Error;
@@ -98,13 +100,14 @@ final class Routes
         ]),JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
         if(!is_string($requestMaterial)){throw new InvalidArgumentException('Mutation request identity could not be encoded safely.');}
         $actor=get_current_user_id();$hash=hash('sha256',$requestMaterial);$state=$this->s['repo']->storeIdempotency($actor,$route,$key,$hash);if(!$state['new']&&'completed'===$state['record']['status']){$body=json_decode((string)$state['record']['response_json'],true)?:[];return new WP_REST_Response($body,(int)$state['record']['response_code']);}if(!$state['new']){return new WP_Error('slto_request_in_progress','An identical operation is already processing.',['status'=>409]);}
+        $traceId=Database::uuid();
         try{
-            $result=$operation();
+            $result=AuditRepository::withTrace($traceId,$operation);
         }catch(Throwable $e){
             try{$this->s['repo']->failIdempotency($actor,$route,$key,sanitize_key(get_class($e)));}catch(Throwable $persistenceFailure){do_action('slto_idempotency_failure_persistence_error',$route,$key,$persistenceFailure);}
-            throw $e;
+            return $this->error($e,$traceId);
         }
-        $body=['data'=>$result,'trace_id'=>\Sabri\Localization\Infrastructure\Database::uuid()];
+        $body=['data'=>$result,'trace_id'=>$traceId];
         // A completed business operation must never be relabeled as failed merely
         // because replay-state persistence failed. If completion persistence throws,
         // the row remains processing and retries fail closed instead of re-executing
@@ -132,5 +135,5 @@ final class Routes
         return $count;
     }
     private function ok(mixed $data,int $status=200):WP_REST_Response{return new WP_REST_Response(['data'=>$data],$status);}
-    private function error(Throwable $e):WP_Error{$trace=\Sabri\Localization\Infrastructure\Database::uuid();$code='slto_internal_error';$status=500;$message='Localization operation failed.';if($e instanceof InvalidArgumentException){$code='slto_invalid_request';$status=422;$message=$e->getMessage();}elseif($e instanceof DomainException&&'stale_version'===$e->getMessage()){$code='slto_stale_version';$status=409;$message='The record changed; reload before retrying.';}elseif($e instanceof DomainException&&'idempotency_conflict'===$e->getMessage()){$code='slto_idempotency_conflict';$status=409;$message='The idempotency key was reused with a different request.';}elseif($e instanceof DomainException&&'idempotency_indeterminate'===$e->getMessage()){$code='slto_idempotency_indeterminate';$status=409;$message='A previous mutation may have completed but replay state is indeterminate; operator reconciliation is required.';}do_action('slto_safe_error',$code,$trace,$e);return new WP_Error($code,$message,['status'=>$status,'trace_id'=>$trace]);}
+    private function error(Throwable $e,?string $trace=null):WP_Error{$trace=$trace?:AuditRepository::currentTraceId()?:Database::uuid();$code='slto_internal_error';$status=500;$message='Localization operation failed.';if($e instanceof InvalidArgumentException){$code='slto_invalid_request';$status=422;$message=$e->getMessage();}elseif($e instanceof DomainException&&'stale_version'===$e->getMessage()){$code='slto_stale_version';$status=409;$message='The record changed; reload before retrying.';}elseif($e instanceof DomainException&&'idempotency_conflict'===$e->getMessage()){$code='slto_idempotency_conflict';$status=409;$message='The idempotency key was reused with a different request.';}elseif($e instanceof DomainException&&'idempotency_indeterminate'===$e->getMessage()){$code='slto_idempotency_indeterminate';$status=409;$message='A previous mutation may have completed but replay state is indeterminate; operator reconciliation is required.';}do_action('slto_safe_error',$code,$trace,$e);return new WP_Error($code,$message,['status'=>$status,'trace_id'=>$trace]);}
 }
