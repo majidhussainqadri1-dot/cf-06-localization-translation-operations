@@ -9,8 +9,9 @@ $metrics=(string)file_get_contents($root.'/src/Application/MetricsService.php');
 $health=(string)file_get_contents($root.'/src/Application/HealthService.php');
 
 $t->test('Critical feedback metric excludes untriaged self-reported severity',function()use($metrics):void{
-    TestHarness::assertTrue(str_contains($metrics,"severity='critical' AND status IN ('triaged','investigating','fixed','released')"));
+    TestHarness::assertTrue(str_contains($metrics,"severity='critical' AND status IN ('triaged','reproduced','correcting','reviewed','released','rolled_back')"));
     TestHarness::assertTrue(!str_contains($metrics,"severity='critical' AND status<>'closed'"));
+    TestHarness::assertTrue(!str_contains($metrics,"severity='critical' AND status IN ('reported'"));
 });
 
 $t->test('Health lifecycle truth derives live and operational state from runtime evidence',function()use($health):void{
