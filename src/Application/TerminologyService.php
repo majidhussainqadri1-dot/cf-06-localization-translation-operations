@@ -50,7 +50,7 @@ final class TerminologyService
     public function transition(string $uuid,string $to,int $version,string $reason=''): array
     {
         $row=$this->repo->find('terminology',$uuid)??throw new InvalidArgumentException('Terminology entry not found.');StateMachine::assert('terminology',(string)$row['status'],$to);
-        $reason=sanitize_textarea_field($reason);if(strlen($reason)>2000){throw new InvalidArgumentException('Terminology transition reason exceeds the bounded limit.');}
+        $reason=sanitize_textarea_field($reason);if(''===trim($reason)||strlen($reason)>2000){throw new InvalidArgumentException('Terminology transition requires a nonempty bounded reason.');}
         if('approved'===$to&&(int)$row['created_by']===get_current_user_id()){throw new InvalidArgumentException('Terminology proposer cannot approve their own entry.');}
         if('active'===$to&&(int)($row['reviewer_id']??0)<=0){throw new InvalidArgumentException('Terminology activation requires preserved approval provenance.');}
         $result=$this->tx->run(function()use($row,$to,$version,$reason):array{
@@ -94,7 +94,7 @@ final class TerminologyService
     {
         $row=$this->repo->find('style_guides',$uuid)??throw new InvalidArgumentException('Style guide not found.');$map=['draft'=>['approved','deprecated'],'approved'=>['active','deprecated'],'active'=>['deprecated'],'deprecated'=>[]];
         if(!in_array($to,$map[(string)$row['status']]??[],true)){throw new InvalidArgumentException('Invalid style guide transition.');}
-        $reason=sanitize_textarea_field($reason);if(strlen($reason)>2000){throw new InvalidArgumentException('Style guide transition reason exceeds the bounded limit.');}
+        $reason=sanitize_textarea_field($reason);if(''===trim($reason)||strlen($reason)>2000){throw new InvalidArgumentException('Style guide transition requires a nonempty bounded reason.');}
         if('approved'===$to&&(int)$row['created_by']===get_current_user_id()){throw new InvalidArgumentException('Style guide author cannot approve their own guide.');}
         if('active'===$to&&(int)($row['approved_by']??0)<=0){throw new InvalidArgumentException('Style guide activation requires preserved approval provenance.');}
         $result=$this->tx->run(function()use($row,$to,$version,$reason):array{
