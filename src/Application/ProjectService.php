@@ -178,9 +178,16 @@ final class ProjectService
 
     public function queue(int $assigneeId,string $role='',int $limit=100): array
     {
-        $rows=$this->repo->list('assignments',['assignee_id'=>$assigneeId,'status'=>'active'],$limit,0,'due_at ASC');
-        $now=time();$rows=array_values(array_filter($rows,static fn(array $r):bool=>empty($r['expires_at'])||strtotime((string)$r['expires_at'])>=$now));
-        return ''===$role?$rows:array_values(array_filter($rows,static fn(array $r):bool=>$r['assignment_role']===$role));
+        $filters=['assignee_id'=>$assigneeId,'status'=>'active'];
+        if(''!==$role){
+            if(!in_array($role,['translator','linguistic_reviewer','domain_reviewer'],true)){
+                throw new InvalidArgumentException('Assignment queue role is invalid.');
+            }
+            $filters['assignment_role']=$role;
+        }
+        $rows=$this->repo->list('assignments',$filters,$limit,0,'due_at ASC');
+        $now=time();
+        return array_values(array_filter($rows,static fn(array $r):bool=>empty($r['expires_at'])||strtotime((string)$r['expires_at'])>=$now));
     }
 
     private static function riskRank(string $risk): int
