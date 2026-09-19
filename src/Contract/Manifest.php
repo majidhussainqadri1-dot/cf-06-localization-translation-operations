@@ -29,6 +29,7 @@ final class Manifest
                 'locale_bundle_release_rollback', 'translation_provider_privacy',
             ),
             'non_owners' => array(
+                'identity_membership_capability_authority', 'independent_assignment_qualification_authority',
                 'user_language_preference', 'global_switcher', 'visual_rtl_components',
                 'localized_notification_transport', 'notification_preferences',
                 'page_composer_authority', 'dashboard_presentation_authority',
