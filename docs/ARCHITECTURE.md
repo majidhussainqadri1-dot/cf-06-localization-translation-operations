@@ -14,6 +14,7 @@ One localization operations owner, while every original record and final domain 
 - **File 25:** visual RTL/LTR components, typography, responsive behavior and public presentation.
 - **File 26:** transliteration, synonyms, multilingual query/ranking and discovery.
 - **CF-04:** canonical media processing, secure delivery and media/document artifacts.
+- **Unicode/CLDR/ICU reference data:** pinned/tested locale formatting, plural and direction reference data; CF-06 consumes/version-binds it but does not redefine that external reference truth.
 - **Native domain owner:** original post/lesson/profile/clinical/legal/financial truth and final translated publication approval.
 - **CF-06:** locales, translation resources/units/projects, assignments, terminology, memory, MT draft orchestration, QA and bundle lifecycle.
 
