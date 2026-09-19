@@ -53,7 +53,7 @@ final class TerminologyService
         $reason=sanitize_textarea_field($reason);if(strlen($reason)>2000){throw new InvalidArgumentException('Terminology transition reason exceeds the bounded limit.');}
         if('approved'===$to&&(int)$row['created_by']===get_current_user_id()){throw new InvalidArgumentException('Terminology proposer cannot approve their own entry.');}
         if('active'===$to&&(int)($row['reviewer_id']??0)<=0){throw new InvalidArgumentException('Terminology activation requires preserved approval provenance.');}
-        return $this->tx->run(function()use($row,$to,$version,$reason):array{
+        $result=$this->tx->run(function()use($row,$to,$version,$reason):array{
             $changes=array('status'=>$to);
             if('approved'===$to){$changes['reviewer_id']=get_current_user_id();}
             if('active'===$to){$changes['effective_at']=Database::now();}
@@ -68,8 +68,10 @@ final class TerminologyService
             if(($propagation['stale_units']??0)>0||($propagation['stale_content_links']??0)>0||($propagation['invalidated_bundles']??0)>0){
                 $this->outbox->enqueue('LocalizationPolicyChanged','terminology',(string)$row['uuid'],array('locale'=>$row['target_locale'],'domain'=>$row['domain_name'],'reason'=>'terminology_policy_changed','propagation'=>$propagation));
             }
-            return $updated;
+            return array('record'=>$updated,'propagation'=>$propagation);
         });
+        if(array_sum(array_map('intval',(array)($result['propagation']??array())))>0){wp_cache_flush();}
+        return $result['record'];
     }
 
     public function styleGuide(array $input): array
@@ -95,7 +97,7 @@ final class TerminologyService
         $reason=sanitize_textarea_field($reason);if(strlen($reason)>2000){throw new InvalidArgumentException('Style guide transition reason exceeds the bounded limit.');}
         if('approved'===$to&&(int)$row['created_by']===get_current_user_id()){throw new InvalidArgumentException('Style guide author cannot approve their own guide.');}
         if('active'===$to&&(int)($row['approved_by']??0)<=0){throw new InvalidArgumentException('Style guide activation requires preserved approval provenance.');}
-        return $this->tx->run(function()use($row,$to,$version,$reason):array{
+        $result=$this->tx->run(function()use($row,$to,$version,$reason):array{
             $changes=array('status'=>$to);
             if('approved'===$to){$changes['approved_by']=get_current_user_id();}
             if('active'===$to){$changes['effective_at']=Database::now();}
@@ -108,8 +110,10 @@ final class TerminologyService
             if(($propagation['stale_units']??0)>0||($propagation['stale_content_links']??0)>0||($propagation['invalidated_bundles']??0)>0){
                 $this->outbox->enqueue('LocalizationPolicyChanged','style_guide',(string)$row['uuid'],array('locale'=>$row['locale_tag'],'domain'=>$row['domain_name'],'reason'=>'style_policy_changed','propagation'=>$propagation));
             }
-            return $updated;
+            return array('record'=>$updated,'propagation'=>$propagation);
         });
+        if(array_sum(array_map('intval',(array)($result['propagation']??array())))>0){wp_cache_flush();}
+        return $result['record'];
     }
 
     public function suggestMemory(string $source,string $sourceLocale,string $targetLocale,string $domain,string $context,int $limit=10): array
