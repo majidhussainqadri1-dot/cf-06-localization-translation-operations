@@ -9,11 +9,36 @@ use Sabri\Localization\Infrastructure\Database;
 
 final class AuditRepository
 {
+    /** @var list<string> */
+    private static array $traceStack = array();
+
+    public static function withTrace(string $traceId, callable $callback): mixed
+    {
+        if (1 !== preg_match('/^[a-f0-9-]{36}$/D', $traceId)) {
+            throw new RuntimeException('Localization trace identity is invalid.');
+        }
+        self::$traceStack[] = $traceId;
+        try {
+            return $callback();
+        } finally {
+            array_pop(self::$traceStack);
+        }
+    }
+
+    public static function currentTraceId(): ?string
+    {
+        if (empty(self::$traceStack)) {
+            return null;
+        }
+        $traceId = end(self::$traceStack);
+        return is_string($traceId) ? $traceId : null;
+    }
+
     public function record(string $objectType, string $objectKey, string $action, string $result, array $payload = array(), string $purpose = 'operations', ?string $traceId = null): string
     {
         global $wpdb;
         $table = Database::table('audit');
-        $traceId = $traceId ?: Database::uuid();
+        $traceId = $traceId ?: self::currentTraceId() ?: Database::uuid();
         $objectType = sanitize_key($objectType);
         $action = sanitize_key($action);
         $purpose = sanitize_key($purpose);
