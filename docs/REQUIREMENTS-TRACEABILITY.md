@@ -7,7 +7,7 @@ This matrix binds the source candidate to the latest CF-06 master plan **and** t
 | Requirement | Implemented by | Primary evidence |
 |---|---|---|
 | CF06-FR-001 Locale registry | LocaleService, LocaleValidator, Activator | unit/contracts tests |
-| CF06-FR-002 Resource catalog | ResourceService, resources schema, governed route/component/screenshot context refs | contracts/review guards + cycle9 round10 |
+| CF06-FR-002 Resource catalog | ResourceService, resources schema, governed route/component/screenshot context refs, bounded structured metadata canonicalization | contracts/review guards + cycle9 round10 + cycle34 round5 |
 | CF06-FR-003 Explicit source language/version | ResourceService, project snapshots | contracts |
 | CF06-FR-004 Translatability/extraction rules | resource fields, ResourceService, ExtractionService | trace/schema checks |
 | CF06-FR-005 Risk classification | RiskPolicy, resource fields | unit/security review |
@@ -71,7 +71,7 @@ This matrix binds the source candidate to the latest CF-06 master plan **and** t
 
 The candidate records and tests the cross-file laws `CEN-GOV-001`, `CEN-OWN-001`, `CEN-BIZ-001`, `CEN-DON-001`, `CEN-BRAND-001`, `CEN-SHELL-001`, `CEN-NUM-001`, `CEN-SAFE-001`, `CEN-PRIV-001` and `CEN-REV-001` through `PlanCompliance`, canonical-owner boundaries, fail-closed runtime activation and companion integration gates. CF-06 does not create paid access, donor advantage, a second shell, search-ranking authority, medical/Sharīʿah source authority or autonomous clinical/financial decisions.
 
-The central localization/internationalization constitution is additionally enforced by translation keys, explicit source locale/version, American-English technical-source policy, Urdu/Arabic RTL support, deterministic fallback, typed placeholders and ICU MessageFormat structure, locale-aware formatting metadata, safe bidi isolates, human high-risk review, SEO/content-link ownership boundaries and runtime fail-closed gates.
+The central localization/internationalization constitution is additionally enforced by translation keys, explicit source locale/version, American-English technical-source policy, Urdu/Arabic RTL support, deterministic fallback, typed placeholders and ICU MessageFormat structure, locale-aware formatting metadata, safe bidi isolates, bounded structured source metadata, human high-risk review, SEO/content-link ownership boundaries and runtime fail-closed gates.
 
 ## Founder-approved Future40 expansion
 
