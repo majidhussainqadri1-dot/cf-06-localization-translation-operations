@@ -11,6 +11,9 @@ concurrency:
   group: cf06-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  EXACT_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
 jobs:
   quality:
     name: quality (PHP ${{ matrix.php }} / WP ${{ matrix.wordpress }})
@@ -33,11 +36,13 @@ jobs:
     steps:
       - name: Check out exact source
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ env.EXACT_SOURCE_SHA }}
 
       - name: Verify checkout identity
         shell: bash
         env:
-          EXPECTED_SHA: ${{ github.sha }}
+          EXPECTED_SHA: ${{ env.EXACT_SOURCE_SHA }}
         run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
 
       - name: Set up PHP
@@ -106,11 +111,13 @@ jobs:
     steps:
       - name: Check out exact source
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ env.EXACT_SOURCE_SHA }}
 
       - name: Verify checkout identity
         shell: bash
         env:
-          EXPECTED_SHA: ${{ github.sha }}
+          EXPECTED_SHA: ${{ env.EXACT_SOURCE_SHA }}
         run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
 
       - name: Set up PHP
@@ -122,13 +129,13 @@ jobs:
 
       - name: Build exact-commit candidate
         env:
-          SOURCE_COMMIT: ${{ github.sha }}
+          SOURCE_COMMIT: ${{ env.EXACT_SOURCE_SHA }}
         run: python3 tools/build-release.py
 
       - name: Verify exact-source manifest and SBOM binding
         shell: bash
         env:
-          SOURCE_COMMIT: ${{ github.sha }}
+          SOURCE_COMMIT: ${{ env.EXACT_SOURCE_SHA }}
         run: |
           set -euo pipefail
           python3 - <<'PY'
@@ -147,7 +154,7 @@ jobs:
       - name: Verify manifest, checksum, ZIP and deterministic rebuild parity
         shell: bash
         env:
-          SOURCE_COMMIT: ${{ github.sha }}
+          SOURCE_COMMIT: ${{ env.EXACT_SOURCE_SHA }}
         run: |
           set -euo pipefail
           (cd dist && sha256sum -c SHA256SUMS)
