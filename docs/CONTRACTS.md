@@ -66,3 +66,8 @@ These filters are fail-closed companion contracts; their default result is denia
 Every governed lifecycle transition requires a nonempty bounded reason/outcome in addition to the caller's current row version and REST idempotency evidence. Transition audits preserve source/target state and the bounded reason under the shared trace identity; special activation/rollback paths retain their stronger independent evidence requirements.
 
 `ContentTranslationPublicationChanged` is emitted for direct publication-state changes. `ContentTranslationReconciliationRequired` is emitted when source correction/retirement automatically stales translated publication relationships, so File 26/search consumers can reconcile or purge stale indexes without becoming source-of-truth owners.
+
+
+## Recent-authentication / step-up boundary
+
+High-risk CF-06 authorization is fail-closed for `release`, `provider`, and `review_domain` actions. In addition to the WordPress capability and current File 00 membership assertion, `slto_verify_recent_authentication` must independently attest a recent step-up for the current actor/action/context. This does not replace the more specific dual-approval, provider-activation, or domain-review evidence contracts.
