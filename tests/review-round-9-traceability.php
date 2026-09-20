@@ -12,12 +12,26 @@ use Sabri\Localization\Contract\PlanCompliance;
 $root = dirname(__DIR__);
 $t = new TestHarness();
 
-$t->test('Future40 per-ID evidence matrix contains every capability', function () use ($root): void {
+$t->test('Future40 per-ID evidence matrix contains exactly one structurally valid row per capability', function () use ($root): void {
     $matrix = file_get_contents($root . '/docs/FUTURE40-TRACEABILITY-EVIDENCE.md');
     TestHarness::assertTrue(is_string($matrix));
+
+    $rows = [];
+    foreach (preg_split('/\R/', $matrix) ?: [] as $line) {
+        if (1 !== preg_match('/^\|\s*(CF06-FUT-(\d{3}))\s*\|\s*`(f\d{3})`\s*\|/', $line, $match)) {
+            continue;
+        }
+        $id = $match[1];
+        TestHarness::assertTrue(! isset($rows[$id]), 'Duplicate per-ID evidence row ' . $id);
+        $rows[$id] = $match[3];
+    }
+
+    TestHarness::assertSame(40, count($rows), 'Future40 evidence matrix must contain exactly 40 capability rows');
     foreach (range(1, 40) as $i) {
         $id = sprintf('CF06-FUT-%03d', $i);
-        TestHarness::assertTrue(str_contains($matrix, $id), 'Missing per-ID evidence row ' . $id);
+        $handler = sprintf('f%03d', $i);
+        TestHarness::assertTrue(isset($rows[$id]), 'Missing per-ID evidence row ' . $id);
+        TestHarness::assertSame($handler, $rows[$id], 'Handler mismatch for ' . $id);
     }
     foreach (['Security/privacy/safety enforcement','Automated evidence','Canonical owner boundary','Package / staging / live evidence'] as $column) {
         TestHarness::assertTrue(str_contains($matrix, $column), 'Missing evidence dimension ' . $column);
