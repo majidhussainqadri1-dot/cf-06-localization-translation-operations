@@ -64,6 +64,8 @@ The public source interface is **not** the raw handler service alone. Every expo
 
 `FutureCapabilities registry → FutureCapabilitiesFacade global byte/node/depth bound → ReleaseLifecycleGuard → HotfixApprovalGuard for FUT-028 → FutureCapabilityGuard → LocaleAccessibilityGuard → SemanticIntegrityGuard input normalization → ProviderEligibilityGuard for FUT-033 → FutureCapabilitiesService::fNNN → SemanticIntegrityGuard result checks → LocaleAccessibilityGuard result checks → ReleaseLifecycleGuard result checks`.
 
+The facade's **global byte/node bound** is coupled with an explicit **nesting-depth bound**; together these are the canonical **global byte/node/depth bound** applied before recursive guards.
+
 `FutureCapabilitiesService` is an internal deterministic handler collection. `FutureCapabilitiesFacade` is the canonical exposed application service and must be used by `FutureRoutes` and application consumers. No caller may treat a raw handler response as activation, publication, provider-send or domain-owner approval evidence.
 
 ## Source interfaces and adversarial evidence
