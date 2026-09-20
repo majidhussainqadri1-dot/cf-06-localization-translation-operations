@@ -15,7 +15,7 @@
 ## Future40 guarded evidence-preview contracts
 
 - `GET /future-capabilities` — privileged catalogue only. It returns the forty registered capability descriptors, `default_state=disabled`, the governing activation gates and `activation_ready=false`. It is not a public feature-discovery API and is not activation evidence.
-- `POST /future-capabilities/{CF06-FUT-NNN}/evaluate` — privileged, bounded **evidence-preview/validation** operation executed through `FutureCapabilitiesFacade`. Request size and structure are bounded, invalid/unknown capabilities fail closed, and internal failures return safe errors.
+- `POST /future-capabilities/{CF06-FUT-NNN}/evaluate` — privileged, bounded **evidence-preview/validation** operation executed through `FutureCapabilitiesFacade`. Request byte size, node count and nesting depth are bounded in the canonical facade before recursive guards, invalid/unknown capabilities fail closed, and internal failures return safe errors.
 - The Future40 REST surface has **no activation, publication, provider-send, native-content mutation, release-bypass or domain-owner approval command**.
 - A successful preview response does not authorize staging, production, publication, provider use or high-risk translation. `activation_ready` remains false until Founder change-control, privacy/security/domain review, companion-contract parity, real staging acceptance, rollback/restore rehearsal and live deployment verification are separately evidenced.
 - Raw `FutureCapabilitiesService` handlers are internal implementation details; application/REST consumers must use the guarded `FutureCapabilitiesFacade` path.
@@ -41,7 +41,7 @@ These filters are fail-closed companion contracts; their default result is denia
 
 - Existing translatable resources, providers and content-translation relationships require an explicit current `row_version` before mutation; a server-fetched current version is not a substitute for the caller's concurrency evidence.
 - A published content-translation relationship must bind the current active resource, the matching translation unit, target locale, source version and source hash. Native-owner approval is reverified after those relationships are proven.
-- Resource source/version identity covers governed translation-affecting metadata (context, description, placeholders, markup policy, references and translatability evidence) as well as source text/risk/domain classification.
+- Resource source/version identity covers governed translation-affecting metadata (context, description, placeholders, markup policy, references and translatability evidence) as well as source text/risk/domain classification. Caller-controlled structured metadata is bounded by byte size, node count and nesting depth before canonical recursive encoding.
 - `slto_verify_staging_acceptance_evidence` is re-run when production truth is evaluated; a boolean carried inside production evidence cannot by itself create `Staging-Accepted`.
 
 
