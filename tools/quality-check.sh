@@ -124,6 +124,7 @@ grep -Fq 'ReleaseLifecycleGuard::apply' src/Application/FutureCapabilitiesFacade
 grep -Fq 'live_deployment_verification' src/Contract/FutureCapabilities.php
 grep -Fq 'MAX_EVALUATION_BYTES' src/Rest/FutureRoutes.php
 grep -Fq 'if (! isset(self::MAP[$action]))' src/Security/Authorization.php
+grep -Fq 'slto_verify_recent_authentication' src/Security/Authorization.php
 grep -Fq 'approved public low-risk C1' src/Domain/Future/FutureCapabilityGuard.php
 grep -Fq 'Data residency is uncertain' src/Domain/Future/FutureCapabilityGuard.php
 grep -Fq 'BidiValidator::assertSafe' src/Domain/Future/LocaleAccessibilityGuard.php
