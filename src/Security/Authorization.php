@@ -64,6 +64,20 @@ final class Authorization
             return false;
         }
 
+        if (in_array($action, array('release','provider','review_domain'), true)) {
+            $stepUpContext = array(
+                'action'=>$action,
+                'user_id'=>$userId,
+                'membership_state'=>$state,
+                'record_version'=>$context['record_version']??null,
+                'object'=>$context['object']??null,
+                'object_uuid'=>$context['object_uuid']??null,
+            );
+            if (true !== apply_filters('slto_verify_recent_authentication', false, $stepUpContext, $assertions)) {
+                return false;
+            }
+        }
+
         $decision = apply_filters('slto_authorize_action', true, $action, $context, $userId, $assertions);
         return true === $decision;
     }
