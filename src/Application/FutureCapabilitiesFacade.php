@@ -19,6 +19,7 @@ final class FutureCapabilitiesFacade
 {
     private const MAX_EVALUATION_BYTES = 262144;
     private const MAX_EVALUATION_NODES = 5000;
+    private const MAX_EVALUATION_DEPTH = 64;
     public function __construct(private readonly FutureCapabilitiesService $handlers = new FutureCapabilitiesService()) {}
 
     public function catalogue(): array
@@ -62,15 +63,18 @@ final class FutureCapabilitiesFacade
         if(strlen($encoded)>self::MAX_EVALUATION_BYTES){
             throw new \InvalidArgumentException('Future capability input exceeds the bounded byte limit.');
         }
-        $count=0;$stack=[$input];
+        $count=0;$stack=[[$input,1]];
         while([]!==$stack){
-            $current=array_pop($stack);
+            [$current,$depth]=array_pop($stack);
+            if($depth>self::MAX_EVALUATION_DEPTH){
+                throw new \InvalidArgumentException('Future capability input exceeds the bounded nesting depth.');
+            }
             foreach($current as $item){
                 ++$count;
                 if($count>self::MAX_EVALUATION_NODES){
                     throw new \InvalidArgumentException('Future capability input exceeds the bounded node limit.');
                 }
-                if(is_array($item)){$stack[]=$item;}
+                if(is_array($item)){$stack[]=[$item,$depth+1];}
             }
         }
     }
