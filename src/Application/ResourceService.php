@@ -41,6 +41,9 @@ final class ResourceService
         $contextRefs=$this->normalizeContextRefs($input['context_refs']??array());
         $referenceEnvelope=array('references'=>$references,'context_refs'=>$contextRefs);
         $translatability=is_array($input['translatability']??null)?$input['translatability']:array();
+        $this->assertBoundedTree($markup,'markup policy');
+        $this->assertBoundedTree($references,'reference evidence');
+        $this->assertBoundedTree($translatability,'translatability evidence');
         $markupJson=$this->encodeBoundedMetadata($markup,'markup policy');
         $referencesJson=$this->encodeBoundedMetadata($referenceEnvelope,'reference/context evidence');
         $translatabilityJson=$this->encodeBoundedMetadata($translatability,'translatability evidence');
@@ -143,6 +146,25 @@ final class ResourceService
         $json=wp_json_encode($this->canonicalize($value),JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
         if(!is_string($json)||strlen($json)>262144){throw new InvalidArgumentException('Resource '.$label.' is invalid or oversized.');}
         return $json;
+    }
+
+    private function assertBoundedTree(array $value,string $label,int $maxNodes=5000,int $maxDepth=32): void
+    {
+        $nodes=0;
+        $stack=[[$value,1]];
+        while([]!==$stack){
+            [$current,$depth]=array_pop($stack);
+            if($depth>$maxDepth){throw new InvalidArgumentException('Resource '.$label.' exceeds the bounded nesting depth.');}
+            foreach($current as $item){
+                ++$nodes;
+                if($nodes>$maxNodes){throw new InvalidArgumentException('Resource '.$label.' exceeds the bounded structural complexity.');}
+                if(is_array($item)){
+                    $stack[]=[$item,$depth+1];
+                }elseif(!(is_string($item)||is_int($item)||is_float($item)||is_bool($item)||null===$item)){
+                    throw new InvalidArgumentException('Resource '.$label.' contains a non-serializable value.');
+                }
+            }
+        }
     }
 
     private function canonicalize(mixed $value): mixed
