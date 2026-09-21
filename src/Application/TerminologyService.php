@@ -79,8 +79,10 @@ final class TerminologyService
         $locale=LocaleValidator::canonicalize((string)($input['locale']??''));if(null===$locale||!$this->repo->findOne('locales','locale_tag',$locale)){throw new InvalidArgumentException('Style guide locale is invalid or unregistered.');}
         $domain=sanitize_key((string)($input['domain']??'platform'))?:'platform';if(strlen($domain)>80){throw new InvalidArgumentException('Style guide domain exceeds the canonical storage bound.');}
         $rules=is_array($input['rules']??null)?$input['rules']:array();if(empty($rules)){throw new InvalidArgumentException('Style guide rules are required.');}
+        $this->assertBoundedTree($rules,'Style guide rules',5000,32);
         $encoded=wp_json_encode($rules,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);if(false===$encoded||strlen($encoded)>250000){throw new InvalidArgumentException('Style guide rules exceed the bounded limit.');}
         $rawExamples=is_array($input['examples']??null)?$input['examples']:array();if(count($rawExamples)>100){throw new InvalidArgumentException('Style guide examples exceed the bounded item limit.');}
+        $this->assertBoundedTree($rawExamples,'Style guide examples',5000,32);
         $examples=wp_json_encode($rawExamples,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);if(!is_string($examples)||strlen($examples)>250000){throw new InvalidArgumentException('Style guide examples exceed the bounded limit.');}
         return $this->tx->run(function()use($locale,$domain,$encoded,$examples):array{
             $existing=$this->repo->list('style_guides',array('locale_tag'=>$locale,'domain_name'=>$domain),1,0,'guide_version DESC');$guideVersion=empty($existing)?1:(int)$existing[0]['guide_version']+1;
@@ -114,6 +116,21 @@ final class TerminologyService
         });
         if(array_sum(array_map('intval',(array)($result['propagation']??array())))>0){wp_cache_flush();}
         return $result['record'];
+    }
+
+    private function assertBoundedTree(array $value,string $label,int $maxNodes,int $maxDepth): void
+    {
+        $nodes=0;$stack=[[$value,1]];
+        while([]!==$stack){
+            [$current,$depth]=array_pop($stack);
+            if($depth>$maxDepth){throw new InvalidArgumentException($label.' exceeds the bounded nesting depth.');}
+            foreach($current as $item){
+                ++$nodes;
+                if($nodes>$maxNodes){throw new InvalidArgumentException($label.' exceeds the bounded structural complexity.');}
+                if(is_array($item)){$stack[]=[$item,$depth+1];}
+                elseif(!(is_string($item)||is_int($item)||is_float($item)||is_bool($item)||null===$item)){throw new InvalidArgumentException($label.' contains a non-serializable value.');}
+            }
+        }
     }
 
     public function suggestMemory(string $source,string $sourceLocale,string $targetLocale,string $domain,string $context,int $limit=10): array
