@@ -8,7 +8,7 @@ $t->test('Project metadata variables are defined and bounded before transactiona
 $t->test('Assignment qualification is independently verified before persistence',function()use($p):void{
  $verify=strpos($p,"apply_filters('slto_verify_assignment_qualification'");
  $lock=strpos($p,'return $this->withUnitAssignmentLock((string)$unit[\'uuid\']');
- $persist=strpos($p,"$this->repo->insert('assignments'",false!==$lock?$lock:0);
+ $persist=strpos($p,'$this->repo->insert(\'assignments\'',false!==$lock?$lock:0);
  TestHarness::assertTrue(false!==$verify&&false!==$lock&&false!==$persist&&$verify<$lock&&$lock<$persist);
  TestHarness::assertTrue(str_contains($p,'Assignment qualification evidence could not be independently verified.'));
 });
