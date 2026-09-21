@@ -98,6 +98,7 @@ final class ProjectService
     public function assign(array $input): array
     {
         $unit=$this->repo->find('units',(string)($input['unit_uuid']??''))??throw new InvalidArgumentException('Translation unit not found.');
+        if(in_array((string)$unit['status'],['approved','released','retired'],true)){throw new InvalidArgumentException('Terminal translation units cannot receive new assignments.');}
         $role=sanitize_key((string)($input['role']??''));
         if(!in_array($role,['translator','linguistic_reviewer','domain_reviewer'],true)){throw new InvalidArgumentException('Assignment role is invalid.');}
         $assignee=(int)($input['assignee_id']??0);
@@ -129,23 +130,33 @@ final class ProjectService
         if(null!==$due&&null!==$expires&&strtotime($due)>strtotime($expires)){throw new InvalidArgumentException('Assignment due date cannot follow its expiry.');}
         $qualificationJson=wp_json_encode($qualification,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
         if(!is_string($qualificationJson)||strlen($qualificationJson)>131072){throw new InvalidArgumentException('Qualification evidence is invalid or oversized.');}
-        $existing=$this->repo->list('assignments',['unit_uuid'=>$unit['uuid']],20);
-        foreach($existing as $assignment){if('active'===$assignment['status']&&(int)$assignment['assignee_id']===$assignee&&$assignment['assignment_role']!==$role){throw new InvalidArgumentException('Separation of duties prevents one person holding multiple roles on the same unit.');}}
-        return $this->tx->run(function()use($unit,$role,$assignee,$qualificationJson,$conflict,$due,$expires,$existing):array{
-            $sameRole=null;foreach($existing as $candidate){if($candidate['assignment_role']===$role){$sameRole=$candidate;break;}}
-            if(is_array($sameRole)){
-                if('active'===$sameRole['status']){throw new InvalidArgumentException('This unit role already has an active assignment.');}
-                $assignment=$this->repo->updateVersioned('assignments',(string)$sameRole['uuid'],(int)$sameRole['row_version'],['assignee_id'=>$assignee,'qualification_json'=>$qualificationJson,'conflict_status'=>$conflict,'status'=>'active','due_at'=>$due,'expires_at'=>$expires,'created_by'=>get_current_user_id()]);
-                $action='assignment_transferred';
-            }else{
-                $assignment=$this->repo->insert('assignments',['project_uuid'=>$unit['project_uuid'],'unit_uuid'=>$unit['uuid'],'assignee_id'=>$assignee,'assignment_role'=>$role,'locale_tag'=>$unit['target_locale'],'qualification_json'=>$qualificationJson,'conflict_status'=>$conflict,'status'=>'active','due_at'=>$due,'expires_at'=>$expires,'row_version'=>1,'created_by'=>get_current_user_id()]);
-                $action='assignment_created';
+        return $this->withUnitAssignmentLock((string)$unit['uuid'],function()use($unit,$role,$assignee,$qualificationJson,$conflict,$due,$expires):array{
+            $currentUnit=$this->repo->find('units',(string)$unit['uuid'])??throw new InvalidArgumentException('Translation unit disappeared before assignment.');
+            if(in_array((string)$currentUnit['status'],['approved','released','retired'],true)){throw new InvalidArgumentException('Terminal translation units cannot receive new assignments.');}
+            $currentProject=$this->repo->find('projects',(string)$currentUnit['project_uuid'])??throw new InvalidArgumentException('Assignment project is unavailable.');
+            if('active'!==(string)$currentProject['status']){throw new InvalidArgumentException('Assignments require an active translation project.');}
+            $existing=$this->repo->list('assignments',['unit_uuid'=>$currentUnit['uuid']],20);
+            foreach($existing as $assignment){
+                if('active'===$assignment['status']&&(int)$assignment['assignee_id']===$assignee&&$assignment['assignment_role']!==$role){
+                    throw new InvalidArgumentException('Separation of duties prevents one person holding multiple roles on the same unit.');
+                }
             }
-            $column=match($role){'translator'=>'translator_id','linguistic_reviewer'=>'linguistic_reviewer_id','domain_reviewer'=>'domain_reviewer_id'};
-            $changes=[$column=>$assignee];if('translator'===$role&&in_array($unit['status'],['new','changed','stale'],true)){$changes['status']='assigned';}
-            $this->repo->updateVersioned('units',(string)$unit['uuid'],(int)$unit['row_version'],$changes);
-            $this->audit->record('unit',(string)$unit['uuid'],$action,'success',['role'=>$role,'assignee_id'=>$assignee,'assignment_uuid'=>$assignment['uuid']]);
-            return $assignment;
+            return $this->tx->run(function()use($currentUnit,$role,$assignee,$qualificationJson,$conflict,$due,$expires,$existing):array{
+                $sameRole=null;foreach($existing as $candidate){if($candidate['assignment_role']===$role){$sameRole=$candidate;break;}}
+                if(is_array($sameRole)){
+                    if('active'===$sameRole['status']){throw new InvalidArgumentException('This unit role already has an active assignment.');}
+                    $assignment=$this->repo->updateVersioned('assignments',(string)$sameRole['uuid'],(int)$sameRole['row_version'],['assignee_id'=>$assignee,'qualification_json'=>$qualificationJson,'conflict_status'=>$conflict,'status'=>'active','due_at'=>$due,'expires_at'=>$expires,'created_by'=>get_current_user_id()]);
+                    $action='assignment_transferred';
+                }else{
+                    $assignment=$this->repo->insert('assignments',['project_uuid'=>$currentUnit['project_uuid'],'unit_uuid'=>$currentUnit['uuid'],'assignee_id'=>$assignee,'assignment_role'=>$role,'locale_tag'=>$currentUnit['target_locale'],'qualification_json'=>$qualificationJson,'conflict_status'=>$conflict,'status'=>'active','due_at'=>$due,'expires_at'=>$expires,'row_version'=>1,'created_by'=>get_current_user_id()]);
+                    $action='assignment_created';
+                }
+                $column=match($role){'translator'=>'translator_id','linguistic_reviewer'=>'linguistic_reviewer_id','domain_reviewer'=>'domain_reviewer_id'};
+                $changes=[$column=>$assignee];if('translator'===$role&&in_array($currentUnit['status'],['new','changed','stale'],true)){$changes['status']='assigned';}
+                $this->repo->updateVersioned('units',(string)$currentUnit['uuid'],(int)$currentUnit['row_version'],$changes);
+                $this->audit->record('unit',(string)$currentUnit['uuid'],$action,'success',['role'=>$role,'assignee_id'=>$assignee,'assignment_uuid'=>$assignment['uuid']]);
+                return $assignment;
+            });
         });
     }
 
@@ -188,6 +199,21 @@ final class ProjectService
         $rows=$this->repo->list('assignments',$filters,$limit,0,'due_at ASC');
         $now=time();
         return array_values(array_filter($rows,static fn(array $r):bool=>empty($r['expires_at'])||strtotime((string)$r['expires_at'])>=$now));
+    }
+
+    private function withUnitAssignmentLock(string $unitUuid,callable $callback): mixed
+    {
+        global $wpdb;
+        $lockName=$wpdb->prefix.'slto_assignment_'.hash('sha256',$unitUuid);
+        $locked=$wpdb->get_var($wpdb->prepare('SELECT GET_LOCK(%s,10)',$lockName));
+        if(''!==(string)$wpdb->last_error||1!==(int)$locked){throw new RuntimeException('Translation assignment lock is unavailable.');}
+        $primary=null;
+        try{return $callback();}
+        catch(\Throwable $e){$primary=$e;throw $e;}
+        finally{
+            $released=$wpdb->get_var($wpdb->prepare('SELECT RELEASE_LOCK(%s)',$lockName));
+            if(null===$primary&&(''!==(string)$wpdb->last_error||1!==(int)$released)){throw new RuntimeException('Translation assignment lock could not be released.');}
+        }
     }
 
     private static function riskRank(string $risk): int
