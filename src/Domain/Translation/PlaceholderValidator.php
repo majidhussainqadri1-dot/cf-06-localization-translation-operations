@@ -20,11 +20,14 @@ final class PlaceholderValidator
         if (! is_array($provided)) {
             return array();
         }
+        if (count($provided) > 500) {
+            throw new InvalidArgumentException('Typed placeholder schema exceeds the bounded item limit.');
+        }
         $schema = array();
         foreach ($provided as $name => $type) {
             $name = (string) $name;
             $type = strtolower((string) $type);
-            if (1 !== preg_match('/^[A-Za-z][A-Za-z0-9_]*$/D', $name) || ! in_array($type, self::TYPES, true)) {
+            if (strlen($name) > 128 || 1 !== preg_match('/^[A-Za-z][A-Za-z0-9_]*$/D', $name) || ! in_array($type, self::TYPES, true)) {
                 throw new InvalidArgumentException('Invalid typed placeholder schema.');
             }
             $schema[$name] = $type;
