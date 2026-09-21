@@ -12,7 +12,7 @@ $t->test('Typed placeholder schemas are item and identifier bounded',function()u
     }
 });
 $t->test('Style guide rules and examples are structurally bounded before encoding',function()use($s):void{
-    foreach(["assertBoundedTree($rules,'Style guide rules',5000,32)","assertBoundedTree($rawExamples,'Style guide examples',5000,32)",'bounded structural complexity','bounded nesting depth'] as $needle){
+    foreach(["assertBoundedTree(\$rules,'Style guide rules',5000,32)","assertBoundedTree(\$rawExamples,'Style guide examples',5000,32)",'bounded structural complexity','bounded nesting depth'] as $needle){
         TestHarness::assertTrue(str_contains($s,$needle),$needle);
     }
 });
