@@ -1,0 +1,20 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Sabri\Localization\Contract;
+
+final class Events
+{
+    public const ALL = array(
+        'LocaleEnabled', 'LocaleDegraded', 'LocaleDeprecated', 'LocaleDisabled',
+        'TranslatableResourceChanged', 'TranslationMarkedStale', 'TranslationSubmitted',
+        'TranslationApproved', 'TranslationRejected', 'TranslationReleased', 'TranslationRetired', 'TranslationContextQueryResolved',
+        'TerminologyEntryApproved', 'TerminologyEntryDeprecated',
+        'LocaleBundleBuilt', 'LocaleBundleActivated', 'LocaleBundleRolledBack',
+        'CriticalTranslationDefectDetected', 'TranslationCorrectionReleased', 'TranslationFeedbackReopened',
+        'MachineTranslationDraftReceived', 'MachineTranslationJobReviewed',
+        'TranslationVendorJobPurged', 'LocalizationCoverageDegraded',
+        'LocalizationIntegrationAccepted', 'LocalizationPolicyChanged', 'ContentTranslationPublicationChanged', 'ContentTranslationReconciliationRequired',
+    );
+}

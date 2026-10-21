@@ -1,0 +1,9 @@
+/vendor/
+/dist/*.zip
+/dist/MANIFEST.json
+/dist/SBOM.cdx.json
+/dist/SHA256SUMS
+/.idea/
+/.vscode/
+*.log
+.env
