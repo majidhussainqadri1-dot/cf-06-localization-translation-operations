@@ -90,13 +90,8 @@ final class MarkupValidator
             if (preg_match('/[\x00-\x1F\x7F<>]/', $decoded)) {
                 throw new InvalidArgumentException('Unsafe control or angle bracket inside markup attribute.');
             }
-            if ($name === 'href') {
-                if ($tag !== 'a' ||
-                    !(preg_match('~^https://[A-Za-z0-9.-]+(?::443)?(?:[/?#][^\s\\]*)?$~D', $decoded) === 1 ||
-                      (str_starts_with($decoded, '/') && !str_starts_with($decoded, '//') && !str_contains($decoded, '\\')) ||
-                      preg_match('/^#[A-Za-z0-9_-]+$/D', $decoded) === 1)) {
-                    throw new InvalidArgumentException('Translation link target is unsafe or not an approved HTTPS/root-relative URL.');
-                }
+            if ($name === 'href' && ($tag !== 'a' || !self::safeLinkTarget($decoded))) {
+                throw new InvalidArgumentException('Translation link target must be an approved HTTPS/root-relative URL.');
             }
             if ($name === 'lang' && preg_match('/^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8}){0,5}$/D', $decoded) !== 1) {
                 throw new InvalidArgumentException('Invalid language attribute for localized markup.');
@@ -115,5 +110,34 @@ final class MarkupValidator
         }
         ksort($attributes, SORT_STRING);
         return $attributes;
+    }
+
+    private static function safeLinkTarget(string $url): bool
+    {
+        if ($url === '' || preg_match('/[\x00-\x20\x7F]/', $url) || str_contains($url, '\\')) {
+            return false;
+        }
+        if ($url[0] === '#') {
+            return preg_match('/^#[A-Za-z0-9_-]+$/D', $url) === 1;
+        }
+        if ($url[0] === '/') {
+            return !str_starts_with($url, '//');
+        }
+        if (!str_starts_with(strtolower($url), 'https://')) {
+            return false;
+        }
+        $parsed = parse_url($url);
+        if (!is_array($parsed) || strtolower((string) ($parsed['scheme'] ?? '')) !== 'https'
+            || !isset($parsed['host']) || isset($parsed['user']) || isset($parsed['pass'])) {
+            return false;
+        }
+        $host = (string) $parsed['host'];
+        if (preg_match('/^[A-Za-z0-9.-]+$/D', $host) !== 1 || str_starts_with($host, '-') || str_ends_with($host, '-')) {
+            return false;
+        }
+        if (isset($parsed['port']) && (int) $parsed['port'] !== 443) {
+            return false;
+        }
+        return true;
     }
 }
