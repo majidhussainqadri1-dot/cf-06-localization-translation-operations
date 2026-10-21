@@ -34,5 +34,26 @@ register_activation_hook(SABRI_SLTO_FILE, array(Sabri\Localization\Infrastructur
 register_deactivation_hook(SABRI_SLTO_FILE, array(Sabri\Localization\Infrastructure\Activator::class, 'deactivate'));
 
 add_action('plugins_loaded', static function (): void {
-    Sabri\Localization\Plugin::instance()->boot();
+    try {
+        Sabri\Localization\Plugin::instance()->boot();
+    } catch (\Throwable $failure) {
+        // A partial/deferred migration must fail closed for CF-06 without
+        // taking down unrelated WordPress pages and companion modules.
+        // Never misrepresent a failed schema check as successful activation.
+        try {
+            update_option('slto_runtime_enabled', false, false);
+        } catch (\Throwable $stateFailure) {
+            error_log('CF-06 runtime-disable persistence failed: ' . get_class($stateFailure));
+        }
+        error_log('CF-06 bootstrap denied (schema/dependency investigation required): ' . get_class($failure));
+
+        add_action('admin_notices', static function (): void {
+            if (! current_user_can('activate_plugins')) {
+                return;
+            }
+            echo '<div class="notice notice-error"><p>'
+                . esc_html('CF-06 localization was safely disabled during initialization. Check the deployed plugin, database schema, migration state and server error logs before retrying.')
+                . '</p></div>';
+        });
+    }
 });
