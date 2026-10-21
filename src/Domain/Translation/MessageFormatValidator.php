@@ -185,11 +185,14 @@ final class MessageFormatValidator
                 throw new InvalidArgumentException('ICU MessageFormat selector category has no message body.');
             }
             $close = self::findMatchingBrace($body, $i);
+            if (in_array($category, $categories, true)) {
+                throw new InvalidArgumentException('Duplicate ICU MessageFormat selector branch is ambiguous.');
+            }
             $categories[] = $category;
             $i = $close + 1;
         }
 
-        $categories = array_values(array_unique($categories));
+        // Duplicate categories have already been rejected above.
         if (! in_array('other', $categories, true)) {
             throw new InvalidArgumentException('ICU MessageFormat plural/select requires an other branch.');
         }
