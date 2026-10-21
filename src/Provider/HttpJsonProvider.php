@@ -15,7 +15,24 @@ final class HttpJsonProvider implements MachineTranslationProvider
     public function submit(array $job,array $units): array
     {
         $url=(string)($this->config['url']??'');$hosts=$this->allowedHosts();UrlGuard::assertPublicHttps($url,$hosts);
-        $body=wp_json_encode(['job'=>$job,'units'=>$units],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);if(!is_string($body)||strlen($body)>5_000_000){throw new RuntimeException('Machine translation request is invalid or oversized.');}
+        // The repository job row contains internal actor, audit and retention fields.
+        // Only the provider's allowlisted transport envelope may leave CF-06.
+        // All translation source material has already passed the C1/low-risk
+        // redaction gate before it reaches this adapter.
+        $providerJob = [
+            'uuid'=>(string)($job['uuid']??''),
+            'provider_key'=>(string)($job['provider_key']??''),
+            'region_code'=>(string)($job['region_code']??''),
+            'purpose'=>(string)($job['purpose']??''),
+            'outbound_hash'=>(string)($job['outbound_hash']??''),
+        ];
+        if (1!==preg_match('/^[a-f0-9-]{36}$/D',$providerJob['uuid'])
+            || 1!==preg_match('/^[a-f0-9]{64}$/D',$providerJob['outbound_hash'])
+            || ''===$providerJob['provider_key'] || ''===$providerJob['region_code']
+            || ''===$providerJob['purpose']) {
+            throw new RuntimeException('Machine translation provider envelope is incomplete.');
+        }
+        $body=wp_json_encode(['job'=>$providerJob,'units'=>$units],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);if(!is_string($body)||strlen($body)>5_000_000){throw new RuntimeException('Machine translation request is invalid or oversized.');}
         $response=wp_remote_post($url,['timeout'=>20,'redirection'=>0,'sslverify'=>true,'reject_unsafe_urls'=>true,
             'headers'=>['Authorization'=>'Bearer '.$this->credential(),'Content-Type'=>'application/json','Idempotency-Key'=>(string)$job['uuid']],
             'body'=>$body,'data_format'=>'body']);
