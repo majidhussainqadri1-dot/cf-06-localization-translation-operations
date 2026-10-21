@@ -143,18 +143,22 @@ final class MessageFormatValidator
         }
         ++$cursor;
         $body = substr($message, $cursor, $end - $cursor);
-        $categories = self::selectorCategories($body, $type);
+        $branchMessages = array();
+        $categories = self::selectorCategories($body, $type, $branchMessages);
 
         return array(
             'name' => $name,
             'type' => $type,
             'selector' => array('type' => $type, 'categories' => $categories),
-            'body' => $body,
+            // Scan only the contents of ICU branches. Their enclosing braces
+            // delimit messages, not named ICU arguments. Scanning raw selector
+            // text erroneously treated English branch literals as placeholders.
+            'body' => implode("\n", $branchMessages),
             'end' => $end,
         );
     }
 
-    private static function selectorCategories(string $body, string $type): array
+    private static function selectorCategories(string $body, string $type, array &$branchMessages): array
     {
         $categories = array();
         $length = strlen($body);
@@ -185,6 +189,7 @@ final class MessageFormatValidator
                 throw new InvalidArgumentException('ICU MessageFormat selector category has no message body.');
             }
             $close = self::findMatchingBrace($body, $i);
+            $branchMessages[] = substr($body, $i + 1, $close - $i - 1);
             if (in_array($category, $categories, true)) {
                 throw new InvalidArgumentException('Duplicate ICU MessageFormat selector branch is ambiguous.');
             }
