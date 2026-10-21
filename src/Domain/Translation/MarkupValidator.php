@@ -42,6 +42,14 @@ final class MarkupValidator
             $closing = '/' === $match[1];
             $selfClosing = '/' === $match[4] || in_array($tag, self::VOID_TAGS, true);
             $attributes = self::attributes((string) $match[3], $tag, $closing);
+            // Human-localizable ARIA/title/language/direction attributes may change
+            // their *values*, but their presence and typed safety stay required.
+            // URL/class/target/rel attributes remain immutable.
+            foreach (array('title', 'aria-label', 'lang', 'dir') as $localizable) {
+                if (array_key_exists($localizable, $attributes)) {
+                    $attributes[$localizable] = '__validated_localized_value__';
+                }
+            }
 
             if ($closing) {
                 if ($selfClosing || array_pop($stack) !== $tag) {
@@ -89,6 +97,15 @@ final class MarkupValidator
                       preg_match('/^#[A-Za-z0-9_-]+$/D', $decoded) === 1)) {
                     throw new InvalidArgumentException('Translation link target is unsafe or not an approved HTTPS/root-relative URL.');
                 }
+            }
+            if ($name === 'lang' && preg_match('/^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8}){0,5}$/D', $decoded) !== 1) {
+                throw new InvalidArgumentException('Invalid language attribute for localized markup.');
+            }
+            if (in_array($name, array('title', 'aria-label'), true)) {
+                if (trim($decoded) === '' || strlen($decoded) > 500) {
+                    throw new InvalidArgumentException('Localized accessible markup label is empty or oversized.');
+                }
+                BidiValidator::assertSafe($decoded, false);
             }
             if ($name === 'dir' && !in_array($decoded, array('ltr', 'rtl', 'auto'), true)) {
                 throw new InvalidArgumentException('Unsupported translation direction attribute.');
