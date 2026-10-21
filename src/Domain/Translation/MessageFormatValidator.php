@@ -71,6 +71,11 @@ final class MessageFormatValidator
 
             $arguments[] = $parsed['name'];
             if (null !== $parsed['type']) {
+                // An earlier formatter may not be silently overwritten by a
+                // later occurrence of the same named ICU argument.
+                if (isset($formats[$parsed['name']]) && $formats[$parsed['name']] !== $parsed['type']) {
+                    throw new InvalidArgumentException('ICU argument is reused with incompatible formatter types.');
+                }
                 $formats[$parsed['name']] = $parsed['type'];
             }
             if (null !== $parsed['selector']) {
@@ -144,12 +149,13 @@ final class MessageFormatValidator
         ++$cursor;
         $body = substr($message, $cursor, $end - $cursor);
         $branchMessages = array();
-        $categories = self::selectorCategories($body, $type, $branchMessages);
+        $offset = null;
+        $categories = self::selectorCategories($body, $type, $branchMessages, $offset);
 
         return array(
             'name' => $name,
             'type' => $type,
-            'selector' => array('type' => $type, 'categories' => $categories),
+            'selector' => array('type' => $type, 'categories' => $categories, 'offset' => $offset),
             // Scan only the contents of ICU branches. Their enclosing braces
             // delimit messages, not named ICU arguments. Scanning raw selector
             // text erroneously treated English branch literals as placeholders.
@@ -158,7 +164,7 @@ final class MessageFormatValidator
         );
     }
 
-    private static function selectorCategories(string $body, string $type, array &$branchMessages): array
+    private static function selectorCategories(string $body, string $type, array &$branchMessages, ?int &$offset): array
     {
         $categories = array();
         $length = strlen($body);
@@ -172,7 +178,16 @@ final class MessageFormatValidator
                 break;
             }
 
-            if (in_array($type, array('plural', 'selectordinal'), true) && 1 === preg_match('/\Goffset\s*:\s*\d+/A', substr($body, $i), $offsetMatch)) {
+            if (in_array($type, array('plural', 'selectordinal'), true)
+                && preg_match('/^offset\s*:/A', substr($body, $i)) === 1) {
+                if ($offset !== null || $categories !== array()) {
+                    throw new InvalidArgumentException('ICU plural offset must occur once before all selector branches.');
+                }
+                if (preg_match('/^offset\s*:\s*([0-9]+)(?=\s|$)/A', substr($body, $i), $offsetMatch) !== 1
+                    || strlen($offsetMatch[1]) > 9) {
+                    throw new InvalidArgumentException('ICU plural offset must be a bounded nonnegative integer.');
+                }
+                $offset = (int) $offsetMatch[1];
                 $i += strlen($offsetMatch[0]);
                 continue;
             }
