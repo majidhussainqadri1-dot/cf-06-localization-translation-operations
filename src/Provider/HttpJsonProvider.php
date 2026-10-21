@@ -50,8 +50,32 @@ final class HttpJsonProvider implements MachineTranslationProvider
         $response=wp_remote_request($purge,['method'=>'DELETE','timeout'=>20,'redirection'=>0,'sslverify'=>true,'reject_unsafe_urls'=>true,
             'headers'=>['Authorization'=>'Bearer '.$this->credential(),'Content-Type'=>'application/json'],'body'=>wp_json_encode(['reference'=>$providerReference])]);
         $code=is_wp_error($response)?0:(int)wp_remote_retrieve_response_code($response);$raw=is_wp_error($response)?'':(string)wp_remote_retrieve_body($response);
-        if(is_wp_error($response)||$code<200||$code>=300||strlen($raw)>262144){throw new RuntimeException('Provider purge could not be verified.');}
-        return ['status'=>'purged','verified_at'=>gmdate(DATE_ATOM),'response_hash'=>hash('sha256',$raw)];
+        if(is_wp_error($response)||strlen($raw)>262144){throw new RuntimeException('Provider purge could not be verified.');}
+        // HTTP 202 merely queues a deletion request. It cannot be treated as
+        // completed erasure or as eligible evidence for a local "purged" state.
+        // A successful 204 is a completed DELETE with no representation; a
+        // 200 response must explicitly attest completed deletion for this ref.
+        if (204 !== $code) {
+            if (200 !== $code) {
+                throw new RuntimeException('Provider purge is not confirmed complete.');
+            }
+            try {
+                $proof=json_decode($raw,true,32,JSON_THROW_ON_ERROR);
+            } catch (\\JsonException $exception) {
+                throw new RuntimeException('Provider purge completion evidence is invalid.',0,$exception);
+            }
+            if (!is_array($proof) || !in_array((string)($proof['status']??''),['purged','deleted'],true)
+                || !hash_equals($providerReference,(string)($proof['reference']??''))) {
+                throw new RuntimeException('Provider did not attest completed deletion for the exact reference.');
+            }
+        }
+        return [
+            'status'=>'purged',
+            'provider_http_status'=>$code,
+            'reference_hash'=>hash('sha256',$providerReference),
+            'verified_at'=>gmdate(DATE_ATOM),
+            'response_hash'=>hash('sha256',$raw),
+        ];
     }
 
     public function health():array
