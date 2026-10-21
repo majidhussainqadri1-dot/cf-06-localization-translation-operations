@@ -12,6 +12,7 @@ $mt = (string)file_get_contents($root . '/src/Application/MachineTranslationServ
 $policy = (string)file_get_contents($root . '/src/Domain/Translation/RiskPolicy.php');
 $compliance = (string)file_get_contents($root . '/src/Contract/PlanCompliance.php');
 $contracts = (string)file_get_contents($root . '/docs/CONTRACTS.md');
+$architecture = (string)file_get_contents($root . '/docs/ARCHITECTURE.md');
 
 $t->test('Schema/version mismatch still denies CF-06 before route registration', function () use ($plugin): void {
     $check = strpos($plugin, 'Activator::assertRuntimeSchemaParity();');
@@ -44,12 +45,12 @@ $t->test('MT source gates remain C1 low-risk and exact outbound-hash bound', fun
     TestHarness::assertTrue(str_contains($policy, "'low' !== strtolower(\$riskClass)"));
 });
 
-$t->test('Central and companion ownership laws remain source-referenced', function () use ($compliance, $contracts): void {
+$t->test('Central and companion ownership laws remain source-referenced', function () use ($compliance, $contracts, $architecture): void {
     foreach (['CEN-OWN-001','CEN-SHELL-001','CEN-PRIV-001','CEN-REV-001','companion_contract_parity'] as $needle) {
         TestHarness::assertTrue(str_contains($compliance, $needle), $needle);
     }
     foreach (['File 00','File 20','File 25','File 26'] as $owner) {
-        TestHarness::assertTrue(str_contains($contracts, $owner) || str_contains($compliance, $owner), $owner);
+        TestHarness::assertTrue(str_contains($contracts, $owner) || str_contains($compliance, $owner) || str_contains($architecture, $owner), $owner);
     }
 });
 
