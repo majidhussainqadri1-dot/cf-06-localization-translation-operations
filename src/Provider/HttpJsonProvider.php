@@ -61,7 +61,7 @@ final class HttpJsonProvider implements MachineTranslationProvider
             }
             try {
                 $proof=json_decode($raw,true,32,JSON_THROW_ON_ERROR);
-            } catch (\\JsonException $exception) {
+            } catch (\JsonException $exception) {
                 throw new RuntimeException('Provider purge completion evidence is invalid.',0,$exception);
             }
             if (!is_array($proof) || !in_array((string)($proof['status']??''),['purged','deleted'],true)
