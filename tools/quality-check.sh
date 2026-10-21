@@ -12,6 +12,7 @@ echo '== Unit and adversarial suites =='
 php tests/run-unit.php
 php tests/fresh40-markup-icu-20261021.php
 php tests/fresh40-icu-offset-format-20261021.php
+php tests/fresh40-numeric-unit-20261021.php
 php tests/fresh40-plan-owner-20261021.php
 php tests/contracts.php
 php tests/review-round-1-ownership.php
@@ -75,6 +76,7 @@ echo '== Critical corrective guards =='
 grep -Fq "'external_mt' => 'low-risk-c1-draft-only'" src/Contract/Manifest.php
 grep -Fq "'C1' !== strtoupper(\$dataClass)" src/Domain/Translation/RiskPolicy.php
 grep -Fq 'MessageFormatValidator::assertEquivalent' src/Domain/Translation/PlaceholderValidator.php
+grep -Fq 'NumberUnitGuard::assertImmutable($this->resources->text($resource),$target,true)' src/Application/QaService.php
 grep -Fq "status='invalidated'" src/Infrastructure/DependencyInvalidator.php
 grep -Fq 'slto_verify_integration_acceptance_evidence' src/Application/IntegrationService.php
 grep -Fq 'deploymentEnvironment' src/Application/IntegrationService.php
