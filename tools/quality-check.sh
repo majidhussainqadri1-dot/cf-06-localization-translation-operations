@@ -10,6 +10,8 @@ find . -path './dist' -prune -o -path './vendor' -prune -o -name '*.php' -print0
 
 echo '== Unit and adversarial suites =='
 php tests/run-unit.php
+php tests/fresh40-markup-icu-20261021.php
+php tests/fresh40-plan-owner-20261021.php
 php tests/contracts.php
 php tests/review-round-1-ownership.php
 php tests/review-round-2-security.php
