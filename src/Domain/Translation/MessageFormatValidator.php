@@ -71,12 +71,14 @@ final class MessageFormatValidator
 
             $arguments[] = $parsed['name'];
             if (null !== $parsed['type']) {
-                // An earlier formatter may not be silently overwritten by a
-                // later occurrence of the same named ICU argument.
-                if (isset($formats[$parsed['name']]) && $formats[$parsed['name']] !== $parsed['type']) {
-                    throw new InvalidArgumentException('ICU argument is reused with incompatible formatter types.');
+                // Preserve the ICU style/skeleton as well as its formatter type.
+                // A currency, percent, integer or date-style mutation can alter
+                // meanings without changing the 'number' or 'date' type.
+                $format = $parsed['format'] ?? $parsed['type'];
+                if (isset($formats[$parsed['name']]) && $formats[$parsed['name']] !== $format) {
+                    throw new InvalidArgumentException('ICU argument is reused with incompatible formatter styles or types.');
                 }
-                $formats[$parsed['name']] = $parsed['type'];
+                $formats[$parsed['name']] = $format;
             }
             if (null !== $parsed['selector']) {
                 if (isset($selectors[$parsed['name']]) && $selectors[$parsed['name']] !== $parsed['selector']) {
@@ -137,7 +139,27 @@ final class MessageFormatValidator
 
         $end = self::findMatchingBrace($message, $open);
         if (! in_array($type, self::SELECTOR_TYPES, true)) {
-            return array('name' => $name, 'type' => $type, 'selector' => null, 'body' => '', 'end' => $end);
+            // The previous parser retained only "number", "date", etc. and
+            // silently discarded the comma-delimited ICU style/skeleton.
+            $tail = trim(substr($message, $cursor, $end - $cursor));
+            $style = null;
+            if ($tail !== '') {
+                if ($tail[0] !== ',') {
+                    throw new InvalidArgumentException('ICU formatter style requires a comma delimiter.');
+                }
+                $style = trim(substr($tail, 1));
+                if ($style === '' || strlen($style) > 256 || preg_match('/[{}\x00-\x1F\x7F]/', $style)) {
+                    throw new InvalidArgumentException('ICU formatter style is missing, malformed or oversized.');
+                }
+            }
+            return array(
+                'name' => $name,
+                'type' => $type,
+                'format' => $type . ($style === null ? '' : ':' . $style),
+                'selector' => null,
+                'body' => '',
+                'end' => $end
+            );
         }
 
         while ($cursor < $end && ctype_space($message[$cursor])) {
