@@ -46,7 +46,19 @@ $t->test('External dependency blockers are explicitly recorded', function () use
 });
 $t->test('Frozen predecessor is not mistaken for current deployed artifact', function () use ($ledger): void {
     TestHarness::assertSame('7bf7a206a8e5569ddeb369841bc0c6481cec05b9',$ledger['candidate_before_ledger_commit']);
-    TestHarness::assertTrue(str_contains($ledger['state_boundary'],'not an independently executed 90-case'));
-    TestHarness::assertTrue(str_contains($ledger['state_boundary'],'deployed'));
+    TestHarness::assertTrue(str_contains($ledger['state_boundary'],'not independent semantic/release acceptance'));
+    TestHarness::assertTrue(str_contains($ledger['state_boundary'],'not staging'));
+    TestHarness::assertTrue(str_contains($ledger['state_boundary'],'not live'));
+});
+$t->test('Ten source corrections are recorded but never misrepresented as Live fixes',function()use($ledger):void{
+    TestHarness::assertSame(10,$ledger['source_review_summary']['found_source_gaps']);
+    TestHarness::assertSame(10,$ledger['source_review_summary']['candidate_code_remediations']);
+    TestHarness::assertSame(72,$ledger['source_review_summary']['new_test_checks_total']);
+    TestHarness::assertSame(10,count($ledger['source_defect_register']));
+    foreach($ledger['source_defect_register'] as $entry){
+        TestHarness::assertSame(false,$entry['independent_semantic_accepted']);
+        TestHarness::assertSame(false,$entry['staging_accepted']);
+        TestHarness::assertSame(false,$entry['live_verified']);
+    }
 });
 $t->finish();
