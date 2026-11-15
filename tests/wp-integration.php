@@ -122,5 +122,6 @@ $check(false !== wp_next_scheduled('slto_daily_reconciliation'), 'reconciliation
 
 require __DIR__ . '/wp-v123-project-uniqueness.php';
 require __DIR__ . '/wp-v123-edition-policy-registry.php';
+require __DIR__ . '/wp-v123-lock-contention.php';
 
 echo "WP_INTEGRATION_PASS\n";
