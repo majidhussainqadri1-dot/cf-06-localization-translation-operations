@@ -70,6 +70,15 @@ final class Routes
         $this->route('/feedback',WP_REST_Server::CREATABLE,function(WP_REST_Request $r){if(!Plugin::runtimeEnabled()){return new WP_Error('slto_runtime_disabled','Localization runtime is not activated.',['status'=>503]);}$bucket='feedback|'.(get_current_user_id()?:hash('sha256',(string)($_SERVER['REMOTE_ADDR']??'')));if(!$this->s['repo']->rateLimit($bucket,10,3600)){return new WP_Error('slto_rate_limited','Too many translation feedback submissions.',['status'=>429]);}return $this->mutate($r,'feedback.submit',fn()=>$this->s['feedback']->submit((array)$r->get_json_params()),201);},'public');
         $this->route('/feedback/(?P<uuid>[a-f0-9-]{36})/transition',WP_REST_Server::CREATABLE,fn(WP_REST_Request $r)=>$this->mutate($r,'feedback.transition',fn()=>$this->s['feedback']->transition((string)$r['uuid'],(string)$r->get_param('to'),(int)$r->get_param('row_version'),(string)$r->get_param('outcome'))),'manage');
         $this->route('/content-links',WP_REST_Server::CREATABLE,fn(WP_REST_Request $r)=>$this->mutate($r,'content-links.register',fn()=>$this->s['contentLinks']->register((array)$r->get_json_params()),201),'manage');
+        // Privileged read-only report: no publish, reindex, sitemap or redirect mutation.
+        $this->route('/content-links/graph/audit',WP_REST_Server::CREATABLE,function(WP_REST_Request $r){
+            if(strlen((string)$r->get_body())>65536){return new WP_Error('slto_graph_too_large','Publication graph evidence exceeds the bounded limit.',['status'=>413]);}
+            $data=$r->get_json_params();
+            if(!is_array($data)||!is_array($data['source']??null)||!is_array($data['translations']??null)){
+                throw new InvalidArgumentException('Publication graph audit requires source and translation arrays.');
+            }
+            return $this->s['publicationGraph']->audit($data['source'],$data['translations']);
+        },'audit');
         // POST is a bounded, privileged PREVIEW only: no DB write, job creation,
         // provider submission, role grant, approval or publication authority.
         $this->route('/edition-policy/versions',WP_REST_Server::CREATABLE,

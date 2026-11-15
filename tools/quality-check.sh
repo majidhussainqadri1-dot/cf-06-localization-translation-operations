@@ -18,6 +18,7 @@ php tests/fresh40-plan-owner-20261021.php
 php tests/v123-public-edition-policy.php
 php tests/v123-published-url-guard.php
 php tests/v123-90-evidence-register.php
+php tests/v123-publication-graph.php
 php tests/contracts.php
 php tests/review-round-1-ownership.php
 php tests/review-round-2-security.php

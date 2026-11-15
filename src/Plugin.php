@@ -18,6 +18,7 @@ use Sabri\Localization\Application\MachineTranslationService;
 use Sabri\Localization\Application\MetricsService;
 use Sabri\Localization\Application\MigrationService;
 use Sabri\Localization\Application\PrivacyService;
+use Sabri\Localization\Application\PublicationGraphService;
 use Sabri\Localization\Application\ProjectService;
 use Sabri\Localization\Application\ProviderService;
 use Sabri\Localization\Application\QaEvidenceService;
@@ -92,6 +93,7 @@ final class Plugin
         $privacy = new PrivacyService($jobs,$audit,$tx);
         $migration = new MigrationService($audit,$tx);
         $contentLinks = new ContentLinkService($repo,$audit,$outbox,$tx);
+        $publicationGraph = new PublicationGraphService();
         $providers = new ProviderService($repo,$audit,$tx);
         $future = new FutureCapabilitiesFacade();
 
@@ -110,7 +112,7 @@ final class Plugin
         $this->services = compact(
             'crypto','repo','audit','tx','outbox','jobs','integrations','extraction','qaEvidence','releaseApprovals',
             'locale','editionPolicy','resource','qa','translation','project','terminology','bundle','feedback','metrics','health','privacy',
-            'migration','contentLinks','providers','future','mt'
+            'migration','contentLinks','publicationGraph','providers','future','mt'
         );
 
         (new Routes($this->services))->registerHooks();

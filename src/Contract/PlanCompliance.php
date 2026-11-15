@@ -82,6 +82,7 @@ final class PlanCompliance
                 'duplicate_source_target' => 'remove_and_use_first_approved_reserve',
                 'public_count' => 'independently_verified_current_published_only',
                 'search_canonical_hreflang_owner' => 'file26_and_native_owner',
+                'reciprocal_publication_graph_audit' => 'owner_attested_read_only_and_file26_independent_receipts',
                 'automatic_publication_allowed' => false,
                 'immutable_policy_versions' => 'wp_options_atomic_unique_revision_with_governed_audit',
                 'independent_founder_policy_approval' => 'required_for_registration_and_preview',
