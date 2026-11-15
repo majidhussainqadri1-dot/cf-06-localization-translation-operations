@@ -49,6 +49,10 @@ The new privileged /edition-policy/preview endpoint is read-only despite using P
 
 The V12.3 ninety-requirement evidence inventory is docs/V12.3-90-REQUIREMENTS-EVIDENCE-REGISTER.json and remains 0/90 independently accepted; it is source traceability, not a coding percentage. The V12.3 reciprocal `hreflang`/canonical URL audit is available only through an authorized, read-only `/content-links/graph/audit` projection. It requires separate native owner and File 26 attestations; no automatic sitemap, translation publication or indexing action is provided. Approved V12.3 language target/reserve policy revisions can be recorded immutably via `EditionPolicyRegistry` with independent Founder approval and authorized step-up; recorded is not activated. Real approved target choices and Live parity remain missing. Cross-project duplicate translation jobs are denied via `TranslationJobConcurrencyGuard` (sorted InnoDB source-row locks and current source/version checks, no schema migration). The disposable WP/MySQL suite includes cancel/retry/version-correction cases; real multi-worker and companion acceptance remain separate. See docs/V12.3-PUBLIC-EDITION-GAP-AUDIT.md for missing Founder language decisions, File 20/21/26 contracts, real reviewer/provider/staging checks, and exact deployed-state gates.
 
+## V12.3 implementation review and truth boundary
+
+The source-only two-pass internal review and the 90-requirement evidence ledger are maintained at `docs/V12.3-POST-IMPLEMENTATION-TWO-PASS-REVIEW-2026-11-15.md` and `docs/V12.3-90-REQUIREMENTS-EVIDENCE-REGISTER.json`. Ten separately categorized source gaps were corrected in the Draft candidate, with 54 new named source tests and 18 disposable WordPress/MySQL checks. External independent acceptance, real Founder locale decisions, native File20/21/26 integrations, Staging/Live deployment and operations are **not** complete. No percentage of overall operational completion is asserted.
+
 ## Development
 
 ```bash

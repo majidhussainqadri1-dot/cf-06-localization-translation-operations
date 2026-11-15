@@ -1,9 +1,9 @@
 {
-  "schema_version": "CF06-V12.3-AUDIT-v1",
+  "schema_version": "CF06-V12.3-AUDIT-v2",
   "as_of": "2026-11-15",
   "governing_plan": "Sabri Website Master Plan V12.3 (2026-11-13), pp. 51–53 and 248–256",
   "candidate_before_ledger_commit": "7bf7a206a8e5569ddeb369841bc0c6481cec05b9",
-  "state_boundary": "Draft PR #11 source assertions. This file is not an independently executed 90-case acceptance suite and does not certify deployed code.",
+  "state_boundary": "90 source/test mappings are pointers only. Source corrections and disposable CI are not independent semantic/release acceptance, not staging, and not live.",
   "totals": {
     "requirements": 90,
     "fr": 34,
@@ -18,35 +18,35 @@
   "priority_unclosed": [
     {
       "area": "V12.3 target policy",
-      "issue": "Founder-approved Chinese script/five additional target languages/reserve ordering and effective policy registration missing"
+      "issue": "Versioned/immutable policy registry, draft validation and future-effective-date gate now coded and tested; real Founder approval selecting Mandarin script, five additional target languages, aliases/reserves and real effective record remains unavailable."
     },
     {
       "area": "Cross-project jobs",
-      "issue": "units has UNIQUE(resource_locale_project), not a proved global one-active-job per source-version/locale across projects; Live DB state unknown"
+      "issue": "InnoDB source-row locks, exact source-version conflict checks and two-connection disposable CI witness now coded/tested; canonical File 21 original-to-CF06 resource mapping and real Hostinger multiworker/DB-engine proof remain pending."
     },
     {
       "area": "File 20",
-      "issue": "UI/content/edition switch and state preservation, route, focus, draft, RTL browser evidence missing"
+      "issue": "Actual UI/content/edition preference switch, canonical route, focus, draft retention and keyboard/RTL real browser evidence are unverified."
     },
     {
       "area": "File 21",
-      "issue": "Canonical original/publication approval/source version, corrections and real public links missing"
+      "issue": "CF06 source link/correction guards coded; genuine author original, qualified native-domain publication approval, real source-version public URLs and File21/CF06 API contract acceptance missing."
     },
     {
       "area": "File 26",
-      "issue": "Reciprocal hreflang/canonical/sitemap/search purge/reindex ownership and real receipts missing"
+      "issue": "Read-only reciprocal hreflang/canonical public graph auditing implemented; no independently verified File26 sitemap, reindex, search purge/redirect or reciprocal live URL receipts."
     },
     {
       "area": "Companion contracts",
-      "issue": "File 00/19/22/23/24/25 and CF-04 actual deployed compatibility/approval missing"
+      "issue": "File00/19/22/23/24/25 and CF04 real installed contract parity, authenticated deployed versions and independent approvals missing."
     },
     {
       "area": "Operations",
-      "issue": "Reviewer qualification, external provider privacy/deletion/region, staging migration, WCAG, backup/restore, penetration, load and rollback evidence missing"
+      "issue": "Real qualified reviewers, translation providers, jurisdiction retention/no-training/provider purge, Hostinger staging migration, WCAG, backup/restore, penetration, load/soak, rollback and two independent reviews missing."
     },
     {
       "area": "Live parity",
-      "issue": "Deployed plugin/version, DB/schema, migration/options, exact checksum and post-deploy live retest unverified"
+      "issue": "No authenticated Live runtime; actual deployed plugin source/package checksum, DB/schema version, migrations/options, runtime logs, staging and live post-deploy re-test unverified."
     }
   ],
   "requirements": [
@@ -860,5 +860,117 @@
       "staging_accepted": false,
       "live_verified": false
     }
-  ]
+  ],
+  "source_changes_reviewed_through": "c04f2f11e754d0e1bfcb63c17db5f4ce56919a02",
+  "source_defect_register": [
+    {
+      "id": "V123-S01",
+      "source_gap": "Missing original-plus-nine distinct source-aware target/reserve policy",
+      "source_remediation": "PublicEditionPolicy, LocaleService, tests/v123-public-edition-policy.php",
+      "repository_code_updated": true,
+      "exact_head_ci_expected": true,
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "V123-S02",
+      "source_gap": "Published translation allowed absent translated/canonical URL",
+      "source_remediation": "PublishedUrlGuard, ContentLinkService, tests/v123-published-url-guard.php",
+      "repository_code_updated": true,
+      "exact_head_ci_expected": true,
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "V123-S03",
+      "source_gap": "Distinct public editions could be falsely counted with shared URL or missing canonical link",
+      "source_remediation": "PublicEditionPolicy public counting and tests",
+      "repository_code_updated": true,
+      "exact_head_ci_expected": true,
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "V123-S04",
+      "source_gap": "Cross-project duplicate active jobs on same resource/version/locale",
+      "source_remediation": "TranslationJobConcurrencyGuard, ProjectService and disposable second-connection CI",
+      "repository_code_updated": true,
+      "exact_head_ci_expected": true,
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "V123-S05",
+      "source_gap": "No immutable versioned Founder-authorized language target/reserve policy register",
+      "source_remediation": "EditionPolicyRegistry, 9 WP test cases",
+      "repository_code_updated": true,
+      "exact_head_ci_expected": true,
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "V123-S06",
+      "source_gap": "No independently attested reciprocal public hreflang/canonical graph audit",
+      "source_remediation": "PublicEditionGraphAuditor, PublicationGraphService and 18 tests",
+      "repository_code_updated": true,
+      "exact_head_ci_expected": true,
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "V123-S07",
+      "source_gap": "Redundant registrar actor identifier in persistent edition policy options",
+      "source_remediation": "EditionPolicyRegistry data minimization and existing audit-chain actor",
+      "repository_code_updated": true,
+      "exact_head_ci_expected": true,
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "V123-S08",
+      "source_gap": "Untouched new translation units not marked stale after source correction; outdated role activation risk",
+      "source_remediation": "markDependentUnitsStale, StateMachine, ProjectService and 8 WP tests",
+      "repository_code_updated": true,
+      "exact_head_ci_expected": true,
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "V123-S09",
+      "source_gap": "Unbounded private extra fields forwarded to independent edition publication verifier",
+      "source_remediation": "LocaleService public metadata projection, 9 WP registry tests",
+      "repository_code_updated": true,
+      "exact_head_ci_expected": true,
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "V123-S10",
+      "source_gap": "Approved future-effective policy was planning_ready before date",
+      "source_remediation": "PublicEditionPolicy UTC date gate and two tests",
+      "repository_code_updated": true,
+      "exact_head_ci_expected": true,
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    }
+  ],
+  "source_review_summary": {
+    "found_source_gaps": 10,
+    "candidate_code_remediations": 10,
+    "exact_head_automated_ci_through": "c04f2f11e754d0e1bfcb63c17db5f4ce56919a02",
+    "new_named_unit_tests": 54,
+    "new_disposable_WP_MySQL_checks": 18,
+    "new_test_checks_total": 72,
+    "note": "Counts distinguish code gaps and added source capabilities; do NOT equate tests/mapping with independently accepted requirements, especially FUT40 preview-only."
+  }
 }
