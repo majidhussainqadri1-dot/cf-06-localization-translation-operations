@@ -86,6 +86,18 @@ $t->test('Approval reference rejects personal email or unbounded free text', fun
     $p=$fixture(); $p['founder_approval_ref']='Founder approved this via my private account';
     TestHarness::assertThrows(fn () => $plan($p,'ur'),InvalidArgumentException::class);
 });
+$t->test('Approved future-dated policy cannot enter planning-ready state before its effective date',function() use($fixture,$plan):void{
+    $p=$fixture();$p['effective_date']='2999-12-31';
+    $r=$plan($p,'ur',true);
+    TestHarness::assertSame('blocked',$r['status']);
+    TestHarness::assertSame('edition_policy_not_yet_effective',$r['reason']);
+    TestHarness::assertSame(false,$r['publication_authorized']);
+});
+$t->test('Effective date is no later than today before a policy becomes planning-ready',function() use($fixture,$plan):void{
+    $p=$fixture();$p['effective_date']='2000-01-01';
+    $r=$plan($p,'ur',true);
+    TestHarness::assertSame('planning_ready',$r['status']);
+});
 $t->test('Source content hash is mandatory', function () use ($fixture): void {
     TestHarness::assertThrows(
         fn () => PublicEditionPolicy::plan($fixture(), 'ur', 'source-v1', 'bad', true),

@@ -117,8 +117,11 @@ final class PublicEditionPolicy
             }
         }
         $missing = self::TARGET_COUNT - count($selected);
+        // Registration of a future-dated revision is allowed, but it cannot
+        // become an effective planning instruction before the approved date.
         $reason = !$policyApprovalVerified ? 'founder_policy_approval_unverified'
-            : ($missing > 0 ? 'approved_reserve_shortfall' : null);
+            : ($config['effective_date'] > gmdate('Y-m-d') ? 'edition_policy_not_yet_effective'
+            : ($missing > 0 ? 'approved_reserve_shortfall' : null));
         return [
             'status' => $reason === null ? 'planning_ready' : 'blocked',
             'reason' => $reason,
