@@ -8,6 +8,7 @@ use InvalidArgumentException;
 use RuntimeException;
 use Sabri\Localization\Domain\Locale\LocaleValidator;
 use Sabri\Localization\Domain\Translation\RiskPolicy;
+use Sabri\Localization\Domain\Translation\TranslationJobConcurrencyGuard;
 use Sabri\Localization\Domain\Workflow\StateMachine;
 use Sabri\Localization\Infrastructure\Database;
 use Sabri\Localization\Infrastructure\Outbox;
@@ -65,6 +66,9 @@ final class ProjectService
         $targetsJson=wp_json_encode($targets);$scopeJson=wp_json_encode(['resource_count'=>count($resources),'resource_keys'=>array_column($resources,'resource_key')]);
         if(!is_string($targetsJson)||!is_string($scopeJson)){throw new RuntimeException('Project scope could not be encoded.');}
         return $this->tx->run(function()use($input,$name,$description,$releaseTarget,$projectProvider,$sourceLocale,$targets,$targetsJson,$scopeJson,$resources,$snapshotHash,$riskCeiling):array{
+            // Lock the same canonical source rows before any cross-project job check.
+            // No source migration: InnoDB row locks serialize overlapping creators.
+            TranslationJobConcurrencyGuard::assertAvailable($resources,$targets,$sourceLocale);
             foreach(array_merge([$sourceLocale],$targets) as $tag){
                 $locale=$this->repo->findOne('locales','locale_tag',$tag);
                 if(!is_array($locale)||!in_array((string)$locale['status'],['tested','content_ready','enabled','degraded'],true)){

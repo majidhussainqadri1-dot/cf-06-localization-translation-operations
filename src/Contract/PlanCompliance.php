@@ -83,6 +83,8 @@ final class PlanCompliance
                 'public_count' => 'independently_verified_current_published_only',
                 'search_canonical_hreflang_owner' => 'file26_and_native_owner',
                 'automatic_publication_allowed' => false,
+                'one_active_job_per_source_version_target' => 'transactional_innodb_row_lock_and_current_status_query',
+                'cross_project_creation_conflict' => 'HTTP_409',
             ],
             'language_preference_scopes' => [
                 'ui' => 'file20_shell_preference',

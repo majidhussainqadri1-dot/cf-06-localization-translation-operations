@@ -47,7 +47,7 @@ V12.3 requires an original authored edition and **nine different** approved targ
 
 The new privileged /edition-policy/preview endpoint is read-only despite using POST for bounded structured input. Its independently verified published count is zero until real native-owner evidence is available; only current, public, owner-approved versions may count. CF-06 cannot approve its own policy or independently authorize publication.
 
-The V12.3 ninety-requirement evidence inventory is docs/V12.3-90-REQUIREMENTS-EVIDENCE-REGISTER.json and remains 0/90 independently accepted; it is source traceability, not a coding percentage. See docs/V12.3-PUBLIC-EDITION-GAP-AUDIT.md for missing Founder language decisions, File 20/21/26 contracts, real reviewer/provider/staging checks, and exact deployed-state gates.
+The V12.3 ninety-requirement evidence inventory is docs/V12.3-90-REQUIREMENTS-EVIDENCE-REGISTER.json and remains 0/90 independently accepted; it is source traceability, not a coding percentage. Cross-project duplicate translation jobs are denied via `TranslationJobConcurrencyGuard` (sorted InnoDB source-row locks and current source/version checks, no schema migration). The disposable WP/MySQL suite includes cancel/retry/version-correction cases; real multi-worker and companion acceptance remain separate. See docs/V12.3-PUBLIC-EDITION-GAP-AUDIT.md for missing Founder language decisions, File 20/21/26 contracts, real reviewer/provider/staging checks, and exact deployed-state gates.
 
 ## Development
 
