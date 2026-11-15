@@ -2,6 +2,18 @@
 
 This matrix binds the source candidate to the latest CF-06 master plan **and** the latest central governing plan. It is source-code/automated-evidence traceability only; Hostinger-equivalent staging, qualified-human acceptance, live deployment and operations remain separate evidence classes.
 
+## V12.3 public edition policy — source coding, external acceptance pending
+
+| Requirement | Candidate code | Candidate test | Remaining acceptance |
+|---|---|---|---|
+| Original + nine distinct source-linked target editions | PublicEditionPolicy::plan | tests/v123-public-edition-policy.php | Founder-selected nine locales/reserves; File 21 real source |
+| Versioned locale aliases/approved Chinese script | PublicEditionPolicy::validate | nine-target/alias/script negative cases | Approved locale policy, five selected languages and reserve order |
+| Real published-edition count | PublicEditionPolicy::countVerifiedPublished | stale/duplicate/private/HTTPS/independent verifier tests | Actual File 21/native-owner attestation, publication URL, File 26 search receipts |
+| Distinct UI/content/edition preferences | PlanCompliance::get | contract tests | File 20/25 UI route/focus and device accessibility |
+| Safe preview, no implicit publication | LocaleService::previewPublicEditionPolicy, Rest Routes | source/permission/negative tests | File 00 real identity and Founder policy verifier |
+
+This is repository-only evidence, not operational completion. See docs/V12.3-PUBLIC-EDITION-GAP-AUDIT.md.
+
 ## Functional requirements
 
 | Requirement | Implemented by | Primary evidence |

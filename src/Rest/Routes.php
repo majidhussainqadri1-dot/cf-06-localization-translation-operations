@@ -70,6 +70,16 @@ final class Routes
         $this->route('/feedback',WP_REST_Server::CREATABLE,function(WP_REST_Request $r){if(!Plugin::runtimeEnabled()){return new WP_Error('slto_runtime_disabled','Localization runtime is not activated.',['status'=>503]);}$bucket='feedback|'.(get_current_user_id()?:hash('sha256',(string)($_SERVER['REMOTE_ADDR']??'')));if(!$this->s['repo']->rateLimit($bucket,10,3600)){return new WP_Error('slto_rate_limited','Too many translation feedback submissions.',['status'=>429]);}return $this->mutate($r,'feedback.submit',fn()=>$this->s['feedback']->submit((array)$r->get_json_params()),201);},'public');
         $this->route('/feedback/(?P<uuid>[a-f0-9-]{36})/transition',WP_REST_Server::CREATABLE,fn(WP_REST_Request $r)=>$this->mutate($r,'feedback.transition',fn()=>$this->s['feedback']->transition((string)$r['uuid'],(string)$r->get_param('to'),(int)$r->get_param('row_version'),(string)$r->get_param('outcome'))),'manage');
         $this->route('/content-links',WP_REST_Server::CREATABLE,fn(WP_REST_Request $r)=>$this->mutate($r,'content-links.register',fn()=>$this->s['contentLinks']->register((array)$r->get_json_params()),201),'manage');
+        // POST is a bounded, privileged PREVIEW only: no DB write, job creation,
+        // provider submission, role grant, approval or publication authority.
+        $this->route('/edition-policy/preview',WP_REST_Server::CREATABLE,function(WP_REST_Request $r){
+            if(strlen((string)$r->get_body())>65536){return new WP_Error('slto_edition_preview_too_large','Edition preview payload exceeds the bounded limit.',['status'=>413]);}
+            $data=$r->get_json_params();
+            if(!is_array($data)||!is_array($data['policy']??null)||!is_array($data['source']??null)||!is_array($data['publication_rows']??[])){
+                throw new InvalidArgumentException('Edition preview requires structured policy/source/evidence fields.');
+            }
+            return $this->s['locale']->previewPublicEditionPolicy($data['policy'],$data['source'],$data['publication_rows']??[]);
+        },'manage');
         $this->route('/metrics',WP_REST_Server::READABLE,fn()=>$this->s['metrics']->summary(),'audit');
         $this->route('/migration/inventory',WP_REST_Server::READABLE,fn()=>$this->s['migration']->inventory(),'audit');
         $this->route('/migration/dry-run',WP_REST_Server::CREATABLE,fn(WP_REST_Request $r)=>$this->mutate($r,'migration.dry-run',fn()=>$this->s['migration']->dryRun(sanitize_key((string)$r->get_param('migration_key')),is_array($r->get_param('source'))?$r->get_param('source'):[])),'manage');

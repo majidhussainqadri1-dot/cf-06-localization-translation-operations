@@ -7,6 +7,7 @@ namespace Sabri\Localization\Application;
 use InvalidArgumentException;
 use Sabri\Localization\Domain\Locale\FallbackChainValidator;
 use Sabri\Localization\Domain\Locale\LocaleValidator;
+use Sabri\Localization\Domain\Locale\PublicEditionPolicy;
 use Sabri\Localization\Domain\Workflow\StateMachine;
 use Sabri\Localization\Infrastructure\Outbox;
 use Sabri\Localization\Infrastructure\Repository\AuditRepository;
@@ -172,6 +173,36 @@ final class LocaleService
         $json=wp_json_encode($surfaces);
         if(!is_string($json)||strlen($json)>65535){throw new InvalidArgumentException('Locale surface metadata is invalid or oversized.');}
         return $json;
+    }
+
+    /**
+     * Read-only V12.3 edition projection. All owner/Founder verifiers default
+     * to denial; user-supplied approval references never authorize publication.
+     */
+    public function previewPublicEditionPolicy(array $policy, array $source, array $publicationRows = []): array
+    {
+        $validated = PublicEditionPolicy::validate($policy);
+        $identity = [
+            'policy_id'=>$validated['policy_id'],
+            'revision'=>$validated['revision'],
+            'effective_date'=>$validated['effective_date'],
+            'founder_approval_ref'=>$validated['founder_approval_ref'],
+            'source_locale'=>$source['locale'] ?? null,
+            'source_version'=>$source['version'] ?? null,
+            'source_hash'=>$source['hash'] ?? null,
+        ];
+        $approved = true === apply_filters('slto_verify_founder_edition_policy', false, $identity);
+        $plan = PublicEditionPolicy::plan(
+            $validated, (string)($source['locale'] ?? ''), (string)($source['version'] ?? ''),
+            (string)($source['hash'] ?? ''), $approved
+        );
+        $report = PublicEditionPolicy::countVerifiedPublished(
+            $plan,
+            $approved ? $publicationRows : [],
+            static fn (array $record): bool =>
+                true === apply_filters('slto_verify_current_edition_publication', false, $identity, $record)
+        );
+        return array_merge($plan, ['published'=>$report]);
     }
 
     public function list(bool $public = false): array

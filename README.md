@@ -41,6 +41,14 @@ The runtime, external machine-translation provider and all Future40 capabilities
 
 CF-06 owns localization **operations**, not original domain truth. File 19 owns notification preferences/transport; File 20 owns the global language switcher/shell placement; Files 22/23 own page/dashboard composer authoring and presentation; File 24 owns independent assurance; File 25 owns visual RTL/LTR component implementation; File 26 owns transliteration and multilingual search ranking; CF-04 owns canonical media processing; each native domain owner approves and publishes its own translated content. CF-06 never turns a cache, bundle, translation memory, provider response, AI estimate or community suggestion into authorization or source of truth.
 
+## V12.3 public-edition policy (source candidate, no deployment)
+
+V12.3 requires an original authored edition and **nine different** approved target editions, not nine languages guessed by CF-06. The bounded PublicEditionPolicy planner validates an effective-dated candidate, distinct targets and reserves, excludes the source via explicitly approved alias rules, and fails closed if independent Founder policy approval or enough reserve targets are absent. It never creates publication or translation jobs.
+
+The new privileged /edition-policy/preview endpoint is read-only despite using POST for bounded structured input. Its independently verified published count is zero until real native-owner evidence is available; only current, public, owner-approved versions may count. CF-06 cannot approve its own policy or independently authorize publication.
+
+See docs/V12.3-PUBLIC-EDITION-GAP-AUDIT.md for missing Founder language decisions, File 20/21/26 contracts, real reviewer/provider/staging checks, and exact deployed-state gates.
+
 ## Development
 
 ```bash
