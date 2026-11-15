@@ -2,6 +2,18 @@
 
 This matrix binds the source candidate to the latest CF-06 master plan **and** the latest central governing plan. It is source-code/automated-evidence traceability only; Hostinger-equivalent staging, qualified-human acceptance, live deployment and operations remain separate evidence classes.
 
+## V12.3 public edition policy — source coding, external acceptance pending
+
+| Requirement | Candidate code | Candidate test | Remaining acceptance |
+|---|---|---|---|
+| Original + nine distinct source-linked target editions | PublicEditionPolicy::plan | tests/v123-public-edition-policy.php | Founder-selected nine locales/reserves; File 21 real source |
+| Versioned locale aliases/approved Chinese script | PublicEditionPolicy::validate | nine-target/alias/script negative cases | Approved locale policy, five selected languages and reserve order |
+| Real published-edition count | PublicEditionPolicy::countVerifiedPublished | stale/duplicate/private/HTTPS/independent verifier tests | Actual File 21/native-owner attestation, publication URL, File 26 search receipts |
+| Distinct UI/content/edition preferences | PlanCompliance::get | contract tests | File 20/25 UI route/focus and device accessibility |
+| Safe preview, no implicit publication | LocaleService::previewPublicEditionPolicy, Rest Routes | source/permission/negative tests | File 00 real identity and Founder policy verifier |
+
+Source-correction lifecycle now includes `new` unit staleness (not merely assigned/reviewed units); `ProjectService::assign` checks source freshness, and draft→active project transitions reject stale frozen snapshots. Verified only in repository QA and disposable WordPress/MySQL tests. Source publication-link safety now additionally uses PublishedUrlGuard with tests/v123-published-url-guard.php. Reciprocal locale graph QA uses `PublicEditionGraphAuditor` and `PublicationGraphService`, with `tests/v123-publication-graph.php` negative/positive fixtures. Its File 21 and File 26 evidence hooks fail closed; no actual index/hreflang HTML or public deployment is proven. Versioned edition governance uses `EditionPolicyRegistry` with InnoDB `wp_options` immutable revision storage, independent Founder approval, step-up, tamper-evident audit, same-revision replay/conflict handling, and `tests/wp-v123-edition-policy-registry.php`. No real policy or activation is claimed. The MySQL concurrency primitive is additionally witnessed by a second actual DB connection in `tests/wp-v123-lock-contention.php` (CI-only); this is not a full multi-process production workload. V12.3 one-active-job-per-(canonical resource, source version, locale) now has a transactional InnoDB locking guard at `TranslationJobConcurrencyGuard` wired into `ProjectService::create`, with disposable tests in `tests/wp-v123-project-uniqueness.php`. No real multi-process stress, File 21 canonical source binding, Staging or Live acceptance is implied. This is repository-only evidence, not operational completion. See docs/V12.3-PUBLIC-EDITION-GAP-AUDIT.md.
+
 ## Functional requirements
 
 | Requirement | Implemented by | Primary evidence |

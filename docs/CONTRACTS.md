@@ -71,3 +71,13 @@ Every governed lifecycle transition requires a nonempty bounded reason/outcome i
 ## Recent-authentication / step-up boundary
 
 High-risk CF-06 authorization is fail-closed for `release`, `provider`, and `review_domain` actions. In addition to the WordPress capability and current File 00 membership assertion, `slto_verify_recent_authentication` must independently attest a recent step-up for the current actor/action/context. This does not replace the more specific dual-approval, provider-activation, or domain-review evidence contracts.
+## V12.3 reciprocal-language publication evidence (CF-06 only)
+
+- `POST /sabri-localization/v1/content-links/graph/audit` — privileged `audit` authorization, bounded read-only structured projection. This operation does **not** publish, index, create a sitemap, modify redirects, or grant visibility.
+- `slto_verify_graph_original_owner` — independent File 21 / native-domain source truth; default **false**.
+- `slto_verify_graph_translation_owner` — independent exact source-version/locale human publication approval; default **false**.
+- `slto_verify_file26_search_graph` — independent File 26 receipt that canonical, reciprocal hreflang, sitemap inclusion/exclusion, purge/re-index and effective public state are correct; default **false**.
+- The audit passes a minimal allowlisted metadata projection to verifiers; never private text, patient identity, secrets or vendor payloads.
+- An original plus nine distinct published language URLs is not accepted merely because supplied fields say `public=true`: owner and search verifiers must both attest. Every included page must reciprocally enumerate all genuinely available canonical destinations.
+- Regional canonical overrides may be proposed only toward a **separately verified same-language peer**; final permission requires actual File 26 receipt. A cross-language canonical redirect is not acceptable.
+- All declarations in this contract are repository-source requirements. Hostinger/WordPress provider callbacks, File 21 and File 26 parity and real rendered URL evidence remain pending.

@@ -19,8 +19,8 @@ final class StateMachine
             'disabled' => array('proposed'),
         ),
         'unit' => array(
-            'new' => array('assigned', 'retired'),
-            'changed' => array('assigned', 'retired'),
+            'new' => array('assigned', 'stale', 'retired'),
+            'changed' => array('assigned', 'stale', 'retired'),
             'assigned' => array('new', 'translating', 'retired'),
             'translating' => array('new', 'linguistic_review', 'assigned'),
             'linguistic_review' => array('domain_review', 'approved', 'translating'),

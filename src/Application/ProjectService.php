@@ -8,6 +8,7 @@ use InvalidArgumentException;
 use RuntimeException;
 use Sabri\Localization\Domain\Locale\LocaleValidator;
 use Sabri\Localization\Domain\Translation\RiskPolicy;
+use Sabri\Localization\Domain\Translation\TranslationJobConcurrencyGuard;
 use Sabri\Localization\Domain\Workflow\StateMachine;
 use Sabri\Localization\Infrastructure\Database;
 use Sabri\Localization\Infrastructure\Outbox;
@@ -65,6 +66,9 @@ final class ProjectService
         $targetsJson=wp_json_encode($targets);$scopeJson=wp_json_encode(['resource_count'=>count($resources),'resource_keys'=>array_column($resources,'resource_key')]);
         if(!is_string($targetsJson)||!is_string($scopeJson)){throw new RuntimeException('Project scope could not be encoded.');}
         return $this->tx->run(function()use($input,$name,$description,$releaseTarget,$projectProvider,$sourceLocale,$targets,$targetsJson,$scopeJson,$resources,$snapshotHash,$riskCeiling):array{
+            // Lock the same canonical source rows before any cross-project job check.
+            // No source migration: InnoDB row locks serialize overlapping creators.
+            TranslationJobConcurrencyGuard::assertAvailable($resources,$targets,$sourceLocale);
             foreach(array_merge([$sourceLocale],$targets) as $tag){
                 $locale=$this->repo->findOne('locales','locale_tag',$tag);
                 if(!is_array($locale)||!in_array((string)$locale['status'],['tested','content_ready','enabled','degraded'],true)){
@@ -107,6 +111,11 @@ final class ProjectService
         $project=$this->repo->find('projects',(string)$unit['project_uuid'])??throw new InvalidArgumentException('Assignment project is unavailable.');
         if('active'!==$project['status']){throw new InvalidArgumentException('Assignments require an active translation project.');}
         $resource=$this->repo->find('resources',(string)$unit['resource_uuid'])??throw new InvalidArgumentException('Assignment resource is unavailable.');
+        if('active'!==(string)$resource['status']
+            ||(int)$unit['source_version']!==(int)$resource['source_version']
+            ||!hash_equals((string)$unit['source_hash'],(string)$resource['source_hash'])){
+            throw new InvalidArgumentException('Translation assignment source snapshot is stale; create a current-source project.');
+        }
         $qualification=is_array($input['qualification']??null)?$input['qualification']:[];
         if(empty($qualification['locale_competency'])||!in_array((string)$unit['target_locale'],array_map('strval',(array)$qualification['locale_competency']),true)){throw new InvalidArgumentException('Target-locale competency evidence is required.');}
         if('domain_reviewer'===$role&&RiskPolicy::requiresDomainReview((string)$resource['risk_class'],(string)$resource['domain_name'])&&!in_array((string)$resource['domain_name'],array_map('sanitize_key',(array)($qualification['domains']??[])),true)){throw new InvalidArgumentException('Qualified domain reviewer evidence is required.');}
@@ -134,6 +143,12 @@ final class ProjectService
             $currentUnit=$this->repo->find('units',(string)$unit['uuid'])??throw new InvalidArgumentException('Translation unit disappeared before assignment.');
             if(in_array((string)$currentUnit['status'],['approved','released','retired'],true)){throw new InvalidArgumentException('Terminal translation units cannot receive new assignments.');}
             $currentProject=$this->repo->find('projects',(string)$currentUnit['project_uuid'])??throw new InvalidArgumentException('Assignment project is unavailable.');
+            $currentSource=$this->repo->find('resources',(string)$currentUnit['resource_uuid']);
+            if(!is_array($currentSource)||'active'!==(string)$currentSource['status']
+                ||(int)$currentUnit['source_version']!==(int)$currentSource['source_version']
+                ||!hash_equals((string)$currentUnit['source_hash'],(string)$currentSource['source_hash'])){
+                throw new InvalidArgumentException('Translation assignment source changed before role lock.');
+            }
             if('active'!==(string)$currentProject['status']){throw new InvalidArgumentException('Assignments require an active translation project.');}
             $existing=$this->repo->list('assignments',['unit_uuid'=>$currentUnit['uuid']],20);
             foreach($existing as $assignment){
@@ -183,6 +198,17 @@ final class ProjectService
         $project=$this->repo->find('projects',$uuid)??throw new InvalidArgumentException('Translation project not found.');
         $reason=sanitize_textarea_field($reason);if(''===trim($reason)||strlen($reason)>2000){throw new InvalidArgumentException('Project transition requires a nonempty bounded reason.');}
         StateMachine::assert('project',(string)$project['status'],$to);
+        if('active'===$to){
+            $snapshots=$this->repo->projectResources($uuid);
+            if([]===$snapshots){throw new InvalidArgumentException('Project cannot activate without a current source snapshot.');}
+            foreach($snapshots as $record){
+                if('active'!==(string)$record['status']
+                    ||(int)$record['source_version']!==(int)$record['frozen_source_version']
+                    ||!hash_equals((string)$record['source_hash'],(string)$record['frozen_source_hash'])){
+                    throw new InvalidArgumentException('Project cannot activate against a changed or retired source snapshot.');
+                }
+            }
+        }
         if('completed'===$to){$open=$wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM ".Database::table('units')." WHERE project_uuid=%s AND status NOT IN ('released','retired')",$uuid));if(''!==(string)$wpdb->last_error){throw new RuntimeException('Project completion state could not be verified.');}if((int)$open>0){throw new InvalidArgumentException('Project has unfinished translation units.');}}
         return $this->tx->run(function()use($project,$to,$version,$reason):array{$updated=$this->repo->updateVersioned('projects',(string)$project['uuid'],$version,['status'=>$to]);$this->audit->record('project',(string)$project['uuid'],'translation_project_transition','success',['from'=>$project['status'],'to'=>$to,'reason'=>$reason]);return $updated;});
     }

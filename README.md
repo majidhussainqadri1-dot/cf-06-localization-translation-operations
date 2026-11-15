@@ -41,6 +41,18 @@ The runtime, external machine-translation provider and all Future40 capabilities
 
 CF-06 owns localization **operations**, not original domain truth. File 19 owns notification preferences/transport; File 20 owns the global language switcher/shell placement; Files 22/23 own page/dashboard composer authoring and presentation; File 24 owns independent assurance; File 25 owns visual RTL/LTR component implementation; File 26 owns transliteration and multilingual search ranking; CF-04 owns canonical media processing; each native domain owner approves and publishes its own translated content. CF-06 never turns a cache, bundle, translation memory, provider response, AI estimate or community suggestion into authorization or source of truth.
 
+## V12.3 public-edition policy (source candidate, no deployment)
+
+V12.3 requires an original authored edition and **nine different** approved target editions, not nine languages guessed by CF-06. The bounded PublicEditionPolicy planner validates an effective-dated candidate, distinct targets and reserves, excludes the source via explicitly approved alias rules, and fails closed if independent Founder policy approval or enough reserve targets are absent. It never creates publication or translation jobs.
+
+The new privileged /edition-policy/preview endpoint is read-only despite using POST for bounded structured input. Its independently verified published count is zero until real native-owner evidence is available; only current, public, owner-approved versions may count. CF-06 cannot approve its own policy or independently authorize publication.
+
+The V12.3 ninety-requirement evidence inventory is docs/V12.3-90-REQUIREMENTS-EVIDENCE-REGISTER.json and remains 0/90 independently accepted; it is source traceability, not a coding percentage. The V12.3 reciprocal `hreflang`/canonical URL audit is available only through an authorized, read-only `/content-links/graph/audit` projection. It requires separate native owner and File 26 attestations; no automatic sitemap, translation publication or indexing action is provided. Approved V12.3 language target/reserve policy revisions can be recorded immutably via `EditionPolicyRegistry` with independent Founder approval and authorized step-up; recorded is not activated. Real approved target choices and Live parity remain missing. Cross-project duplicate translation jobs are denied via `TranslationJobConcurrencyGuard` (sorted InnoDB source-row locks and current source/version checks, no schema migration). The disposable WP/MySQL suite includes cancel/retry/version-correction cases; real multi-worker and companion acceptance remain separate. See docs/V12.3-PUBLIC-EDITION-GAP-AUDIT.md for missing Founder language decisions, File 20/21/26 contracts, real reviewer/provider/staging checks, and exact deployed-state gates.
+
+## V12.3 implementation review and truth boundary
+
+The source-only two-pass internal review and the 90-requirement evidence ledger are maintained at `docs/V12.3-POST-IMPLEMENTATION-TWO-PASS-REVIEW-2026-11-15.md` and `docs/V12.3-90-REQUIREMENTS-EVIDENCE-REGISTER.json`. Ten separately categorized source gaps were corrected in the Draft candidate, with 54 new named source tests and 18 disposable WordPress/MySQL checks. External independent acceptance, real Founder locale decisions, native File20/21/26 integrations, Staging/Live deployment and operations are **not** complete. No percentage of overall operational completion is asserted.
+
 ## Development
 
 ```bash

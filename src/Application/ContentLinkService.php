@@ -6,6 +6,7 @@ namespace Sabri\Localization\Application;
 
 use InvalidArgumentException;
 use Sabri\Localization\Domain\Locale\LocaleValidator;
+use Sabri\Localization\Domain\Locale\PublishedUrlGuard;
 use Sabri\Localization\Infrastructure\Outbox;
 use Sabri\Localization\Infrastructure\Repository\AuditRepository;
 use Sabri\Localization\Infrastructure\Repository\LocalizationRepository;
@@ -45,6 +46,7 @@ final class ContentLinkService
         $urls=[];foreach(['translated_url','canonical_url'] as $field){$url=(string)($input[$field]??'');if(''!==$url){if(strlen($url)>255){throw new InvalidArgumentException('Content translation URL exceeds the canonical storage bound.');}$this->assertPlatformUrl($url);$urls[$field]=esc_url_raw($url);}else{$urls[$field]=null;}}
         $status=sanitize_key((string)($input['publication_status']??'draft'));
         if(!in_array($status,['draft','review','approved','published','stale','retracted','retired'],true)){throw new InvalidArgumentException('Content translation publication status is invalid.');}
+        PublishedUrlGuard::assertValid($status,$urls['translated_url'],$urls['canonical_url']);
         $approvalRef=sanitize_text_field((string)($input['owner_approval_ref']??''));if(strlen($approvalRef)>191){throw new InvalidArgumentException('Content owner approval reference exceeds the canonical storage bound.');}
         if('published'===$status){
             if(''===$approvalRef||!is_array($resource)||'active'!==(string)$resource['status']||!is_array($unit)
