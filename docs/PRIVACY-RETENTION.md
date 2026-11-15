@@ -10,6 +10,10 @@
 - Retention schedules and lawful/clinical/financial exceptions are finalized before activation per jurisdiction and native owner.
 
 
+## V12.3 immutable language policy retention and minimization
+
+The `slto_v123_edition_*` revision options hold only the versioned locale/alias/reserve policy, an opaque non-secret Founder approval reference, a policy hash, and nonpersonal registration timestamp/state. They **do not** repeat the registering WordPress user's ID; the restricted, tamper-evident security audit retains actor identity under the existing governance exception. Public policy examples must not include private manuscript contents or patient/vendor data. The conservative uninstall intentionally retains governed policy revisions; any purge requires an owner-approved retention/deletion assessment.
+
 ## Operational actor pseudonymization
 
 Mutable operational actor references are pseudonymized during erasure into a deterministic high-ID namespace. Allocation explicitly refuses collision with a real WordPress user account; immutable audit-chain actor metadata remains retained only under the stated security/governance integrity exception.

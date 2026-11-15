@@ -16,6 +16,10 @@ final class PublicEditionPolicy
         $id = self::bounded($policy['policy_id'] ?? null, 80, 'policy ID');
         $revision = self::bounded($policy['revision'] ?? null, 40, 'policy revision');
         $approval = self::bounded($policy['founder_approval_ref'] ?? null, 160, 'Founder approval reference');
+        // Reference only: reject emails, free text, URL/query strings and secret-bearing material.
+        if (!preg_match('/^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$/D', $approval)) {
+            throw new InvalidArgumentException('Founder approval reference must be an opaque non-secret identifier.');
+        }
         $effective = self::bounded($policy['effective_date'] ?? null, 10, 'effective date');
         if (!preg_match('/^\d{4}-\d{2}-\d{2}$/D', $effective)
             || !checkdate((int)substr($effective, 5, 2), (int)substr($effective, 8, 2), (int)substr($effective, 0, 4))) {

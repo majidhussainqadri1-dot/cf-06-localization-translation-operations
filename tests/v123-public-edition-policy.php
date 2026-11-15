@@ -80,6 +80,12 @@ $t->test('Approval reference and effective date cannot be fabricated by omission
     $p = $fixture(); $p['effective_date'] = '2026-02-30';
     TestHarness::assertThrows(fn () => $plan($p, 'ur'), InvalidArgumentException::class);
 });
+$t->test('Approval reference rejects personal email or unbounded free text', function () use ($fixture, $plan): void {
+    $p=$fixture(); $p['founder_approval_ref']='person@example.test';
+    TestHarness::assertThrows(fn () => $plan($p,'ur'),InvalidArgumentException::class);
+    $p=$fixture(); $p['founder_approval_ref']='Founder approved this via my private account';
+    TestHarness::assertThrows(fn () => $plan($p,'ur'),InvalidArgumentException::class);
+});
 $t->test('Source content hash is mandatory', function () use ($fixture): void {
     TestHarness::assertThrows(
         fn () => PublicEditionPolicy::plan($fixture(), 'ur', 'source-v1', 'bad', true),

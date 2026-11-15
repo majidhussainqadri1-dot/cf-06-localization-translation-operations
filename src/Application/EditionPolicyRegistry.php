@@ -50,7 +50,6 @@ final class EditionPolicyRegistry
             'revision' => $policy['revision'],
             'policy_hash' => $hash,
             'policy' => $policy,
-            'registered_by' => get_current_user_id(),
             'registered_at_utc' => gmdate('Y-m-d\TH:i:s\Z'),
             'status' => 'registered',
             'activation_authorized' => false,

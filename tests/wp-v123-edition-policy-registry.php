@@ -64,7 +64,8 @@ try {
         add_filter('slto_verify_founder_edition_policy', $founder, 10, 2);
         $first = $registry->register($policy);
         if (true !== $first['created'] || 'registered' !== $first['record']['status']
-            || false !== $first['record']['activation_authorized']) {
+            || false !== $first['record']['activation_authorized']
+            || array_key_exists('registered_by', $first['record'])) {
             throw new RuntimeException('New immutable candidate was incorrectly activated or not registered.');
         }
         ++$passes;
