@@ -12,7 +12,7 @@ This matrix binds the source candidate to the latest CF-06 master plan **and** t
 | Distinct UI/content/edition preferences | PlanCompliance::get | contract tests | File 20/25 UI route/focus and device accessibility |
 | Safe preview, no implicit publication | LocaleService::previewPublicEditionPolicy, Rest Routes | source/permission/negative tests | File 00 real identity and Founder policy verifier |
 
-This is repository-only evidence, not operational completion. See docs/V12.3-PUBLIC-EDITION-GAP-AUDIT.md.
+Source publication-link safety now additionally uses PublishedUrlGuard with tests/v123-published-url-guard.php. This is repository-only evidence, not operational completion. See docs/V12.3-PUBLIC-EDITION-GAP-AUDIT.md.
 
 ## Functional requirements
 
