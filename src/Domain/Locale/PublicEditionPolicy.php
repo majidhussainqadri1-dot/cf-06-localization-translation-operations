@@ -152,6 +152,7 @@ final class PublicEditionPolicy
         }
         $allowed = array_merge([$plan['source_locale']], $plan['selected_target_locales']);
         $seen = [];
+        $seenUrls = [];
         $rejected = 0;
         foreach ($records as $record) {
             if (!is_array($record)) {
@@ -160,23 +161,31 @@ final class PublicEditionPolicy
             }
             $tag = LocaleValidator::canonicalize((string)($record['locale'] ?? ''));
             $url = (string)($record['public_url'] ?? '');
+            $canonical = (string)($record['canonical_url'] ?? '');
             $parts = parse_url($url);
+            $canonicalParts = parse_url($canonical);
             $valid = $tag !== null
                 && in_array($tag, $allowed, true)
                 && !isset($seen[$tag])
+                && !isset($seenUrls[$url])
                 && 'published' === ($record['status'] ?? '')
                 && true === ($record['public'] ?? false)
                 && hash_equals((string)$plan['source_version'], (string)($record['source_version'] ?? ''))
                 && hash_equals((string)$plan['source_hash'], strtolower((string)($record['source_hash'] ?? '')))
-                && is_array($parts)
+                && is_array($parts) && is_array($canonicalParts)
+                && $url !== '' && $canonical !== '' && strlen($url) <= 255 && strlen($canonical) <= 255
                 && 'https' === strtolower((string)($parts['scheme'] ?? ''))
+                && 'https' === strtolower((string)($canonicalParts['scheme'] ?? ''))
                 && '' !== (string)($parts['host'] ?? '')
-                && !isset($parts['user']) && !isset($parts['pass']);
+                && '' !== (string)($canonicalParts['host'] ?? '')
+                && !isset($parts['user']) && !isset($parts['pass']) && !isset($parts['fragment'])
+                && !isset($canonicalParts['user']) && !isset($canonicalParts['pass']) && !isset($canonicalParts['fragment']);
             if (!$valid || true !== $verify($record)) {
                 ++$rejected;
                 continue;
             }
             $seen[$tag] = true;
+            $seenUrls[$url] = true;
         }
         return [
             'verified_published_count' => count($seen),
