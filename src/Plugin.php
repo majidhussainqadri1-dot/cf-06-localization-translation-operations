@@ -7,6 +7,7 @@ namespace Sabri\Localization;
 use Sabri\Localization\Admin\AdminPage;
 use Sabri\Localization\Application\BundleService;
 use Sabri\Localization\Application\ContentLinkService;
+use Sabri\Localization\Application\EditionPolicyRegistry;
 use Sabri\Localization\Application\ExtractionService;
 use Sabri\Localization\Application\FeedbackService;
 use Sabri\Localization\Application\FutureCapabilitiesFacade;
@@ -78,6 +79,7 @@ final class Plugin
         $qaEvidence = new QaEvidenceService($repo,$audit,$tx);
         $releaseApprovals = new ReleaseApprovalService($repo,$audit,$tx);
         $locale = new LocaleService($repo,$audit,$outbox,$tx);
+        $editionPolicy = new EditionPolicyRegistry($audit,$tx);
         $resource = new ResourceService($repo,$audit,$outbox,$tx);
         $qa = new QaService($repo,$resource);
         $translation = new TranslationService($repo,$resource,$qa,$audit,$outbox,$tx);
@@ -107,7 +109,7 @@ final class Plugin
 
         $this->services = compact(
             'crypto','repo','audit','tx','outbox','jobs','integrations','extraction','qaEvidence','releaseApprovals',
-            'locale','resource','qa','translation','project','terminology','bundle','feedback','metrics','health','privacy',
+            'locale','editionPolicy','resource','qa','translation','project','terminology','bundle','feedback','metrics','health','privacy',
             'migration','contentLinks','providers','future','mt'
         );
 

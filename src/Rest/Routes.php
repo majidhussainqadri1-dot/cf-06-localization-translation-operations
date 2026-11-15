@@ -72,6 +72,20 @@ final class Routes
         $this->route('/content-links',WP_REST_Server::CREATABLE,fn(WP_REST_Request $r)=>$this->mutate($r,'content-links.register',fn()=>$this->s['contentLinks']->register((array)$r->get_json_params()),201),'manage');
         // POST is a bounded, privileged PREVIEW only: no DB write, job creation,
         // provider submission, role grant, approval or publication authority.
+        $this->route('/edition-policy/versions',WP_REST_Server::CREATABLE,
+            fn(WP_REST_Request $r)=>$this->mutate($r,'edition-policy.register',fn()=>$this->s['editionPolicy']->register((array)$r->get_json_params()),201),'release');
+        $this->route('/edition-policy/versions/(?P<policy_id>[A-Za-z0-9._-]{1,80})/(?P<revision>[A-Za-z0-9._-]{1,40})',
+            WP_REST_Server::READABLE,fn(WP_REST_Request $r)=>$this->s['editionPolicy']->get((string)$r['policy_id'],(string)$r['revision']),'audit');
+        $this->route('/edition-policy/versions/preview',WP_REST_Server::CREATABLE,function(WP_REST_Request $r){
+            if(strlen((string)$r->get_body())>65536){return new WP_Error('slto_edition_preview_too_large','Edition preview payload exceeds the bounded limit.',['status'=>413]);}
+            $data=$r->get_json_params();
+            if(!is_array($data)||!is_array($data['source']??null)||!is_array($data['publication_rows']??[])){
+                throw new InvalidArgumentException('Edition preview requires source and evidence fields.');
+            }
+            $version=$this->s['editionPolicy']->get((string)($data['policy_id']??''),(string)($data['revision']??''));
+            if(!is_array($version)){throw new InvalidArgumentException('Approved versioned edition policy not found.');}
+            return $this->s['locale']->previewPublicEditionPolicy($version['policy'],$data['source'],$data['publication_rows']??[]);
+        },'manage');
         $this->route('/edition-policy/preview',WP_REST_Server::CREATABLE,function(WP_REST_Request $r){
             if(strlen((string)$r->get_body())>65536){return new WP_Error('slto_edition_preview_too_large','Edition preview payload exceeds the bounded limit.',['status'=>413]);}
             $data=$r->get_json_params();
@@ -146,5 +160,5 @@ final class Routes
         return $count;
     }
     private function ok(mixed $data,int $status=200):WP_REST_Response{return new WP_REST_Response(['data'=>$data],$status);}
-    private function error(Throwable $e,?string $trace=null):WP_Error{$trace=$trace?:AuditRepository::currentTraceId()?:Database::uuid();$code='slto_internal_error';$status=500;$message='Localization operation failed.';if($e instanceof InvalidArgumentException){$code='slto_invalid_request';$status=422;$message=$e->getMessage();}elseif($e instanceof DomainException&&'stale_version'===$e->getMessage()){$code='slto_stale_version';$status=409;$message='The record changed; reload before retrying.';}elseif($e instanceof DomainException&&'idempotency_conflict'===$e->getMessage()){$code='slto_idempotency_conflict';$status=409;$message='The idempotency key was reused with a different request.';}elseif($e instanceof DomainException&&'translation_job_already_active'===$e->getMessage()){$code='slto_translation_job_conflict';$status=409;$message='An active translation job already exists for this source version and target locale.';}elseif($e instanceof DomainException&&'idempotency_indeterminate'===$e->getMessage()){$code='slto_idempotency_indeterminate';$status=409;$message='A previous mutation may have completed but replay state is indeterminate; operator reconciliation is required.';}do_action('slto_safe_error',$code,$trace,$e);return new WP_Error($code,$message,['status'=>$status,'trace_id'=>$trace]);}
+    private function error(Throwable $e,?string $trace=null):WP_Error{$trace=$trace?:AuditRepository::currentTraceId()?:Database::uuid();$code='slto_internal_error';$status=500;$message='Localization operation failed.';if($e instanceof InvalidArgumentException){$code='slto_invalid_request';$status=422;$message=$e->getMessage();}elseif($e instanceof DomainException&&'stale_version'===$e->getMessage()){$code='slto_stale_version';$status=409;$message='The record changed; reload before retrying.';}elseif($e instanceof DomainException&&'idempotency_conflict'===$e->getMessage()){$code='slto_idempotency_conflict';$status=409;$message='The idempotency key was reused with a different request.';}elseif($e instanceof DomainException&&'edition_policy_revision_conflict'===$e->getMessage()){$code='slto_edition_policy_revision_conflict';$status=409;$message='This edition policy revision exists with different content; create a new revision.';}elseif($e instanceof DomainException&&'translation_job_already_active'===$e->getMessage()){$code='slto_translation_job_conflict';$status=409;$message='An active translation job already exists for this source version and target locale.';}elseif($e instanceof DomainException&&'idempotency_indeterminate'===$e->getMessage()){$code='slto_idempotency_indeterminate';$status=409;$message='A previous mutation may have completed but replay state is indeterminate; operator reconciliation is required.';}do_action('slto_safe_error',$code,$trace,$e);return new WP_Error($code,$message,['status'=>$status,'trace_id'=>$trace]);}
 }

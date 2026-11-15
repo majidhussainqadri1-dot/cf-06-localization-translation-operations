@@ -47,6 +47,7 @@ final class PublicEditionPolicy
                 throw new InvalidArgumentException('Edition alias chains or cycles are forbidden.');
             }
         }
+        ksort($aliases, SORT_STRING);
         $targets = self::localeList($policy['target_locales'] ?? null, $aliases, self::TARGET_COUNT);
         if (count($targets) !== self::TARGET_COUNT) {
             throw new InvalidArgumentException('Exactly nine primary translation targets are mandatory.');

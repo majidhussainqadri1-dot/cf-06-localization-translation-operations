@@ -121,5 +121,6 @@ $check(false !== wp_next_scheduled('slto_process_jobs'), 'job schedule missing')
 $check(false !== wp_next_scheduled('slto_daily_reconciliation'), 'reconciliation schedule missing');
 
 require __DIR__ . '/wp-v123-project-uniqueness.php';
+require __DIR__ . '/wp-v123-edition-policy-registry.php';
 
 echo "WP_INTEGRATION_PASS\n";
