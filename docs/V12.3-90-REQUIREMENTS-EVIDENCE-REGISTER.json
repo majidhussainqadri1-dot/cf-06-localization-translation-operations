@@ -1,0 +1,864 @@
+{
+  "schema_version": "CF06-V12.3-AUDIT-v1",
+  "as_of": "2026-11-15",
+  "governing_plan": "Sabri Website Master Plan V12.3 (2026-11-13), pp. 51–53 and 248–256",
+  "candidate_before_ledger_commit": "7bf7a206a8e5569ddeb369841bc0c6481cec05b9",
+  "state_boundary": "Draft PR #11 source assertions. This file is not an independently executed 90-case acceptance suite and does not certify deployed code.",
+  "totals": {
+    "requirements": 90,
+    "fr": 34,
+    "cen": 10,
+    "nj": 6,
+    "fut": 40,
+    "source_traceability_claims": 90,
+    "independently_accepted": 0,
+    "staging_accepted": 0,
+    "live_verified": 0
+  },
+  "priority_unclosed": [
+    {
+      "area": "V12.3 target policy",
+      "issue": "Founder-approved Chinese script/five additional target languages/reserve ordering and effective policy registration missing"
+    },
+    {
+      "area": "Cross-project jobs",
+      "issue": "units has UNIQUE(resource_locale_project), not a proved global one-active-job per source-version/locale across projects; Live DB state unknown"
+    },
+    {
+      "area": "File 20",
+      "issue": "UI/content/edition switch and state preservation, route, focus, draft, RTL browser evidence missing"
+    },
+    {
+      "area": "File 21",
+      "issue": "Canonical original/publication approval/source version, corrections and real public links missing"
+    },
+    {
+      "area": "File 26",
+      "issue": "Reciprocal hreflang/canonical/sitemap/search purge/reindex ownership and real receipts missing"
+    },
+    {
+      "area": "Companion contracts",
+      "issue": "File 00/19/22/23/24/25 and CF-04 actual deployed compatibility/approval missing"
+    },
+    {
+      "area": "Operations",
+      "issue": "Reviewer qualification, external provider privacy/deletion/region, staging migration, WCAG, backup/restore, penetration, load and rollback evidence missing"
+    },
+    {
+      "area": "Live parity",
+      "issue": "Deployed plugin/version, DB/schema, migration/options, exact checksum and post-deploy live retest unverified"
+    }
+  ],
+  "requirements": [
+    {
+      "id": "CF06-CEN-01",
+      "documented_implementation": "LocaleValidator, LocaleService, PlanCompliance",
+      "documented_automated_evidence": "American English policy + Urdu/Arabic first-class + deterministic fallback",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-CEN-02",
+      "documented_implementation": "Manifest canonical/non-owner boundaries, ContentLinkService",
+      "documented_automated_evidence": "domain owner remains source/publication authority",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-CEN-03",
+      "documented_implementation": "RiskPolicy, ProjectService, TranslationService",
+      "documented_automated_evidence": "qualified domain review gate for medical/Islamic/legal/privacy/security/financial material",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-CEN-04",
+      "documented_implementation": "RiskPolicy, MachineTranslationService",
+      "documented_automated_evidence": "external MT restricted to low-risk C1 drafts; C2–C5 and high-risk domains denied",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-CEN-05",
+      "documented_implementation": "MessageFormatValidator, PlaceholderValidator, NumberUnitGuard, MarkupValidator, BidiValidator, QaService",
+      "documented_automated_evidence": "ICU/placeholder/number/unit/link-markup/bidi structural QA",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-CEN-06",
+      "documented_implementation": "TerminologyService, terminology schema",
+      "documented_automated_evidence": "canonical concept, approved/prohibited terms, domain/source/version governance",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-CEN-07",
+      "documented_implementation": "ResourceService, DependencyInvalidator, outbox",
+      "documented_automated_evidence": "source correction/retirement stales units/content links, invalidates active bundles, flushes cache and emits downstream degradation/change facts",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-CEN-08",
+      "documented_implementation": "LocalizationRepository::coverage, QaService, BundleService",
+      "documented_automated_evidence": "100% critical current-resource coverage before release",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-CEN-09",
+      "documented_implementation": "BidiValidator, LocaleService, File 20/25 integration gates",
+      "documented_automated_evidence": "safe mixed-direction isolates + deterministic locale resolution; visual/route acceptance remains companion/staging evidence",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-CEN-10",
+      "documented_implementation": "RiskPolicy, ProviderService, PrivacyService, translation-memory restrictions",
+      "documented_automated_evidence": "private/user data excluded from external MT/reuse by default",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FR-001",
+      "documented_implementation": "LocaleService, LocaleValidator, Activator",
+      "documented_automated_evidence": "unit/contracts tests",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FR-002",
+      "documented_implementation": "ResourceService, resources schema, governed route/component/screenshot context refs, bounded structured metadata canonicalization",
+      "documented_automated_evidence": "contracts/review guards + cycle9 round10 + cycle34 round5",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FR-003",
+      "documented_implementation": "ResourceService, project snapshots",
+      "documented_automated_evidence": "contracts",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FR-004",
+      "documented_implementation": "resource fields, ResourceService, ExtractionService",
+      "documented_automated_evidence": "trace/schema checks",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FR-005",
+      "documented_implementation": "RiskPolicy, resource fields",
+      "documented_automated_evidence": "unit/security review",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FR-006",
+      "documented_implementation": "ProjectService, projects/project_resources",
+      "documented_automated_evidence": "schema/contracts",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FR-007",
+      "documented_implementation": "ProjectService, assignments, strict UTC due/expiry evidence",
+      "documented_automated_evidence": "code/review checks + cycle10 round5",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FR-008",
+      "documented_implementation": "StateMachine, TranslationService",
+      "documented_automated_evidence": "lifecycle tests",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FR-009",
+      "documented_implementation": "TranslationService versioned comment/query resolution, comments table, contextual-change dependency invalidation",
+      "documented_automated_evidence": "cycle9 round10 + REST/contracts",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FR-010",
+      "documented_implementation": "TranslationService, TerminologyService, memory table",
+      "documented_automated_evidence": "contracts",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FR-011",
+      "documented_implementation": "ProviderService, HttpJsonProvider, UrlGuard",
+      "documented_automated_evidence": "security review",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FR-012",
+      "documented_implementation": "TerminologyService, terminology table",
+      "documented_automated_evidence": "schema/contracts",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FR-013",
+      "documented_implementation": "RiskPolicy, TranslationService, NumberUnitGuard",
+      "documented_automated_evidence": "unit/security tests",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FR-014",
+      "documented_implementation": "RiskPolicy, TranslationService",
+      "documented_automated_evidence": "unit/security tests",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FR-015",
+      "documented_implementation": "RiskPolicy, TranslationService",
+      "documented_automated_evidence": "unit/security tests",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FR-016",
+      "documented_implementation": "Manifest/architecture boundary with File 26",
+      "documented_automated_evidence": "ownership review",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FR-017",
+      "documented_implementation": "PlaceholderValidator, MessageFormatValidator, NumberUnitGuard",
+      "documented_automated_evidence": "unit tests",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FR-018",
+      "documented_implementation": "RiskPolicy, MachineTranslationService",
+      "documented_automated_evidence": "unit/security tests",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FR-019",
+      "documented_implementation": "Redactor, MachineTranslationService",
+      "documented_automated_evidence": "unit/security tests",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FR-020",
+      "documented_implementation": "MachineTranslationService, TranslationService",
+      "documented_automated_evidence": "contracts/security review",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FR-021",
+      "documented_implementation": "TerminologyService memory suggestions",
+      "documented_automated_evidence": "contracts",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FR-022",
+      "documented_implementation": "providers schema, ProviderService, PlanCompliance",
+      "documented_automated_evidence": "schema/security review",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FR-023",
+      "documented_implementation": "QaService, MessageFormatValidator and validators",
+      "documented_automated_evidence": "unit/contracts tests",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FR-024",
+      "documented_implementation": "BundleService QA results + `slto_verify_bundle_qa_evidence` + bundle state machine",
+      "documented_automated_evidence": "independent route/device/accessibility evidence; lifecycle/release review; real staging remains external",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FR-025",
+      "documented_implementation": "DeterministicBundle, BundleService",
+      "documented_automated_evidence": "unit/package tests",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FR-026",
+      "documented_implementation": "LocalizationRepository::coverage, QaService",
+      "documented_automated_evidence": "contracts",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FR-027",
+      "documented_implementation": "BundleService, bundle state machine",
+      "documented_automated_evidence": "lifecycle/release tests",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FR-028",
+      "documented_implementation": "ContentLinkService, content_links table, `ContentTranslationPublicationChanged` + `ContentTranslationReconciliationRequired` outbox facts",
+      "documented_automated_evidence": "current resource/unit/native-owner binding + direct and automatic search/retraction reconciliation notification; redirects/search purge remain staging acceptance",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FR-029",
+      "documented_implementation": "TerminologyService, style_guides table",
+      "documented_automated_evidence": "schema/contracts",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FR-030",
+      "documented_implementation": "FeedbackService, feedback table",
+      "documented_automated_evidence": "schema/contracts",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FR-031",
+      "documented_implementation": "ResourceService + DependencyInvalidator source/context/terminology/style-policy propagation",
+      "documented_automated_evidence": "lifecycle/plan tests + cycle9 round10",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FR-032",
+      "documented_implementation": "MetricsService aggregate unit/word/turnaround/QA/reopen/feedback/coverage definitions, HealthService",
+      "documented_automated_evidence": "cycle9 round10; no actor surveillance dimensions",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FR-033",
+      "documented_implementation": "PrivacyService, atomic erasure-job minimization, secure payloads/vendor purge",
+      "documented_automated_evidence": "security/privacy review",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FR-034",
+      "documented_implementation": "LocaleService, ProviderService, state machines, `slto_verify_provider_deprecation_evidence`",
+      "documented_automated_evidence": "purge/credential-revocation/exit evidence + lifecycle tests; real provider exit remains staging evidence",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FUT-001",
+      "documented_implementation": "FutureCapabilitiesService::f001; FutureCapabilities registry",
+      "documented_automated_evidence": "tests/future40.php + docs/FUTURE40.md",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FUT-002",
+      "documented_implementation": "FutureCapabilitiesService::f002; FutureCapabilities registry",
+      "documented_automated_evidence": "tests/future40.php + docs/FUTURE40.md",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FUT-003",
+      "documented_implementation": "FutureCapabilitiesService::f003; FutureCapabilities registry",
+      "documented_automated_evidence": "tests/future40.php + docs/FUTURE40.md",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FUT-004",
+      "documented_implementation": "FutureCapabilitiesService::f004; FutureCapabilities registry",
+      "documented_automated_evidence": "tests/future40.php + docs/FUTURE40.md",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FUT-005",
+      "documented_implementation": "FutureCapabilitiesService::f005; FutureCapabilities registry",
+      "documented_automated_evidence": "tests/future40.php + docs/FUTURE40.md",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FUT-006",
+      "documented_implementation": "FutureCapabilitiesService::f006; FutureCapabilities registry",
+      "documented_automated_evidence": "tests/future40.php + docs/FUTURE40.md",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FUT-007",
+      "documented_implementation": "FutureCapabilitiesService::f007; FutureCapabilities registry",
+      "documented_automated_evidence": "tests/future40.php + docs/FUTURE40.md",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FUT-008",
+      "documented_implementation": "FutureCapabilitiesService::f008; FutureCapabilities registry",
+      "documented_automated_evidence": "tests/future40.php + docs/FUTURE40.md",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FUT-009",
+      "documented_implementation": "FutureCapabilitiesService::f009; FutureCapabilities registry",
+      "documented_automated_evidence": "tests/future40.php + docs/FUTURE40.md",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FUT-010",
+      "documented_implementation": "FutureCapabilitiesService::f010; FutureCapabilities registry",
+      "documented_automated_evidence": "tests/future40.php + docs/FUTURE40.md",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FUT-011",
+      "documented_implementation": "FutureCapabilitiesService::f011; FutureCapabilities registry",
+      "documented_automated_evidence": "tests/future40.php + docs/FUTURE40.md",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FUT-012",
+      "documented_implementation": "FutureCapabilitiesService::f012; FutureCapabilities registry",
+      "documented_automated_evidence": "tests/future40.php + docs/FUTURE40.md",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FUT-013",
+      "documented_implementation": "FutureCapabilitiesService::f013; FutureCapabilities registry",
+      "documented_automated_evidence": "tests/future40.php + docs/FUTURE40.md",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FUT-014",
+      "documented_implementation": "FutureCapabilitiesService::f014; FutureCapabilities registry",
+      "documented_automated_evidence": "tests/future40.php + docs/FUTURE40.md",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FUT-015",
+      "documented_implementation": "FutureCapabilitiesService::f015; FutureCapabilities registry",
+      "documented_automated_evidence": "tests/future40.php + docs/FUTURE40.md",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FUT-016",
+      "documented_implementation": "FutureCapabilitiesService::f016; FutureCapabilities registry",
+      "documented_automated_evidence": "tests/future40.php + docs/FUTURE40.md",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FUT-017",
+      "documented_implementation": "FutureCapabilitiesService::f017; FutureCapabilities registry",
+      "documented_automated_evidence": "tests/future40.php + docs/FUTURE40.md",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FUT-018",
+      "documented_implementation": "FutureCapabilitiesService::f018; FutureCapabilities registry",
+      "documented_automated_evidence": "tests/future40.php + docs/FUTURE40.md",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FUT-019",
+      "documented_implementation": "FutureCapabilitiesService::f019; FutureCapabilities registry",
+      "documented_automated_evidence": "tests/future40.php + docs/FUTURE40.md",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FUT-020",
+      "documented_implementation": "FutureCapabilitiesService::f020; FutureCapabilities registry",
+      "documented_automated_evidence": "tests/future40.php + docs/FUTURE40.md",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FUT-021",
+      "documented_implementation": "FutureCapabilitiesService::f021; FutureCapabilities registry",
+      "documented_automated_evidence": "tests/future40.php + docs/FUTURE40.md",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FUT-022",
+      "documented_implementation": "FutureCapabilitiesService::f022; FutureCapabilities registry",
+      "documented_automated_evidence": "tests/future40.php + docs/FUTURE40.md",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FUT-023",
+      "documented_implementation": "FutureCapabilitiesService::f023; FutureCapabilities registry",
+      "documented_automated_evidence": "tests/future40.php + docs/FUTURE40.md",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FUT-024",
+      "documented_implementation": "FutureCapabilitiesService::f024; FutureCapabilities registry",
+      "documented_automated_evidence": "tests/future40.php + docs/FUTURE40.md",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FUT-025",
+      "documented_implementation": "FutureCapabilitiesService::f025; FutureCapabilities registry",
+      "documented_automated_evidence": "tests/future40.php + docs/FUTURE40.md",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FUT-026",
+      "documented_implementation": "FutureCapabilitiesService::f026; FutureCapabilities registry",
+      "documented_automated_evidence": "tests/future40.php + docs/FUTURE40.md",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FUT-027",
+      "documented_implementation": "FutureCapabilitiesService::f027; FutureCapabilities registry",
+      "documented_automated_evidence": "tests/future40.php + docs/FUTURE40.md",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FUT-028",
+      "documented_implementation": "FutureCapabilitiesService::f028; FutureCapabilities registry",
+      "documented_automated_evidence": "tests/future40.php + docs/FUTURE40.md",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FUT-029",
+      "documented_implementation": "FutureCapabilitiesService::f029; FutureCapabilities registry",
+      "documented_automated_evidence": "tests/future40.php + docs/FUTURE40.md",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FUT-030",
+      "documented_implementation": "FutureCapabilitiesService::f030; FutureCapabilities registry",
+      "documented_automated_evidence": "tests/future40.php + docs/FUTURE40.md",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FUT-031",
+      "documented_implementation": "FutureCapabilitiesService::f031; FutureCapabilities registry",
+      "documented_automated_evidence": "tests/future40.php + docs/FUTURE40.md",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FUT-032",
+      "documented_implementation": "FutureCapabilitiesService::f032; FutureCapabilities registry",
+      "documented_automated_evidence": "tests/future40.php + docs/FUTURE40.md",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FUT-033",
+      "documented_implementation": "FutureCapabilitiesService::f033; FutureCapabilities registry",
+      "documented_automated_evidence": "tests/future40.php + docs/FUTURE40.md",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FUT-034",
+      "documented_implementation": "FutureCapabilitiesService::f034; FutureCapabilities registry",
+      "documented_automated_evidence": "tests/future40.php + docs/FUTURE40.md",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FUT-035",
+      "documented_implementation": "FutureCapabilitiesService::f035; FutureCapabilities registry",
+      "documented_automated_evidence": "tests/future40.php + docs/FUTURE40.md",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FUT-036",
+      "documented_implementation": "FutureCapabilitiesService::f036; FutureCapabilities registry",
+      "documented_automated_evidence": "tests/future40.php + docs/FUTURE40.md",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FUT-037",
+      "documented_implementation": "FutureCapabilitiesService::f037; FutureCapabilities registry",
+      "documented_automated_evidence": "tests/future40.php + docs/FUTURE40.md",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FUT-038",
+      "documented_implementation": "FutureCapabilitiesService::f038; FutureCapabilities registry",
+      "documented_automated_evidence": "tests/future40.php + docs/FUTURE40.md",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FUT-039",
+      "documented_implementation": "FutureCapabilitiesService::f039; FutureCapabilities registry",
+      "documented_automated_evidence": "tests/future40.php + docs/FUTURE40.md",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-FUT-040",
+      "documented_implementation": "FutureCapabilitiesService::f040; FutureCapabilities registry",
+      "documented_automated_evidence": "tests/future40.php + docs/FUTURE40.md",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-NJ-01",
+      "documented_implementation": "ResourceService → ProjectService → TranslationService → QaService → BundleService staged release",
+      "documented_automated_evidence": "Native journey traceability only; independent journey not verified",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-NJ-02",
+      "documented_implementation": "qualified domain assignment/review + terminology + ContentLinkService owner approval",
+      "documented_automated_evidence": "Native journey traceability only; independent journey not verified",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-NJ-03",
+      "documented_implementation": "ResourceService source correction → stale units/content links → active-bundle invalidation → rebuild/re-review",
+      "documented_automated_evidence": "Native journey traceability only; independent journey not verified",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-NJ-04",
+      "documented_implementation": "RiskPolicy low-risk C1 only → MachineTranslationService draft → human review → normal release gates",
+      "documented_automated_evidence": "Native journey traceability only; independent journey not verified",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-NJ-05",
+      "documented_implementation": "LocaleService deterministic resolve + BidiValidator + File 20/25 integration evidence",
+      "documented_automated_evidence": "Native journey traceability only; independent journey not verified",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    },
+    {
+      "id": "CF06-NJ-06",
+      "documented_implementation": "BundleService signed rollback/containment + correction/re-review; source invalidation also removes stale active bundle eligibility",
+      "documented_automated_evidence": "Native journey traceability only; independent journey not verified",
+      "grade": "repository_traceability_claim_only",
+      "independent_semantic_accepted": false,
+      "staging_accepted": false,
+      "live_verified": false
+    }
+  ]
+}
