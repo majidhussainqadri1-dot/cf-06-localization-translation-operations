@@ -17,3 +17,8 @@ The `slto_v123_edition_*` revision options hold only the versioned locale/alias/
 ## Operational actor pseudonymization
 
 Mutable operational actor references are pseudonymized during erasure into a deterministic high-ID namespace. Allocation explicitly refuses collision with a real WordPress user account; immutable audit-chain actor metadata remains retained only under the stated security/governance integrity exception.
+
+
+## V12.3 owner verifier projection
+
+Public-version review passes only allowlisted public source/version/link/owner metadata to `slto_verify_current_edition_publication`, never arbitrary caller-supplied clinical, patient or credential fields. The 100-record maximum is enforced before projection. Synthetic negative tests in `tests/wp-v123-edition-policy-registry.php` cover this data-minimization boundary.

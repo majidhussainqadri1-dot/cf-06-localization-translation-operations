@@ -199,9 +199,23 @@ final class LocaleService
             $validated, (string)($source['locale'] ?? ''), (string)($source['version'] ?? ''),
             (string)($source['hash'] ?? ''), $approved
         );
+        // The owner verifier must receive only public version/link metadata,
+        // never caller-supplied clinical notes, patient data or vendor secrets.
+        if(count($publicationRows)>100){
+            throw new InvalidArgumentException('Edition publication evidence exceeds the bounded limit.');
+        }
+        $publicEvidenceFields=array_fill_keys([
+            'locale','status','public','public_url','canonical_url',
+            'source_version','source_hash','owner_module','owner_object_id',
+            'owner_approval_ref',
+        ],true);
+        $safeRows=array_map(
+            static fn(mixed $row):mixed=>is_array($row)?array_intersect_key($row,$publicEvidenceFields):$row,
+            $publicationRows
+        );
         $report = PublicEditionPolicy::countVerifiedPublished(
             $plan,
-            $approved ? $publicationRows : [],
+            $approved ? $safeRows : [],
             static fn (array $record): bool =>
                 true === apply_filters('slto_verify_current_edition_publication', false, $identity, $record)
         );

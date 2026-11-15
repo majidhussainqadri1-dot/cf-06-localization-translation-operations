@@ -106,6 +106,35 @@ try {
         }
         ++$passes;
 
+        $sentMetadata=[];
+        $ownerVerifier = static function (mixed $result, array $identity, array $row) use (&$sentMetadata): bool {
+            $sentMetadata=$row;
+            return isset($identity['source_hash']) && ($row['owner_approval_ref']??'')==='ci-owner-attested';
+        };
+        add_filter('slto_verify_current_edition_publication',$ownerVerifier,10,3);
+        $sourceHash=hash('sha256','synthetic source');
+        $sensitiveRow=[
+            'locale'=>'ur','status'=>'published','public'=>true,
+            'public_url'=>'https://example.test/ur','canonical_url'=>'https://example.test/ur',
+            'source_version'=>'v1','source_hash'=>$sourceHash,
+            'owner_module'=>'file21','owner_object_id'=>'ci-source',
+            'owner_approval_ref'=>'ci-owner-attested',
+            'clinical_note'=>'SECRET-DONT-PASS','patient_email'=>'person@example.test',
+            'api_key'=>'SECRET-NO-TRANSMISSION',
+        ];
+        $minimal=$localeService->previewPublicEditionPolicy($found['policy'],[
+            'locale'=>'ur','version'=>'v1','hash'=>$sourceHash,
+        ],[$sensitiveRow]);
+        remove_filter('slto_verify_current_edition_publication',$ownerVerifier,10);
+        if(1!==$minimal['published']['verified_published_count']
+            || isset($sentMetadata['clinical_note'],$sentMetadata['patient_email'])
+            || array_key_exists('clinical_note',$sentMetadata)
+            || array_key_exists('patient_email',$sentMetadata)
+            || array_key_exists('api_key',$sentMetadata)) {
+            throw new RuntimeException('Independent publication verifier received forbidden sensitive fields.');
+        }
+        ++$passes;
+
         remove_filter('slto_verify_founder_edition_policy', $founder, 10);
         $blocked = $localeService->previewPublicEditionPolicy($found['policy'],[
             'locale'=>'ur','version'=>'v1','hash'=>hash('sha256','synthetic source'),
@@ -126,7 +155,7 @@ try {
     }
 }
 
-if (8 !== $passes) {
+if (9 !== $passes) {
     throw new RuntimeException('Edition policy registry suite incomplete: '. $passes);
 }
-echo "V123_EDITION_POLICY_REGISTRY_PASS 8\n";
+echo "V123_EDITION_POLICY_REGISTRY_PASS 9\n";
