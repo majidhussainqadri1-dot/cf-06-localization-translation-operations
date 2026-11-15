@@ -93,6 +93,7 @@ try {
             throw new RuntimeException('Replacement project identity was reused.');
         }
         ++$passed;
+        $service->transition((string)$replacement['uuid'],'active',(int)$replacement['row_version'],'Synthetic active project before source correction');
 
         // A source correction creates a new version; no stale-version job may
         // keep the new version blocked. Historical units are marked stale.
@@ -107,6 +108,38 @@ try {
         if ((int)$updated['record']['source_version'] !== 2) {
             throw new RuntimeException('Synthetic source version did not increment.');
         }
+        $oldUnits=Plugin::instance()->service('repo')->list('units',['project_uuid'=>(string)$replacement['uuid']],10);
+        if(count($oldUnits)!==1 || 'stale'!==(string)$oldUnits[0]['status']){
+            throw new RuntimeException('An untouched new unit escaped source-correction staleness propagation.');
+        }
+        ++$passed;
+
+        try {
+            $service->assign([
+                'unit_uuid'=>(string)$oldUnits[0]['uuid'],
+                'assignee_id'=>1,
+                'role'=>'translator',
+                'qualification'=>['locale_competency'=>[$targetLocale]],
+                'conflict_status'=>'clear',
+            ]);
+            throw new RuntimeException('Stale source version was assigned to a translator.');
+        } catch (InvalidArgumentException $expected) {
+            if (!str_contains($expected->getMessage(), 'source snapshot is stale')) {
+                throw $expected;
+            }
+        }
+        ++$passed;
+
+        try {
+            $service->transition((string)$allowed['uuid'],'active',(int)$allowed['row_version'],'Try to activate a stale source project');
+            throw new RuntimeException('Stale project was activated.');
+        } catch (InvalidArgumentException $expected) {
+            if (!str_contains($expected->getMessage(), 'changed or retired source snapshot')) {
+                throw $expected;
+            }
+        }
+        ++$passed;
+
         $nextVersion = $service->create($input);
         if ('draft' !== (string)$nextVersion['status']) {
             throw new RuntimeException('New source version was incorrectly blocked.');
@@ -123,7 +156,7 @@ try {
     }
 }
 
-if (5 !== $passed) {
+if (8 !== $passed) {
     throw new RuntimeException('V12.3 WordPress/MySQL guard integration incomplete: '. $passed);
 }
-echo "V123_PROJECT_JOB_INTEGRATION_PASS 5\n";
+echo "V123_PROJECT_JOB_INTEGRATION_PASS 8\n";
